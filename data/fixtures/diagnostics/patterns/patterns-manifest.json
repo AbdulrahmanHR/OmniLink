@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "description": "M38 GPS-bearing pattern fixtures (v2.0.1 backfill). Synthetic, static, no real location (a small grid around 47.0N, 8.0E). Separate from the M36 fixtures-manifest.json corpus loader; provenance only.",
+  "generated": "static",
+  "fixtures": [
+    {
+      "file": "patterns/gps-area-recurring-01.csv",
+      "patterns": [
+        "gps-area-degradation"
+      ],
+      "description": "A loop flown twice; link quality is depressed (~55%) over the same recurring cell on both passes and healthy (~95%) elsewhere.",
+      "sampleCount": 130
+    },
+    {
+      "file": "patterns/gps-clean-01.csv",
+      "patterns": [],
+      "description": "Same track flown twice with uniform ~95% link quality; the GPS-area detector must stay silent (negative control).",
+      "sampleCount": 130
+    },
+    {
+      "file": "patterns/short-session-01.csv",
+      "patterns": [],
+      "description": "A 10-sample healthy session below MIN_SAMPLES_FOR_PATTERNS; the detector must return hasEnoughEvidence:false (the honest 'not enough evidence' UI state).",
+      "sampleCount": 10
+    }
+  ]
+}

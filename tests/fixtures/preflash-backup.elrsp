@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "Auto-backup — BETAFPV_2400_TX",
+  "description": "Automatic snapshot taken before flashing BETAFPV_2400_TX (TX, firmware 3.5.2) on /dev/ttyUSB0. The device's live settings cannot be read yet, so the values below are ExpressLRS defaults — the identity above is what was actually read from the device.",
+  "tags": ["auto-backup"],
+  "firmwareVersion": "3.5.2",
+  "settings": {
+    "packetRate": 250,
+    "telemetryRatio": "1:64",
+    "switchMode": "Hybrid",
+    "txPower": 100,
+    "dynamicPower": false,
+    "modelMatch": false,
+    "modelId": 0,
+    "bindingPhrase": "",
+    "antennaMode": "Diversity",
+    "fanThreshold": 250
+  },
+  "updatedAt": 1735689600000,
+  "device": {
+    "target": "BETAFPV_2400_TX",
+    "deviceType": "TX",
+    "firmwareVersion": "3.5.2",
+    "port": "/dev/ttyUSB0"
+  }
+}

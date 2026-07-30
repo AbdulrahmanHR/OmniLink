@@ -1,0 +1,24 @@
+# Crowdin configuration for OmniLink community translations (NFR-I18N-04).
+#
+# This maps OmniLink's i18n source (English) to its per-locale translation files
+# so a Crowdin project can host community translation. It is SCAFFOLDING ONLY —
+# it does nothing until a maintainer:
+#   1. creates a Crowdin project for OmniLink,
+#   2. adds the repo secrets CROWDIN_PROJECT_ID + CROWDIN_PERSONAL_TOKEN, and
+#   3. runs the manual `.github/workflows/crowdin-sync.yml` action.
+# (Same "exists but inert until secrets are wired" shape as release.yml.)
+#
+# The single source of truth is `src/locales/en/translation.json`; every other
+# locale (`es`, and any future community locale) is a translation of it. The
+# `zero hardcoded user-facing strings` policy + the `translationStrings` unit
+# test (key parity across locales) keep translations complete and in sync — see
+# docs/TRANSLATIONS.md.
+
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env: CROWDIN_PERSONAL_TOKEN
+
+preserve_hierarchy: true
+
+files:
+  - source: /src/locales/en/translation.json
+    translation: /src/locales/%two_letters_code%/translation.json

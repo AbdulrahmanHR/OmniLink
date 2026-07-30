@@ -1,0 +1,360 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant carbon (&:is(.carbon *));
+
+/*
+ * OmniLink — "Signal Lab" Design System
+ * Oscilloscope / spectrum-analyzer inspired dark-first theme
+ * Per SRS §4.1: shadcn/ui + Tailwind, Decision #13: Signal Lab style
+ */
+
+:root {
+  /* Light theme — clean, high-contrast lab white */
+  --radius: 0.625rem;
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.15 0.015 240);
+  --card: oklch(0.96 0.005 240);
+  --card-foreground: oklch(0.15 0.015 240);
+  --popover: oklch(0.98 0.005 240);
+  --popover-foreground: oklch(0.15 0.015 240);
+  /* M28: darkened from L=0.55 so the green clears WCAG AA both as `text-primary`
+     on the light background (was 3.71:1) and as `bg-primary` under white
+     `--primary-foreground` text (was 3.94:1). */
+  --primary: oklch(0.50 0.17 160);
+  --primary-foreground: oklch(0.98 0.005 160);
+  --secondary: oklch(0.92 0.01 240);
+  --secondary-foreground: oklch(0.25 0.015 240);
+  --muted: oklch(0.94 0.008 240);
+  --muted-foreground: oklch(0.50 0.015 240);
+  --accent: oklch(0.92 0.01 240);
+  --accent-foreground: oklch(0.25 0.015 240);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0.005 25);
+  --border: oklch(0.88 0.01 240);
+  --input: oklch(0.88 0.01 240);
+  --ring: oklch(0.50 0.17 160);
+  --chart-1: oklch(0.55 0.18 160);
+  --chart-2: oklch(0.60 0.15 200);
+  --chart-3: oklch(0.65 0.15 80);
+  --chart-4: oklch(0.55 0.2 25);
+  --chart-5: oklch(0.60 0.18 280);
+
+  /* Telemetry status colors — hue/meaning stays consistent across themes
+     (FR-THEME-04: good=green, warning=amber, critical=red). On the LIGHT theme
+     the amber warning is darkened (L 0.70→0.47) so `text-status-warning` small
+     text clears WCAG AA on near-white tints (ProfileDiff / warning Badge were
+     2.1–2.3:1); good/critical already pass as text on light. */
+  --status-good: oklch(0.65 0.2 145);
+  --status-warning: oklch(0.47 0.13 70);
+  --status-critical: oklch(0.55 0.22 25);
+  /* M41: a text-only "strong" critical for the severity Badge foreground, which
+     sits on the faint `bg-status-critical/15` tint over the card (see badge.tsx).
+     The base critical over that light tint is only ~3.74:1 — a WCAG AA fail for
+     the 12px badge text — so the LIGHT theme DARKENS it (L 0.55→0.45), measuring
+     ~5.1:1 for `text-status-critical-strong` over the `/15` tint on the light
+     card. This mirrors how the dark themes LIGHTEN the same token. It never
+     touches a SOLID critical fill (e.g. the NotificationBell count), so no
+     white-on-red contrast is affected. */
+  --status-critical-strong: oklch(0.45 0.22 25);
+  /* M41: a text-only "strong" good for diagnostics readouts (the Signal-Health
+     factor values) where the base green sits as small text on the near-white card.
+     Green is high-luminance, so the base `--status-good` is only ~2.67:1 there — a
+     WCAG AA fail — hence the LIGHT theme DARKENS it hard (L 0.65→0.46) to ~5.8:1 on
+     the card (~5.0:1 even on a `/15` tint). Text only; solid good fills are
+     untouched. The dark themes already clear AA, so they alias the base below. */
+  --status-good-strong: oklch(0.46 0.17 145);
+
+  /* Signal Lab accent — oscilloscope green */
+  --signal-primary: oklch(0.65 0.22 155);
+  --signal-glow: oklch(0.65 0.22 155 / 0.3);
+  --signal-grid: oklch(0.88 0.01 240);
+
+  /* v2.5.0: depth surfaces. `inset` sits BELOW the card (recessed wells, empty
+     states), `elevated` sits ABOVE it (raised panels) — a third and fourth step
+     in the background/card ladder so surfaces can stack without borders. */
+  --surface-inset: oklch(0.93 0.005 240);
+  --surface-elevated: oklch(0.99 0.003 240);
+}
+
+.dark {
+  /* Dark theme — primary, oscilloscope-inspired */
+  --background: oklch(0.12 0.015 240);
+  --foreground: oklch(0.90 0.01 160);
+  --card: oklch(0.16 0.015 240);
+  --card-foreground: oklch(0.90 0.01 160);
+  --popover: oklch(0.14 0.015 240);
+  --popover-foreground: oklch(0.90 0.01 160);
+  --primary: oklch(0.65 0.22 155);
+  --primary-foreground: oklch(0.12 0.015 155);
+  --secondary: oklch(0.22 0.015 240);
+  --secondary-foreground: oklch(0.85 0.01 240);
+  --muted: oklch(0.20 0.012 240);
+  /* M28: lightened L=0.60→0.70 so secondary `text-muted-foreground` clears WCAG
+     AA with margin even on the darkest surface (the near-black page background,
+     oklch 0.12, where 0.60 was 4.33:1 and 0.64 only 4.48:1). It only ever sits
+     on equal-or-darker surfaces in this theme, so this strictly raises contrast
+     everywhere it is used. */
+  --muted-foreground: oklch(0.70 0.01 240);
+  --accent: oklch(0.22 0.015 240);
+  --accent-foreground: oklch(0.85 0.01 240);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.005 25);
+  --border: oklch(0.26 0.015 240);
+  --input: oklch(0.26 0.015 240);
+  --ring: oklch(0.65 0.22 155);
+  --chart-1: oklch(0.65 0.22 155);
+  --chart-2: oklch(0.60 0.18 200);
+  --chart-3: oklch(0.70 0.18 80);
+  --chart-4: oklch(0.55 0.22 25);
+  --chart-5: oklch(0.65 0.18 280);
+
+  --status-good: oklch(0.65 0.22 145);
+  --status-warning: oklch(0.70 0.18 80);
+  --status-critical: oklch(0.60 0.22 25);
+  /* M41: LIGHTENED critical for contrast-safe TEXT (L 0.60→0.72). The base
+     critical is only ~3.98:1 as `text-status-critical` on the `bg-status-critical/
+     15` badge tint (WCAG AA fail, surfaced by the M41 M38 pattern-card axe scan)
+     and ~4.40:1 as a direct label on the dark card; `-strong` clears 4.5:1 with
+     margin (~6.6:1 on the badge tint, ~7.3:1 on the card) while leaving the solid
+     `--status-critical` fill (chart markers, NotificationBell count) untouched. */
+  --status-critical-strong: oklch(0.72 0.16 25);
+  /* M41: the dark theme's good green already clears AA as text on the card
+     (~6.60:1), so `-strong` aliases the base — a real per-theme token that keeps
+     the diagnostics good readouts consistent with the light darkened value. */
+  --status-good-strong: var(--status-good);
+
+  --signal-primary: oklch(0.65 0.22 155);
+  --signal-glow: oklch(0.65 0.22 155 / 0.4);
+  --signal-grid: oklch(0.22 0.015 240);
+
+  --surface-inset: oklch(0.10 0.015 240);
+  --surface-elevated: oklch(0.19 0.015 240);
+}
+
+.carbon {
+  /* Carbon & Copper theme — Space Grotesk / PCB inspired */
+  --background: oklch(0.14 0.00 0);
+  --foreground: oklch(0.90 0.02 45); /* pale copper */
+  --card: oklch(0.18 0.00 0);
+  --card-foreground: oklch(0.90 0.02 45);
+  --popover: oklch(0.16 0.00 0);
+  --popover-foreground: oklch(0.90 0.02 45);
+  /* M28: brightened L=0.60→0.64 so the copper clears WCAG AA as `text-primary`
+     on the near-black carbon background (was 4.45:1, just under 4.5). */
+  --primary: oklch(0.64 0.15 45); /* Copper */
+  --primary-foreground: oklch(0.10 0.00 0);
+  --secondary: oklch(0.22 0.01 45);
+  --secondary-foreground: oklch(0.85 0.02 45);
+  --muted: oklch(0.20 0.01 45);
+  --muted-foreground: oklch(0.65 0.04 45);
+  --accent: oklch(0.22 0.01 45);
+  --accent-foreground: oklch(0.85 0.02 45);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.005 25);
+  --border: oklch(0.40 0.10 45); /* Copper hairline traces */
+  --input: oklch(0.26 0.02 45);
+  --ring: oklch(0.64 0.15 45);
+  --chart-1: oklch(0.60 0.15 45);
+  --chart-2: oklch(0.50 0.10 80);
+  --chart-3: oklch(0.40 0.05 120);
+  --chart-4: oklch(0.55 0.22 25);
+  --chart-5: oklch(0.65 0.15 280);
+
+  --status-good: oklch(0.65 0.22 145);
+  --status-warning: oklch(0.70 0.18 80);
+  --status-critical: oklch(0.60 0.22 25);
+  /* M41: lightened critical BADGE TEXT (see .dark) — carbon shares the dark-tint
+     badge composite, so it takes the same text-only override; the solid fill is
+     unchanged. */
+  --status-critical-strong: oklch(0.72 0.16 25);
+  /* M41: carbon's good green clears AA as text on the card (~6.40:1), so `-strong`
+     aliases the base (real per-theme token, consistent with light/dark). */
+  --status-good-strong: var(--status-good);
+
+  --signal-primary: oklch(0.60 0.15 45);
+  --signal-glow: oklch(0.60 0.15 45 / 0.4);
+  --signal-grid: oklch(0.40 0.10 45);
+
+  --surface-inset: oklch(0.11 0.00 0);
+  --surface-elevated: oklch(0.21 0.00 0);
+
+  --radius: 0.25rem; /* sharper corners */
+}
+
+@theme inline {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-status-good: var(--status-good);
+  --color-status-good-strong: var(--status-good-strong);
+  --color-status-warning: var(--status-warning);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-strong: var(--status-critical-strong);
+  --color-signal-primary: var(--signal-primary);
+  --color-signal-glow: var(--signal-glow);
+  --color-signal-grid: var(--signal-grid);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-elevated: var(--surface-elevated);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .carbon body {
+    /* Carbon weave texture for the 'chrome' */
+    background-image: 
+      linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2)), 
+      linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2));
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  /* Visible keyboard focus states — SRS shared principle: clarity beats minimalism
+     for safety-relevant settings (failsafe, binding phrase) */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /* prefers-reduced-motion — SRS shared principle */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Signal Lab — entrance & interaction animations (v2.5.0)
+   All gated behind motion-safe: so prefers-reduced-motion is respected. */
+
+/* Entrance = MOTION ONLY, no opacity fade. Fading a card in means its text
+   spends the animation below AA contrast: axe measures 1.24–1.44:1 on the
+   DeviceStatusCard copy mid-fade and fails the e2e a11y gate (wifi.spec). The
+   rise reads as an entrance on its own and never dims a word of text.
+
+   The resting keyframe MUST end on `transform: none`, not `translateY(0)`: a
+   settled transform of any kind — even the identity matrix — makes the element a
+   containing block for `position: fixed` descendants, and this app renders
+   Dialog/Sheet inside Cards without portalling them. With `translateY(0)` here,
+   every modal opened from inside a Card is confined to that card's box. */
+@keyframes signal-rise {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes signal-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--color-signal-glow);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px var(--color-signal-glow);
+  }
+}
+
+/* Declared with `@utility`, NOT `@layer utilities` — in Tailwind v4 only
+   registered utilities compose with variants, so a plain `@layer utilities`
+   class silently emits nothing for `motion-safe:animate-signal-rise` (the
+   very gate these animations rely on). Verified against the built CSS. */
+/* Longhands, not the `animation` shorthand: the shorthand resets every omitted
+   longhand, so it would zero out the `animation-delay` set by `stagger-*` (which
+   Tailwind emits as a separate rule at equal specificity) and the stagger would
+   silently do nothing.
+   `backwards`, not `both`: a forwards fill would leave the `to` keyframe applied
+   after the run. Paired with a `transform: none` resting keyframe this is
+   belt-and-braces — the settled Card keeps no transform, so it never becomes a
+   containing block for the fixed-position Dialog/Sheet mounted inside it. */
+@utility animate-signal-rise {
+  animation-name: signal-rise;
+  animation-duration: 300ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: backwards;
+}
+
+@utility animate-signal-glow-pulse {
+  animation: signal-glow-pulse 2s ease-in-out infinite;
+}
+
+@utility card-hover-lift {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px oklch(0 0 0 / 0.2);
+  }
+}
+
+@utility card-accent-top {
+  border-top: 2px solid var(--color-signal-primary);
+}
+
+/* Stagger delays for sequential card mounting. */
+@utility stagger-1 {
+  animation-delay: 50ms;
+}
+
+@utility stagger-2 {
+  animation-delay: 100ms;
+}
+
+@utility stagger-3 {
+  animation-delay: 150ms;
+}
+
+@utility stagger-4 {
+  animation-delay: 200ms;
+}
+
+@utility stagger-5 {
+  animation-delay: 250ms;
+}

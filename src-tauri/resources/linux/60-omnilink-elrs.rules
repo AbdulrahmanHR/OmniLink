@@ -1,0 +1,42 @@
+# OmniLink — udev rules for ExpressLRS / serial-flashing hardware (NFR-PLAT-04)
+#
+# Grants a normal (non-root) desktop user access to the USB-serial bridges that
+# ExpressLRS transmitters, receivers and flashing dongles present, so OmniLink
+# can open /dev/ttyUSB* and /dev/ttyACM* without "Permission denied" and without
+# adding the user to the `dialout` group by hand.
+#
+# Each matched device is set to mode 0660, group `dialout`, and tagged
+# `uaccess` — the latter lets systemd-logind grant the *currently logged-in*
+# local user an ACL on the node, which works even on distros that don't use the
+# `dialout` group. The two mechanisms are complementary; shipping both keeps the
+# rule robust across desktops.
+#
+# INSTALL (AppImage / manual — the .deb installs this automatically):
+#   sudo cp 60-omnilink-elrs.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Then replug the device. To confirm a device matched:
+#   udevadm info -a -n /dev/ttyUSB0 | grep -E 'idVendor|idProduct'
+#
+# The four covered bridge families are the well-known ELRS ones. Match on the
+# tty device and walk up to the parent USB interface for the VID/PID attrs, the
+# standard idiom for USB-serial udev rules.
+
+# Silicon Labs CP210x (CP2102/CP2104) — most common ELRS TX/RX flashing bridge.
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0660", GROUP="dialout", TAG+="uaccess"
+
+# WCH CH340 / CH341 — cheap USB-serial found on many ELRS boards and dongles.
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE="0660", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5523", MODE="0660", GROUP="dialout", TAG+="uaccess"
+
+# FTDI FT-series — classic USB-serial adapters. Each variant has its own PID:
+#   FT232R / FT232RL / FT245R  0403:6001  (most common)
+#   FT232H                     0403:6014
+#   FT230X / FT231X            0403:6015
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0660", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", MODE="0660", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", MODE="0660", GROUP="dialout", TAG+="uaccess"
+
+# Espressif native-USB — ESP32-S2/S3/C3 that expose USB-CDC directly (no bridge
+# chip). VID 303a covers the whole family; match the vendor so every current and
+# future Espressif native-USB PID (e.g. 1001 = USB-JTAG/serial, 0002) is caught.
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="303a", MODE="0660", GROUP="dialout", TAG+="uaccess"

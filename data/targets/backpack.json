@@ -1,0 +1,59 @@
+{
+  "_comment": "Curated ExpressLRS Backpack flash targets (M19, FR-FLASH-11*). Consumed by src/lib/backpack.ts::parseBackpackTargets. `kind` MUST be exactly \"tx-backpack\" or \"vrx-backpack\". `repoAsset` names the firmware binary fetched from https://github.com/ExpressLRS/Backpack releases.",
+  "targets": [
+    {
+      "id": "tx-backpack-esp",
+      "name": "Generic ESP TX Backpack",
+      "kind": "tx-backpack",
+      "repoAsset": "Generic_TX_Backpack_via_BetaflightPassthrough.bin"
+    },
+    {
+      "id": "tx-backpack-esp-wifi",
+      "name": "Generic ESP TX Backpack (WiFi)",
+      "kind": "tx-backpack",
+      "repoAsset": "Generic_TX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "tx-backpack-radiomaster-bandit",
+      "name": "RadioMaster Bandit Internal TX Backpack",
+      "kind": "tx-backpack",
+      "repoAsset": "RadioMaster_Bandit_TX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "tx-backpack-radiomaster-ranger",
+      "name": "RadioMaster Ranger TX Backpack",
+      "kind": "tx-backpack",
+      "repoAsset": "RadioMaster_Ranger_TX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "tx-backpack-happymodel-es24tx",
+      "name": "HappyModel ES24TX Pro TX Backpack",
+      "kind": "tx-backpack",
+      "repoAsset": "HappyModel_ES24TX_Pro_TX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "vrx-backpack-rapidfire",
+      "name": "ImmersionRC rapidFIRE VRX Backpack",
+      "kind": "vrx-backpack",
+      "repoAsset": "ImmersionRC_rapidFIRE_VRX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "vrx-backpack-rx5808",
+      "name": "Generic RX5808 VRX Backpack",
+      "kind": "vrx-backpack",
+      "repoAsset": "Generic_RX5808_VRX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "vrx-backpack-fusion",
+      "name": "Skyzone / Orqa Fusion VRX Backpack",
+      "kind": "vrx-backpack",
+      "repoAsset": "Fusion_VRX_Backpack_via_WIFI.bin"
+    },
+    {
+      "id": "vrx-backpack-steadyview",
+      "name": "SteadyView VRX Backpack",
+      "kind": "vrx-backpack",
+      "repoAsset": "SteadyView_VRX_Backpack_via_WIFI.bin"
+    }
+  ]
+}

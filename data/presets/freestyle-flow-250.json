@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-freestyle-flow-250",
+  "name": "Freestyle Flow 250Hz",
+  "description": "Balanced 250Hz profile for freestyle flying — smooth feel with solid range and telemetry headroom.",
+  "category": "freestyle",
+  "tags": ["freestyle", "5-inch", "balanced", "250hz"],
+  "firmwareVersion": "3.4.1",
+  "settings": {
+    "packetRate": 250,
+    "telemetryRatio": "1:32",
+    "switchMode": "Wide",
+    "txPower": 250,
+    "dynamicPower": true,
+    "modelMatch": false,
+    "modelId": 0,
+    "bindingPhrase": "freestyle-flow",
+    "antennaMode": "Diversity",
+    "fanThreshold": 250
+  }
+}

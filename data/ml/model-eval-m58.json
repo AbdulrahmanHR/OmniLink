@@ -1,0 +1,2817 @@
+{
+  "schemaVersion": "1.0.0",
+  "mlDatasetSchemaVersion": "1.0.0",
+  "model": {
+    "modelId": "m58-isolation-forest",
+    "schemaVersion": "1.0.0",
+    "hyperparams": {
+      "trees": 100,
+      "subsampleSize": 7,
+      "heightLimit": 3,
+      "seed": 2551,
+      "trainedOnClass": "healthy"
+    },
+    "training": {
+      "rowCount": 7,
+      "offeredRowCount": 21,
+      "constantFeatures": [
+        "lqFracBelowLow",
+        "lqFracZero",
+        "rssiFracBelowFloor",
+        "txPowerRangeMw",
+        "txPowerFracAtTopStep",
+        "packetRateChangeRate",
+        "findingCountInfo",
+        "findingCountWarning",
+        "findingCountCritical",
+        "maxFindingConfidence",
+        "findingCoverageFrac",
+        "ruleLqCollapseCount",
+        "ruleRssiFloorCount",
+        "ruleSnrNoiseCount",
+        "rulePacketInstabilityCount",
+        "ruleTxPowerSaturationCount",
+        "patternRepeatedLqDrops",
+        "patternHeadingDegradation",
+        "patternPowerPacketLinkEvents",
+        "patternMaxConfidence"
+      ],
+      "splittableFeatureCount": 23
+    },
+    "threshold": 0.553897,
+    "pathNorm": 3.023665,
+    "forestArtifact": "data/ml/model-m58.json"
+  },
+  "corpus": {
+    "manifestVersion": "1.0.0",
+    "sessionCount": 36,
+    "fingerprint": "9b0a0e76e376d11c",
+    "baselineFingerprint": "9b0a0e76e376d11c",
+    "split": {
+      "seed": 2551,
+      "ratios": {
+        "train": 0.6,
+        "val": 0.2,
+        "test": 0.2
+      },
+      "train": 21,
+      "val": 6,
+      "test": 9
+    }
+  },
+  "honesty": {
+    "indicativeNotAGatePass": true,
+    "clearedM56Gate": false,
+    "fpCeilingClearable": false,
+    "corpusSessions": 36,
+    "d21RequiredSessionsPerClass": 300,
+    "d21Met": false,
+    "trainingRows": 7,
+    "heldOutHealthySessions": 3,
+    "heldOutFpRateQuantumPp": 33.333333,
+    "notes": [
+      "THE MODEL DOES NOT CLEAR THE M56 GATE, AND NO MODEL CAN. D25's false-positive ceiling is a STRICT '<' against the measured v2.0 baseline, whose FP rate on the held-out test split is 0.000. Nothing is strictly below zero. clearsM56Gate() returns false for this model, and it returns false for a flawless oracle too (asserted in tests/unit/ml/baseline.test.ts).",
+      "The v2.0 baseline's 1.000 precision / 1.000 recall / 0.000 FP is a CEILING, not field performance: the 36 fixtures were authored alongside the v2.0 rules and manifest-acceptance.test.ts asserts the engine reproduces them. There is nothing to beat, and no headroom to beat it in.",
+      "The one-class model was fit to 7 healthy sessions in 43 dimensions. That is not a training set; it is a handful of points. D21 asks for 300 labeled sessions PER CLASS.",
+      "The held-out test split has 3 healthy negatives, so its false-positive rate quantises in 33.333333-point steps: the only values it can take are 0/3, 1/3, 2/3, 3/3. A number computed on three negatives is not a measurement.",
+      "The forest is structurally blind along 20 of the 43 features, because they are constant across the healthy training rows and an isolation tree can only cut a feature that varies. Every v2.0 finding count and pattern flag is among them. The model detects faults through the continuous channel statistics and through nothing else.",
+      "Per-finding metrics are NOT computed for the model. It emits one session-level score, not findings with rule ids and evidence windows; matching that single verdict against the corpus's five rule ids would manufacture a correspondence the model does not have."
+    ]
+  },
+  "heldOutTestSplit": {
+    "sessionCount": 9,
+    "negativeSessions": 3,
+    "positiveSessions": 6,
+    "fpRateQuantumPp": 33.333333,
+    "gateBaseline": {
+      "baselineFpRate": 0,
+      "baselineRecall": 1
+    },
+    "model": {
+      "schemaVersion": "1.0.0",
+      "perSession": {
+        "granularity": "per-session",
+        "counts": {
+          "truePositives": 3,
+          "falsePositives": 1,
+          "trueNegatives": 2,
+          "falseNegatives": 3
+        },
+        "positiveSessions": 6,
+        "negativeSessions": 3,
+        "precision": {
+          "kind": "rate",
+          "value": 0.75,
+          "numerator": 3,
+          "denominator": 4
+        },
+        "recall": {
+          "kind": "rate",
+          "value": 0.5,
+          "numerator": 3,
+          "denominator": 6
+        },
+        "falsePositiveRate": {
+          "kind": "rate",
+          "value": 0.333333,
+          "numerator": 1,
+          "denominator": 3
+        },
+        "fpRateQuantumPp": 33.333333
+      },
+      "perFinding": null,
+      "leadTime": null,
+      "gateEvaluated": true,
+      "passes": false,
+      "limitations": [
+        {
+          "code": "class-below-d21-minimum",
+          "label": "antennaSuspicion",
+          "detail": {
+            "total": 1,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "failsafe",
+          "detail": {
+            "total": 2,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "healthy",
+          "detail": {
+            "total": 3,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "warning",
+          "detail": {
+            "total": 2,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "wiringSuspicion",
+          "detail": {
+            "total": 1,
+            "required": 300
+          }
+        },
+        {
+          "code": "fp-rate-quantised",
+          "label": "corpus",
+          "detail": {
+            "negativeSessions": 3,
+            "quantumPp": 33.333333,
+            "required": 60
+          }
+        },
+        {
+          "code": "per-finding-not-scored",
+          "label": "corpus",
+          "detail": {
+            "expectedFindings": 13
+          }
+        }
+      ],
+      "cases": [
+        {
+          "sessionId": "antenna/antenna-wide-arc-05.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "failsafe/failsafe-long-tail-04.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-single-01.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-edge-comfort-10.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "healthy/healthy-mid-range-03.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-lq-dips-01.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-mixed-05.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-loose-antenna-05.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        }
+      ]
+    },
+    "passes": false,
+    "results": [
+      {
+        "sessionId": "antenna/antenna-wide-arc-05.csv",
+        "label": "antennaSuspicion",
+        "score": 0.537917,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqP05",
+            "contribution": 0.079917
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.059736
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.052378
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 196,
+          "endIndex": 220
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-long-tail-04.csv",
+        "label": "failsafe",
+        "score": 0.565597,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 302,
+          "endIndex": 326
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-single-01.csv",
+        "label": "failsafe",
+        "score": 0.553521,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 149,
+          "endIndex": 173
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+        "label": "healthy",
+        "score": 0.530749,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqMean",
+            "contribution": 0.082616
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.07189
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.06081
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.050304
+          },
+          {
+            "feature": "snrMean",
+            "contribution": 0.043395
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 170,
+          "endIndex": 194
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-edge-comfort-10.csv",
+        "label": "healthy",
+        "score": 0.558354,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.079446
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.05553
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.053828
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 399
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-mid-range-03.csv",
+        "label": "healthy",
+        "score": 0.484403,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "rssi1Std",
+            "contribution": 0.038347
+          },
+          {
+            "feature": "headingSectorRssiSpreadDb",
+            "contribution": 0.032159
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.032143
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.020186
+          },
+          {
+            "feature": "snrMin",
+            "contribution": 0.020036
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 75,
+          "endIndex": 99
+        }
+      },
+      {
+        "sessionId": "warning/warning-lq-dips-01.csv",
+        "label": "warning",
+        "score": 0.537378,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.084202
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 79,
+          "endIndex": 103
+        }
+      },
+      {
+        "sessionId": "warning/warning-mixed-05.csv",
+        "label": "warning",
+        "score": 0.560358,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 330,
+          "endIndex": 354
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-loose-antenna-05.csv",
+        "label": "wiringSuspicion",
+        "score": 0.557985,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.078433
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.068858
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 24,
+          "endIndex": 48
+        }
+      }
+    ]
+  },
+  "wholeCorpus": {
+    "sessionCount": 36,
+    "negativeSessions": 12,
+    "positiveSessions": 24,
+    "fpRateQuantumPp": 8.333333,
+    "gateBaseline": {
+      "baselineFpRate": 0,
+      "baselineRecall": 1
+    },
+    "model": {
+      "schemaVersion": "1.0.0",
+      "perSession": {
+        "granularity": "per-session",
+        "counts": {
+          "truePositives": 16,
+          "falsePositives": 2,
+          "trueNegatives": 10,
+          "falseNegatives": 8
+        },
+        "positiveSessions": 24,
+        "negativeSessions": 12,
+        "precision": {
+          "kind": "rate",
+          "value": 0.888889,
+          "numerator": 16,
+          "denominator": 18
+        },
+        "recall": {
+          "kind": "rate",
+          "value": 0.666667,
+          "numerator": 16,
+          "denominator": 24
+        },
+        "falsePositiveRate": {
+          "kind": "rate",
+          "value": 0.166667,
+          "numerator": 2,
+          "denominator": 12
+        },
+        "fpRateQuantumPp": 8.333333
+      },
+      "perFinding": null,
+      "leadTime": null,
+      "gateEvaluated": true,
+      "passes": false,
+      "limitations": [
+        {
+          "code": "class-below-d21-minimum",
+          "label": "antennaSuspicion",
+          "detail": {
+            "total": 5,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "failsafe",
+          "detail": {
+            "total": 7,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "healthy",
+          "detail": {
+            "total": 12,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "warning",
+          "detail": {
+            "total": 7,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "wiringSuspicion",
+          "detail": {
+            "total": 5,
+            "required": 300
+          }
+        },
+        {
+          "code": "fp-rate-quantised",
+          "label": "corpus",
+          "detail": {
+            "negativeSessions": 12,
+            "quantumPp": 8.333333,
+            "required": 60
+          }
+        },
+        {
+          "code": "per-finding-not-scored",
+          "label": "corpus",
+          "detail": {
+            "expectedFindings": 67
+          }
+        }
+      ],
+      "cases": [
+        {
+          "sessionId": "antenna/antenna-narrow-null-04.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "antenna/antenna-null-deep-02.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "antenna/antenna-null-mild-01.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "antenna/antenna-sector-rear-03.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "antenna/antenna-wide-arc-05.csv",
+          "label": "antennaSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "failsafe/failsafe-after-warning-05.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-deep-03.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-early-07.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-long-tail-04.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-single-01.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "failsafe/failsafe-tx-max-06.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-clean-cruise-01.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-climb-06.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-cruise-09.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-edge-comfort-10.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "healthy/healthy-hover-08.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-long-cruise-04.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "healthy/healthy-low-rate-05.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-mid-range-03.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-short-hop-11.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-strong-link-02.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-touring-12.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-lq-dips-01.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-marginal-rssi-04.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "warning/warning-mixed-05.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "warning/warning-packet-jitter-03.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "warning/warning-recurring-dips-07.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "warning/warning-snr-noise-02.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-tx-saturation-06.csv",
+          "label": "warning",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-intermittent-01.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-jitter-03.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": false,
+          "outcome": "falseNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "wiring/wiring-loose-antenna-05.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        }
+      ]
+    },
+    "passes": false,
+    "results": [
+      {
+        "sessionId": "antenna/antenna-narrow-null-04.csv",
+        "label": "antennaSuspicion",
+        "score": 0.551101,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.052378
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 7,
+          "endIndex": 31
+        }
+      },
+      {
+        "sessionId": "antenna/antenna-null-deep-02.csv",
+        "label": "antennaSuspicion",
+        "score": 0.560358,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 205,
+          "endIndex": 229
+        }
+      },
+      {
+        "sessionId": "antenna/antenna-null-mild-01.csv",
+        "label": "antennaSuspicion",
+        "score": 0.532935,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqP05",
+            "contribution": 0.079917
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "snrMean",
+            "contribution": 0.042199
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 188,
+          "endIndex": 212
+        }
+      },
+      {
+        "sessionId": "antenna/antenna-sector-rear-03.csv",
+        "label": "antennaSuspicion",
+        "score": 0.526692,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqP05",
+            "contribution": 0.079917
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "rssi1Std",
+            "contribution": 0.039798
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 210,
+          "endIndex": 234
+        }
+      },
+      {
+        "sessionId": "antenna/antenna-wide-arc-05.csv",
+        "label": "antennaSuspicion",
+        "score": 0.537917,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqP05",
+            "contribution": 0.079917
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.059736
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.052378
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 196,
+          "endIndex": 220
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-after-warning-05.csv",
+        "label": "failsafe",
+        "score": 0.564225,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.079446
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "rssi2Mean",
+            "contribution": 0.05781
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 399
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-deep-03.csv",
+        "label": "failsafe",
+        "score": 0.562742,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.05813
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 136,
+          "endIndex": 160
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-double-02.csv",
+        "label": "failsafe",
+        "score": 0.568119,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.079446
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.078821
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "rssi2Mean",
+            "contribution": 0.05781
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 419
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-early-07.csv",
+        "label": "failsafe",
+        "score": 0.559151,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 40,
+          "endIndex": 64
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-long-tail-04.csv",
+        "label": "failsafe",
+        "score": 0.565597,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 302,
+          "endIndex": 326
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-single-01.csv",
+        "label": "failsafe",
+        "score": 0.553521,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 149,
+          "endIndex": 173
+        }
+      },
+      {
+        "sessionId": "failsafe/failsafe-tx-max-06.csv",
+        "label": "failsafe",
+        "score": 0.559901,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 150,
+          "endIndex": 174
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+        "label": "healthy",
+        "score": 0.530749,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqMean",
+            "contribution": 0.082616
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.07189
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.06081
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.050304
+          },
+          {
+            "feature": "snrMean",
+            "contribution": 0.043395
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 170,
+          "endIndex": 194
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-clean-cruise-01.csv",
+        "label": "healthy",
+        "score": 0.431754,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "headingSectorRssiSpreadDb",
+            "contribution": 0.031568
+          },
+          {
+            "feature": "rssiImbalanceMax",
+            "contribution": 0.02098
+          },
+          {
+            "feature": "lqFracBelowLow",
+            "contribution": 0
+          },
+          {
+            "feature": "lqFracZero",
+            "contribution": 0
+          },
+          {
+            "feature": "rssiFracBelowFloor",
+            "contribution": 0
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 74,
+          "endIndex": 98
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-climb-06.csv",
+        "label": "healthy",
+        "score": 0.44071,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.083343
+          },
+          {
+            "feature": "rssi1Std",
+            "contribution": 0.025701
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.005076
+          },
+          {
+            "feature": "snrStd",
+            "contribution": 0.002499
+          },
+          {
+            "feature": "lqFracBelowLow",
+            "contribution": 0
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 273,
+          "endIndex": 297
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-cruise-09.csv",
+        "label": "healthy",
+        "score": 0.463105,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.127101
+          },
+          {
+            "feature": "packetRateMean",
+            "contribution": 0.04257
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.016629
+          },
+          {
+            "feature": "headingSectorRssiSpreadDb",
+            "contribution": 0.013896
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.007662
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 244,
+          "endIndex": 268
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-edge-comfort-10.csv",
+        "label": "healthy",
+        "score": 0.558354,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.079446
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.05553
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.053828
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 399
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-hover-08.csv",
+        "label": "healthy",
+        "score": 0.510254,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "txPowerMean",
+            "contribution": 0.097167
+          },
+          {
+            "feature": "txPowerMax",
+            "contribution": 0.091923
+          },
+          {
+            "feature": "lqMaxStepDrop",
+            "contribution": 0.090874
+          },
+          {
+            "feature": "rssiImbalanceMax",
+            "contribution": 0.050662
+          },
+          {
+            "feature": "healthScore",
+            "contribution": 0.044907
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 24
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-long-cruise-04.csv",
+        "label": "healthy",
+        "score": 0.559265,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.087962
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.078821
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.05921
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 459
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-low-rate-05.csv",
+        "label": "healthy",
+        "score": 0.449378,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "headingSectorRssiSpreadDb",
+            "contribution": 0.030675
+          },
+          {
+            "feature": "rssi1Std",
+            "contribution": 0.029749
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.020136
+          },
+          {
+            "feature": "lqFracBelowLow",
+            "contribution": 0
+          },
+          {
+            "feature": "lqFracZero",
+            "contribution": 0
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 74,
+          "endIndex": 98
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-mid-range-03.csv",
+        "label": "healthy",
+        "score": 0.484403,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "rssi1Std",
+            "contribution": 0.038347
+          },
+          {
+            "feature": "headingSectorRssiSpreadDb",
+            "contribution": 0.032159
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.032143
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.020186
+          },
+          {
+            "feature": "snrMin",
+            "contribution": 0.020036
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 75,
+          "endIndex": 99
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-short-hop-11.csv",
+        "label": "healthy",
+        "score": 0.552665,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqMin",
+            "contribution": 0.0697
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.068586
+          },
+          {
+            "feature": "packetRateMean",
+            "contribution": 0.059364
+          },
+          {
+            "feature": "txPowerMean",
+            "contribution": 0.058553
+          },
+          {
+            "feature": "snrMean",
+            "contribution": 0.057589
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 59,
+          "endIndex": 83
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-strong-link-02.csv",
+        "label": "healthy",
+        "score": 0.53981,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "rssi2Min",
+            "contribution": 0.09481
+          },
+          {
+            "feature": "lqMin",
+            "contribution": 0.077626
+          },
+          {
+            "feature": "txPowerMax",
+            "contribution": 0.06634
+          },
+          {
+            "feature": "packetRateMean",
+            "contribution": 0.059364
+          },
+          {
+            "feature": "rssiBestMean",
+            "contribution": 0.053293
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 214,
+          "endIndex": 238
+        }
+      },
+      {
+        "sessionId": "healthy/healthy-touring-12.csv",
+        "label": "healthy",
+        "score": 0.553897,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "durationMs",
+            "contribution": 0.087962
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.082616
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.078821
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "sampleCount",
+            "contribution": 0.063691
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 0,
+          "endIndex": 439
+        }
+      },
+      {
+        "sessionId": "warning/warning-lq-dips-01.csv",
+        "label": "warning",
+        "score": 0.537378,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.084202
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 79,
+          "endIndex": 103
+        }
+      },
+      {
+        "sessionId": "warning/warning-marginal-rssi-04.csv",
+        "label": "warning",
+        "score": 0.560168,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.07469
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 149,
+          "endIndex": 173
+        }
+      },
+      {
+        "sessionId": "warning/warning-mixed-05.csv",
+        "label": "warning",
+        "score": 0.560358,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.069326
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 330,
+          "endIndex": 354
+        }
+      },
+      {
+        "sessionId": "warning/warning-packet-jitter-03.csv",
+        "label": "warning",
+        "score": 0.554716,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi2Mean",
+            "contribution": 0.05781
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 73,
+          "endIndex": 97
+        }
+      },
+      {
+        "sessionId": "warning/warning-recurring-dips-07.csv",
+        "label": "warning",
+        "score": 0.559075,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.084202
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.082616
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.068821
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.062143
+          },
+          {
+            "feature": "rssi2Mean",
+            "contribution": 0.05781
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 58,
+          "endIndex": 82
+        }
+      },
+      {
+        "sessionId": "warning/warning-snr-noise-02.csv",
+        "label": "warning",
+        "score": 0.548133,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.073006
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.066174
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 204,
+          "endIndex": 228
+        }
+      },
+      {
+        "sessionId": "warning/warning-tx-saturation-06.csv",
+        "label": "warning",
+        "score": 0.559901,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "lqStd",
+            "contribution": 0.080932
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.0714
+          },
+          {
+            "feature": "rssi1Mean",
+            "contribution": 0.070895
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.069731
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 74,
+          "endIndex": 98
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-asymmetric-02.csv",
+        "label": "wiringSuspicion",
+        "score": 0.570429,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.077843
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "rssi2Mean",
+            "contribution": 0.059293
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 27,
+          "endIndex": 51
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-intermittent-01.csv",
+        "label": "wiringSuspicion",
+        "score": 0.557985,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.078433
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.068858
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 30,
+          "endIndex": 54
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-jitter-03.csv",
+        "label": "wiringSuspicion",
+        "score": 0.546517,
+        "flagged": false,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.085583
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.078433
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.060932
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 30,
+          "endIndex": 54
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-loose-antenna-05.csv",
+        "label": "wiringSuspicion",
+        "score": 0.557985,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.078433
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.077657
+          },
+          {
+            "feature": "lqStd",
+            "contribution": 0.068858
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 24,
+          "endIndex": 48
+        }
+      },
+      {
+        "sessionId": "wiring/wiring-multi-drop-04.csv",
+        "label": "wiringSuspicion",
+        "score": 0.565982,
+        "flagged": true,
+        "topFeatures": [
+          {
+            "feature": "rssiImbalanceMean",
+            "contribution": 0.125027
+          },
+          {
+            "feature": "lqMean",
+            "contribution": 0.085583
+          },
+          {
+            "feature": "durationMs",
+            "contribution": 0.0742
+          },
+          {
+            "feature": "rssi1Min",
+            "contribution": 0.064217
+          },
+          {
+            "feature": "lqP05",
+            "contribution": 0.059293
+          }
+        ],
+        "evidenceWindow": {
+          "startIndex": 29,
+          "endIndex": 53
+        }
+      }
+    ]
+  },
+  "featureImportance": [
+    {
+      "subject": "allFaulty",
+      "sessionCount": 24,
+      "top": [
+        {
+          "feature": "lqMean",
+          "contribution": 0.073505
+        },
+        {
+          "feature": "lqStd",
+          "contribution": 0.071487
+        },
+        {
+          "feature": "lqP05",
+          "contribution": 0.06962
+        },
+        {
+          "feature": "rssi1Min",
+          "contribution": 0.0638
+        },
+        {
+          "feature": "rssi1Mean",
+          "contribution": 0.050524
+        },
+        {
+          "feature": "rssi2Mean",
+          "contribution": 0.049633
+        },
+        {
+          "feature": "snrMean",
+          "contribution": 0.03907
+        },
+        {
+          "feature": "rssi2Min",
+          "contribution": 0.032564
+        }
+      ]
+    },
+    {
+      "subject": "healthy",
+      "sessionCount": 12,
+      "top": [
+        {
+          "feature": "headingSectorRssiSpreadDb",
+          "contribution": 0.021376
+        },
+        {
+          "feature": "lqMean",
+          "contribution": 0.014724
+        },
+        {
+          "feature": "snrMin",
+          "contribution": 0.012295
+        },
+        {
+          "feature": "rssi1Mean",
+          "contribution": 0.010207
+        },
+        {
+          "feature": "snrMean",
+          "contribution": 0.008634
+        }
+      ]
+    },
+    {
+      "subject": "warning",
+      "sessionCount": 7,
+      "top": [
+        {
+          "feature": "lqStd",
+          "contribution": 0.078469
+        },
+        {
+          "feature": "lqMean",
+          "contribution": 0.07248
+        },
+        {
+          "feature": "rssi1Mean",
+          "contribution": 0.070599
+        },
+        {
+          "feature": "lqP05",
+          "contribution": 0.067695
+        },
+        {
+          "feature": "rssi1Min",
+          "contribution": 0.062788
+        }
+      ]
+    },
+    {
+      "subject": "failsafe",
+      "sessionCount": 7,
+      "top": [
+        {
+          "feature": "lqStd",
+          "contribution": 0.073791
+        },
+        {
+          "feature": "rssi1Mean",
+          "contribution": 0.072027
+        },
+        {
+          "feature": "lqMean",
+          "contribution": 0.069731
+        },
+        {
+          "feature": "rssi1Min",
+          "contribution": 0.064217
+        },
+        {
+          "feature": "lqP05",
+          "contribution": 0.063739
+        }
+      ]
+    },
+    {
+      "subject": "wiringSuspicion",
+      "sessionCount": 5,
+      "top": [
+        {
+          "feature": "rssiImbalanceMean",
+          "contribution": 0.125027
+        },
+        {
+          "feature": "lqMean",
+          "contribution": 0.080827
+        },
+        {
+          "feature": "lqP05",
+          "contribution": 0.074487
+        },
+        {
+          "feature": "rssi1Min",
+          "contribution": 0.064217
+        },
+        {
+          "feature": "lqStd",
+          "contribution": 0.05962
+        }
+      ]
+    },
+    {
+      "subject": "antennaSuspicion",
+      "sessionCount": 5,
+      "top": [
+        {
+          "feature": "lqP05",
+          "contribution": 0.075681
+        },
+        {
+          "feature": "lqMean",
+          "contribution": 0.072901
+        },
+        {
+          "feature": "lqStd",
+          "contribution": 0.070352
+        },
+        {
+          "feature": "rssi1Min",
+          "contribution": 0.064217
+        },
+        {
+          "feature": "rssi1Mean",
+          "contribution": 0.041185
+        }
+      ]
+    }
+  ],
+  "earlyWarning": {
+    "protocol": {
+      "strideSamples": 5,
+      "strideMs": 200,
+      "horizonBoundedMs": 2000,
+      "note": "Both detectors are replayed over the SAME prefixes of the SAME sessions: at each 200 ms step the model and evaluateSession() see exactly the samples that had arrived, and each detector's emission time is the first prefix at which it says anything. The rule engine is given the same chance to speak early that the model is; crediting a prefix-scored model against a baseline held to zero predictions would compare a detector that was asked with one that was not."
+    },
+    "eventCount": 17,
+    "model": {
+      "warnedSessions": 30,
+      "healthyFlaggedAtSomePrefix": 6,
+      "flaggedAtPrefixButNotOnFullSession": 12,
+      "leadTimeUnbounded": {
+        "targetMs": 2000,
+        "horizonMs": null,
+        "eventCount": 17,
+        "predictedCount": 12,
+        "lateCount": 1,
+        "missedCount": 4,
+        "coverage": 0.705882,
+        "medianLeadMs": 4920,
+        "p25LeadMs": 3440,
+        "p75LeadMs": 6200,
+        "minLeadMs": 520,
+        "maxLeadMs": 11920,
+        "meetsTargetMedian": true,
+        "cases": [
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "onsetMs": 9680,
+            "outcome": "predicted",
+            "leadMs": 9520
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "onsetMs": 5680,
+            "outcome": "predicted",
+            "leadMs": 5520
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 4480,
+            "outcome": "predicted",
+            "leadMs": 4320
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 11280,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "onsetMs": 1680,
+            "outcome": "predicted",
+            "leadMs": 520
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "onsetMs": 12080,
+            "outcome": "predicted",
+            "leadMs": 11920
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "onsetMs": 6080,
+            "outcome": "predicted",
+            "leadMs": 5920
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "onsetMs": 6080,
+            "outcome": "predicted",
+            "leadMs": 5920
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 3600,
+            "outcome": "predicted",
+            "leadMs": 3440
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 9200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "onsetMs": 5200,
+            "outcome": "predicted",
+            "leadMs": 1040
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "onsetMs": 6400,
+            "outcome": "predicted",
+            "leadMs": 3640
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "onsetMs": 7200,
+            "outcome": "predicted",
+            "leadMs": 7040
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 2800,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 6400,
+            "outcome": "predicted",
+            "leadMs": 3440
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 10000,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 13200,
+            "outcome": "missed",
+            "leadMs": null
+          }
+        ]
+      },
+      "leadTimeBounded": {
+        "targetMs": 2000,
+        "horizonMs": 2000,
+        "eventCount": 17,
+        "predictedCount": 2,
+        "lateCount": 1,
+        "missedCount": 14,
+        "coverage": 0.117647,
+        "medianLeadMs": 780,
+        "p25LeadMs": 650,
+        "p75LeadMs": 910,
+        "minLeadMs": 520,
+        "maxLeadMs": 1040,
+        "meetsTargetMedian": false,
+        "cases": [
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "onsetMs": 9680,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "onsetMs": 5680,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 4480,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 11280,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "onsetMs": 1680,
+            "outcome": "predicted",
+            "leadMs": 520
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "onsetMs": 12080,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "onsetMs": 6080,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "onsetMs": 6080,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 3600,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 9200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "onsetMs": 5200,
+            "outcome": "predicted",
+            "leadMs": 1040
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "onsetMs": 6400,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "onsetMs": 7200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 2800,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 6400,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 10000,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 13200,
+            "outcome": "missed",
+            "leadMs": null
+          }
+        ]
+      }
+    },
+    "ruleEngine": {
+      "warnedSessions": 24,
+      "healthyFlaggedAtSomePrefix": 0,
+      "flaggedAtPrefixButNotOnFullSession": 0,
+      "leadTimeUnbounded": {
+        "targetMs": 2000,
+        "horizonMs": null,
+        "eventCount": 17,
+        "predictedCount": 8,
+        "lateCount": 7,
+        "missedCount": 2,
+        "coverage": 0.470588,
+        "medianLeadMs": 4980,
+        "p25LeadMs": 3590,
+        "p75LeadMs": 5350,
+        "minLeadMs": 2840,
+        "maxLeadMs": 6720,
+        "meetsTargetMedian": true,
+        "cases": [
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "onsetMs": 9680,
+            "outcome": "predicted",
+            "leadMs": 4720
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "onsetMs": 5680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 4480,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 11280,
+            "outcome": "predicted",
+            "leadMs": 6720
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "onsetMs": 1680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "onsetMs": 12080,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "onsetMs": 6080,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "onsetMs": 6080,
+            "outcome": "predicted",
+            "leadMs": 5320
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 3600,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 9200,
+            "outcome": "predicted",
+            "leadMs": 5440
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "onsetMs": 5200,
+            "outcome": "predicted",
+            "leadMs": 3640
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "onsetMs": 6400,
+            "outcome": "predicted",
+            "leadMs": 5240
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "onsetMs": 7200,
+            "outcome": "predicted",
+            "leadMs": 2840
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 2800,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 6400,
+            "outcome": "predicted",
+            "leadMs": 3440
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 10000,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 13200,
+            "outcome": "missed",
+            "leadMs": null
+          }
+        ]
+      },
+      "leadTimeBounded": {
+        "targetMs": 2000,
+        "horizonMs": 2000,
+        "eventCount": 17,
+        "predictedCount": 0,
+        "lateCount": 7,
+        "missedCount": 10,
+        "coverage": 0,
+        "medianLeadMs": null,
+        "p25LeadMs": null,
+        "p75LeadMs": null,
+        "minLeadMs": null,
+        "maxLeadMs": null,
+        "meetsTargetMedian": false,
+        "cases": [
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "onsetMs": 9680,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "onsetMs": 5680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 4480,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 11280,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "onsetMs": 1680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "onsetMs": 12080,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "onsetMs": 6080,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "onsetMs": 6080,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 3600,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 9200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "onsetMs": 5200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "onsetMs": 6400,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "onsetMs": 7200,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 2800,
+            "outcome": "late",
+            "leadMs": -160
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 6400,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 10000,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 13200,
+            "outcome": "missed",
+            "leadMs": null
+          }
+        ]
+      }
+    },
+    "branchMet": false,
+    "caveats": [
+      "BRANCH NOT MET, and the first reason is decisive: the model flagged 6 of the 12 HEALTHY sessions at some prefix. M58's second branch requires earlier warnings \"without raising FP above the ceiling\", and the ceiling is 0. The rule engine flagged 0.",
+      "The second reason is that the model's prefix verdicts are not coherent with its own final verdicts: on 12 sessions it flagged at some prefix and then did NOT flag the complete session. It warned, and then — given MORE evidence — withdrew. A detector that contradicts itself is not warning early; it is oscillating across its threshold, and the first crossing of an oscillation is a timestamp, not a prediction. (The rule engine: 0.)",
+      "Nominally the model \"warned strictly earlier\" than the rule engine on 2 of the 17 frozen failsafe onsets under the 2000 ms horizon. That number is reported and NOT believed, for the two reasons above and the two below.",
+      "An UNBOUNDED horizon inflates it further. On a wiring session the RSSI imbalance is present from sample 0, so the model flags the very first prefix — and an unbounded scorer then credits that flag with a multi-second 'lead' on a failsafe seconds later. Even where that flag is genuine it is the detection of a STANDING FAULT, not the prediction of a failsafe: the model did not foresee the link dying, it noticed a bad antenna feed that had been there all along. Both numbers are in this artifact; only the bounded one is even a candidate for being a lead time.",
+      "And the link-collapse signal itself carries no usable lead in this corpus. Link quality sits at ~90 until roughly 2 samples (80 ms) before the failsafe edge (MEASURED_MAX_FIXTURE_LEAD_MS = 80), which is 25x short of the 2000 ms product target (PREDICTIVE_LEAD_TIME_TARGET_MS). No model predicts from a signal that is not in the data.",
+      "Finally, none of this could clear the M56 gate even if it were real: the gate is FP + recall on the complete session, and D25's FP ceiling is a strict '<' against a baseline FP rate of 0.000."
+    ]
+  },
+  "sensitivity": {
+    "scoredOnSessions": 27,
+    "cells": [
+      {
+        "trees": 100,
+        "heightLimit": 3,
+        "isShippedConfig": true,
+        "threshold": 0.553897,
+        "aucTrainVal": 0.87037,
+        "recallTrainVal": 0.722222,
+        "fpRateTrainVal": 0.111111
+      },
+      {
+        "trees": 100,
+        "heightLimit": 7,
+        "isShippedConfig": false,
+        "threshold": 0.547221,
+        "aucTrainVal": 0.552469,
+        "recallTrainVal": 0.166667,
+        "fpRateTrainVal": 0.111111
+      },
+      {
+        "trees": 1000,
+        "heightLimit": 3,
+        "isShippedConfig": false,
+        "threshold": 0.548935,
+        "aucTrainVal": 0.814815,
+        "recallTrainVal": 0.555556,
+        "fpRateTrainVal": 0.111111
+      },
+      {
+        "trees": 1000,
+        "heightLimit": 7,
+        "isShippedConfig": false,
+        "threshold": 0.546844,
+        "aucTrainVal": 0.697531,
+        "recallTrainVal": 0.277778,
+        "fpRateTrainVal": 0.111111
+      }
+    ],
+    "note": "This grid SELECTS NOTHING. The shipped model is Liu et al.'s reference configuration (100 trees, ceil(log2 psi) height limit), fixed before any score was computed. The grid is scored on train+val only — the held-out test split is not in it — and exists solely to answer whether the model's weak numbers are the corpus or a badly-configured forest. They are the corpus: no cell separates the classes, and the 1000-tree cells (which estimate the expected path length MORE accurately) separate them WORSE than the 100-tree ones. A model whose apparent performance improves when you estimate its score less carefully is a model whose performance is substantially Monte-Carlo noise."
+  }
+}

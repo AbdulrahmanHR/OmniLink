@@ -1,0 +1,249 @@
+name: Hardware validation report
+description: You ran one of the protocols in docs/HARDWARE_VALIDATION.md on real ExpressLRS gear
+title: "[HW]: "
+labels: ["hardware-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you — this is the single most valuable contribution this project can receive.**
+
+        OmniLink has never been connected to a real ExpressLRS device. The maintainer
+        owns none. Every test runs against a mock or a fixture, so on-device acceptance
+        is the project's biggest structural gap and you are the only person who can
+        close it.
+
+        Run one protocol from
+        [docs/HARDWARE_VALIDATION.md](https://github.com/AbdulrahmanHR/OmniLink/blob/main/docs/HARDWARE_VALIDATION.md)
+        and paste its **Report** block below. One issue per protocol, please.
+
+        **A FAIL is more useful than a PASS**, and **`blocked` is genuinely welcome** —
+        it tells the project which protocols need hardware nobody has yet. Please do
+        not report a PASS you did not personally observe: a fabricated pass closes a
+        gap that is still open on somebody's radio.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you file
+      options:
+        - label: I ran this on **real hardware** and am reporting what I actually observed.
+          required: true
+        - label: >
+            There is **no binding phrase**, no API key, no MAC or IP address, and no GPS
+            coordinate of anywhere I care about in the text, logs or screenshots below.
+          required: true
+
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Which protocol did you run?
+      description: From docs/HARDWARE_VALIDATION.md.
+      options:
+        - HW-1 — Serial connection and CRSF handshake
+        - HW-2 — Live telemetry and session persistence
+        - HW-3 — Firmware flashing and the safety guards
+        - HW-4 — GPS readout
+        - HW-5 — Live flight-path map
+        - HW-6 — WiFi and Backpack discovery
+        - HW-7 — Session recording to CSV round-trip
+        - HW-8 — Flight-controller bridge (read-only)
+        - Something else / general hardware finding
+    validations:
+      required: true
+
+  - type: dropdown
+    id: verdict
+    attributes:
+      label: Verdict
+      options:
+        - PASS — every step matched what the protocol said
+        - FAIL — something differed (details below)
+        - PARTIAL — some steps passed, some blocked
+        - blocked — could not run it (missing gear, no fix, out of time)
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: OmniLink version
+      description: >
+        Settings → App Update shows the running version, or use the installer
+        filename. If you built from source, give the commit SHA — a source build and
+        an installed release are different environments.
+      placeholder: "3.0.0, installed from the .deb — or: built from source @ abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux — Debian/Ubuntu
+        - Linux — Fedora
+        - Linux — Arch
+        - Linux — other
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version and how you ran OmniLink
+      description: >
+        Include the install method. On Linux also say whether you installed the udev
+        rule or used the `dialout` group — serial permissions are the most common
+        first-run wall and they change the outcome.
+      placeholder: "Ubuntu 24.04, .deb install, udev rule from the package"
+    validations:
+      required: true
+
+  - type: input
+    id: radio-model
+    attributes:
+      label: Radio / TX module — brand and model
+      description: >
+        Be specific. "BETAFPV 2.4GHz Nano TX" and "BETAFPV 2.4GHz Micro TX 1W" are
+        different build targets with different power amplifiers and have aliased in
+        the past. Write "none" if no transmitter was involved.
+      placeholder: "RadioMaster TX16S MkII, internal 2.4 GHz ELRS module"
+    validations:
+      required: true
+
+  - type: input
+    id: rx-model
+    attributes:
+      label: Receiver — brand and model
+      description: Include the antenna variant if it matters (e.g. T-antenna, ceramic).
+      placeholder: "HappyModel EP1 2.4 GHz, ceramic antenna — or: none"
+    validations:
+      required: true
+
+  - type: input
+    id: elrs-firmware
+    attributes:
+      label: ExpressLRS firmware version
+      description: >
+        On both ends if they differ, e.g. "TX 3.5.3 / RX 3.4.3". Say "unknown" if you
+        could not read it — but note that HW-1 exists precisely to check that OmniLink
+        reads it correctly.
+      placeholder: "TX 3.5.3 / RX 3.5.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection-mode
+    attributes:
+      label: Connection mode
+      description: How was OmniLink talking to the hardware?
+      options:
+        - Serial (USB) — direct to the ELRS device
+        - WiFi — device self-AP
+        - WiFi — device on my LAN via mDNS
+        - Backpack (WiFi OTA)
+        - Flight-controller bridge (MSP passthrough)
+        - More than one (say which in the report)
+    validations:
+      required: true
+
+  - type: input
+    id: usb-bridge
+    attributes:
+      label: USB-serial bridge chip, if you know it
+      description: >
+        CP210x, CH340, FTDI, or Espressif native USB. On Linux,
+        `udevadm info -a -n /dev/ttyUSB0 | grep -E 'idVendor|idProduct' | head -4`.
+        This matters because the shipped udev rule covers a fixed list of VID/PIDs —
+        if yours is not covered, that is itself a finding.
+      placeholder: "CP2102 (10c4:ea60)"
+    validations:
+      required: false
+
+  - type: textarea
+    id: report-block
+    attributes:
+      label: The protocol's Report block, filled in
+      description: >
+        Copy the "Report" block from the end of your protocol in
+        docs/HARDWARE_VALIDATION.md and fill it in. This is the body of the report —
+        please do not summarise it, because the individual answers are what make it
+        usable.
+      render: text
+      placeholder: |
+        Protocol: HW-1 (serial + CRSF handshake)
+        Verdict: PASS
+
+        Device:            RadioMaster TX16S internal, ELRS 3.5.3
+        Host OS + build:   Ubuntu 24.04, .deb
+        Serial port:       /dev/ttyACM0, CP2102
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: unexpected
+    attributes:
+      label: What differed from the protocol, if anything
+      description: >
+        For a FAIL or PARTIAL: exactly what you expected, and exactly what you got.
+        Include the wording of any error message — click the red **Error** chip in the
+        top bar to expand the full text.
+      placeholder: |
+        Expected: ...
+        Actually got: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt
+      description: >
+        From `omnilink-app.<date>.log` — Linux `~/.local/share/com.omnilink.app/logs/`,
+        macOS `~/Library/Logs/com.omnilink.app/`, Windows
+        `%APPDATA%\com.omnilink.app\logs\`. After a crash also include
+        `omnilink-crash.log`. **Scrub it first.** Formatted as code automatically.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: >
+        Drag images in. Very useful for telemetry readouts and map tracks — but crop
+        out anything that locates your home.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: matrix
+    attributes:
+      label: Compatibility matrix
+      description: >
+        The matrix in README.md is the project's only public evidence that any of this
+        runs on real gear. It is a plain Markdown table and a one-line pull request.
+      options:
+        - label: >
+            I am willing to add a row to the
+            [compatibility matrix](https://github.com/AbdulrahmanHR/OmniLink#hardware-compatibility-matrix)
+            (or would like the maintainer to add it on my behalf, using this issue).
+          required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: >
+        Was a step unclear or wrong? Say so — an unclear protocol is a defect in the
+        protocol, and fixing it helps the next reporter.
+    validations:
+      required: false

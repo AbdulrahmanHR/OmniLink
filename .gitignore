@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite
+*.local
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tauri
+src-tauri/target/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Playwright (M20 E2E)
+playwright-report/
+test-results/
+
+# graphify (local tooling)
+graphify-out/
+
+# dev-harness (Python, imported at M70 per decision D42)
+dev-harness/__pycache__/
+*.pyc

@@ -1,0 +1,185 @@
+{
+  "_comment": "Golden retrieval eval set (M50, D19). Consumed by src/lib/knowledge/eval.ts::runEval and tests/unit/knowledgeEval.test.ts. `in-corpus` items name the expected top-source id (a registry/allowlist id under data/knowledge/registry.json); the pipeline must return that source at/above RELEVANCE_THRESHOLD. `out-of-corpus` items must return noSourceFound. Pass-bar (EVAL_PASS_BAR): in-corpus top-source accuracy >= 0.90, out-of-corpus no-source rate = 1.0. Frozen here, re-audited in M55.",
+  "items": [
+    {
+      "id": "bind-receiver",
+      "query": "How do I bind my receiver to my transmitter?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-binding"
+    },
+    {
+      "id": "binding-phrase",
+      "query": "What is a binding phrase and why is it the recommended way to pair?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-binding"
+    },
+    {
+      "id": "manual-binding",
+      "query": "How does traditional manual binding with bind mode work?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-binding"
+    },
+    {
+      "id": "verify-bind",
+      "query": "How can I verify that my receiver is actually bound?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-binding"
+    },
+    {
+      "id": "packet-rate-freestyle",
+      "query": "What packet rate should I use for freestyle flying?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-packet-rates"
+    },
+    {
+      "id": "telemetry-ratio",
+      "query": "What does the telemetry ratio setting control?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-packet-rates"
+    },
+    {
+      "id": "lora-vs-flrc",
+      "query": "What is the difference between LoRa and FLRC modulation?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-packet-rates"
+    },
+    {
+      "id": "rate-for-range",
+      "query": "Which packet rate gives the most range and sensitivity?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-packet-rates"
+    },
+    {
+      "id": "frequency-bands",
+      "query": "What is the difference between the 2.4 GHz and 900 MHz frequency bands?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-getting-started"
+    },
+    {
+      "id": "regulatory-domain",
+      "query": "Which regulatory domain firmware should I flash to fly in Europe?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-getting-started"
+    },
+    {
+      "id": "tx-rx-halves",
+      "query": "What are the transmitter and receiver halves of an ExpressLRS link?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-getting-started"
+    },
+    {
+      "id": "flashing-firmware",
+      "query": "How does OmniLink flash ExpressLRS firmware onto my target board?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-getting-started"
+    },
+    {
+      "id": "tx-power",
+      "query": "How should I set my transmit power, and what is dynamic power?",
+      "kind": "in-corpus",
+      "expectedSourceId": "omnilink-notes"
+    },
+    {
+      "id": "antenna-mounting",
+      "query": "How should I mount the receiver antennas on a diversity receiver?",
+      "kind": "in-corpus",
+      "expectedSourceId": "omnilink-notes"
+    },
+    {
+      "id": "diagnosing-dropouts",
+      "query": "Why does my link keep dropping out when I fly at distance?",
+      "kind": "in-corpus",
+      "expectedSourceId": "omnilink-notes"
+    },
+    {
+      "id": "failsafe-config",
+      "query": "How do I configure a safe failsafe on the receiver?",
+      "kind": "in-corpus",
+      "expectedSourceId": "omnilink-notes"
+    },
+    {
+      "id": "edge-bind-led-blinking",
+      "query": "My receiver LED keeps fast-blinking and never goes solid after a bind attempt.",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-binding"
+    },
+    {
+      "id": "edge-telemetry-dense-ratio",
+      "query": "Does a denser telemetry ratio give smoother RSSI and battery readings?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-packet-rates"
+    },
+    {
+      "id": "edge-domain-americas",
+      "query": "Which regulatory domain firmware should I flash to fly legally in the Americas?",
+      "kind": "in-corpus",
+      "expectedSourceId": "elrs-getting-started"
+    },
+    {
+      "id": "edge-pinched-antenna",
+      "query": "Could a pinched or damaged antenna be why my range is unexpectedly short?",
+      "kind": "in-corpus",
+      "expectedSourceId": "omnilink-notes"
+    },
+    {
+      "id": "ooc-pizza",
+      "query": "What is the best pizza topping to order for dinner?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-weather",
+      "query": "Will it rain in London tomorrow afternoon?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-guitar",
+      "query": "How do I tune a six string acoustic guitar?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-tax",
+      "query": "How do I file my annual income tax return online?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-recipe",
+      "query": "Give me a recipe for chocolate chip cookies.",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-stocks",
+      "query": "Should I buy or sell technology stocks this quarter?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-flight-booking",
+      "query": "How much is a plane ticket from Paris to Tokyo?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "ooc-fridge-power",
+      "query": "How much electrical power does a household refrigerator consume?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "edge-ooc-golf",
+      "query": "How do I improve my golf swing technique?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "edge-ooc-coffee",
+      "query": "What is the best way to brew a strong cup of coffee?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "edge-ooc-spanish",
+      "query": "How many words should I learn to become fluent in Spanish?",
+      "kind": "out-of-corpus"
+    },
+    {
+      "id": "edge-ooc-piano",
+      "query": "What are good beginner songs to practice on the piano?",
+      "kind": "out-of-corpus"
+    }
+  ]
+}

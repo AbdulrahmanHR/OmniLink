@@ -1,0 +1,1826 @@
+{
+  "bridge": {
+    "label": "Flight Controller Bridge",
+    "title": "Controller bridge",
+    "probe": "Probe",
+    "probing": "Probing…",
+    "probeAction": "Probe {{port}} for a flight controller bridge",
+    "notController": "No flight controller responded on this port. It isn't a controller bridge — a direct ELRS receiver speaking CRSF won't answer here.",
+    "family": {
+      "betaflight": "Betaflight",
+      "inav": "iNav",
+      "unsupported": "Unsupported bridge"
+    },
+    "safety": {
+      "warning": "Before probing: props off and the aircraft on a bench. Probing energizes the flight controller and receiver — make sure nothing can spin."
+    },
+    "recovery": {
+      "wrongPort": "Wrong port: pick the flight controller's serial port, not the receiver or another device.",
+      "busyPort": "Port busy: close Betaflight/iNav Configurator or any serial monitor using this port, then retry.",
+      "wrongBaud": "Wrong baud: OmniLink tries the common MSP bauds automatically — power-cycle the controller and retry if none answered.",
+      "noMspResponse": "No MSP response: confirm the controller is powered and running Betaflight/iNav (not in DFU/bootloader)."
+    },
+    "a11y": {
+      "label": "Flight controller bridge: {{family}} ({{id}})"
+    },
+    "context": {
+      "title": "Controller context (read-only)",
+      "fetch": "Fetch context",
+      "fetching": "Fetching…",
+      "family": "Flight controller",
+      "version": "Firmware version",
+      "apiVersion": "MSP API version",
+      "serialPorts": "Serial ports",
+      "noSerialPorts": "No serial-port details available.",
+      "empty": "Not enough controller context",
+      "emptyHint": "Connect a Betaflight/iNav flight controller and fetch its read-only context to help diagnose passthrough.",
+      "function": {
+        "serialRx": "Serial RX",
+        "msp": "MSP",
+        "gps": "GPS",
+        "telemetry": "Telemetry",
+        "blackbox": "Blackbox"
+      },
+      "a11y": {
+        "surface": "Read-only flight-controller context for ELRS troubleshooting",
+        "fetch": "Fetch read-only controller context from {{port}}",
+        "serialPorts": "Flight-controller serial ports"
+      }
+    },
+    "passthrough": {
+      "title": "Passthrough diagnostics",
+      "intro": "Run a guided check to find exactly where UART passthrough to the receiver fails.",
+      "safety": "Before running: props off and the aircraft on a bench. Passthrough energizes the flight controller and powers the receiver — confirm your wiring and make sure nothing can spin.",
+      "run": "Run check",
+      "running": "Running…",
+      "success": "Passthrough reached the receiver — a valid CRSF frame was seen.",
+      "baudOverride": "Baud",
+      "baudAuto": "Auto (try all)",
+      "step": {
+        "handshake": "Controller handshake",
+        "uart": "UART passthrough",
+        "receiver": "Receiver response",
+        "crsf": "CRSF response"
+      },
+      "status": {
+        "pass": "passed",
+        "fail": "failed",
+        "skipped": "skipped",
+        "pending": "pending"
+      },
+      "failure": {
+        "controllerNotResponding": "The flight controller didn't answer MSP. Check the port and baud, and confirm Betaflight/iNav is running (not in DFU/bootloader).",
+        "passthroughUnavailable": "The controller is reachable but wouldn't enter serial passthrough. Update the flight-controller firmware or pick the correct UART.",
+        "rxNotPowered": "Passthrough opened but the receiver sent nothing back — it likely isn't powered. Check the receiver's 5V and GND.",
+        "rxNotWired": "Bytes came back, but not from a CRSF receiver on the selected UART — the receiver isn't wired to that UART. Re-check TX↔RX and the chosen port.",
+        "crsfTimeout": "The receiver is responding but no valid CRSF frame arrived in time — usually a baud mismatch. Try another baud."
+      },
+      "wiring": {
+        "title": "Wiring (generic)",
+        "tx": "Receiver TX → flight-controller UART RX (the signal crosses over).",
+        "rx": "Receiver RX → flight-controller UART TX (the other half of the cross).",
+        "power": "Receiver 5V → 5V and GND → GND, from the same flight controller.",
+        "uart": "Pick the flight-controller UART you actually wired the receiver to."
+      },
+      "log": {
+        "title": "Attempt log",
+        "empty": "No passthrough attempts yet.",
+        "clear": "Clear log",
+        "success": "Passthrough succeeded",
+        "errored": "Couldn't run the check",
+        "atBaud": "@ {{baud}} baud"
+      }
+    },
+    "export": {
+      "copy": "Copy Report",
+      "copied": "Copied",
+      "copyAria": "Copy the bridge failure support report to the clipboard",
+      "title": "Bridge Failure Support Report",
+      "intro": "Paste this into your support request. It contains diagnostic details only — no private identifiers.",
+      "none": "Not available",
+      "noReport": "No passthrough check has been run yet.",
+      "noFailure": "No failure — passthrough reached the receiver.",
+      "noSerialPorts": "No serial-port details available.",
+      "section": {
+        "environment": "Environment",
+        "bridge": "Detected controller bridge",
+        "passthrough": "Passthrough check",
+        "handshake": "Handshake summary",
+        "serialPorts": "Serial ports"
+      },
+      "field": {
+        "generatedAt": "Generated",
+        "appVersion": "App version",
+        "os": "Operating system",
+        "port": "Selected port",
+        "family": "Controller family",
+        "fcVariant": "FC variant",
+        "apiVersion": "MSP API version",
+        "fcVersion": "FC firmware",
+        "baudAttempts": "Baud attempts",
+        "baudUsed": "Baud used",
+        "uart": "Wired UART",
+        "failure": "Failure category"
+      }
+    }
+  },
+  "app": {
+    "name": "OmniLink",
+    "tagline": "ExpressLRS Configuration & Telemetry"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "primaryNav": "Primary navigation"
+  },
+  "nav": {
+    "home": "Home",
+    "flash": "Flash",
+    "telemetry": "Telemetry",
+    "profiles": "Profiles",
+    "logs": "Logs",
+    "wizard": "Wizard",
+    "simulator": "Simulator",
+    "analysis": "Session Analysis",
+    "trends": "Trends",
+    "settings": "Settings"
+  },
+  "sessionAnalysis": {
+    "title": "Session Analysis",
+    "description": "Load one recorded session, then scrub it for forensic analysis or play it back through the live dashboard — no hardware required.",
+    "empty": {
+      "title": "No session loaded",
+      "description": "Import a flight log (.bbl/.csv) or pick a prior OmniLink session to scrub or replay it."
+    }
+  },
+  "home": {
+    "deviceStatus": {
+      "title": "Device",
+      "firmware": "Firmware",
+      "port": "Port",
+      "disconnectedTitle": "No device connected",
+      "disconnectedDescription": "Connect your ExpressLRS device from the bar above, or flash new firmware to get started.",
+      "baud": "Baud",
+      "params": "Parameters"
+    },
+    "activeProfile": {
+      "label": "Active config",
+      "none": "No profile applied yet.",
+      "view": "View profiles"
+    }
+  },
+  "device": {
+    "status": {
+      "disconnected": "Disconnected",
+      "connecting": "Connecting…",
+      "connected": "Connected",
+      "bootloader": "Bootloader",
+      "flashing": "Flashing…",
+      "error": "Error"
+    },
+    "error": {
+      "title": "Connection failed",
+      "show": "Show error details",
+      "copy": "Copy error"
+    },
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "cancelConnect": "Cancel connection attempt",
+    "disconnect": "Disconnect",
+    "port": "Serial port",
+    "selectPort": "Select a port",
+    "noPorts": "No devices found",
+    "refreshPorts": "Refresh ports",
+    "baudTitle": "CRSF handshake succeeded at {{baud}} baud",
+    "typeUnknown": "Unknown type",
+    "firmwareUnknown": "Firmware unknown",
+    "portMissing": "{{port}} (not connected)",
+    "autoSelectPort": "Follow the first port",
+    "connectPortAbsent": "{{port}} is not connected right now — plug it back in, or pick another port.",
+    "connectNoPort": "Select a serial port first.",
+    "portBusy": {
+      "probe": "OmniLink is probing this port for a flight controller — connecting and flashing resume in a few seconds.",
+      "context": "OmniLink is reading controller context from this port — connecting and flashing resume in a few seconds.",
+      "passthrough": "OmniLink is running the passthrough check on this port — connecting and flashing resume when it finishes (up to ~15s).",
+      "connecting": "OmniLink is still connecting to this port — flashing resumes once the connection attempt finishes, or cancel it in the device bar."
+    }
+  },
+  "telemetry": {
+    "title": "Telemetry",
+    "live": "Live",
+    "empty": {
+      "title": "No telemetry stream",
+      "description": "Connect a device to view telemetry"
+    },
+    "metrics": {
+      "rssi": "RSSI",
+      "linkQuality": "Link Quality",
+      "snr": "SNR",
+      "txPower": "TX Power",
+      "packetRate": "Packet Rate"
+    },
+    "link": {
+      "title": "Link Performance",
+      "rssi1": "RSSI Ant 1",
+      "rssi2": "RSSI Ant 2",
+      "linkQuality": "Link Quality"
+    },
+    "polar": {
+      "title": "Antenna Pattern",
+      "antenna1": "ANT 1",
+      "antenna2": "ANT 2",
+      "noSignal": "No signal",
+      "ariaLabel": "Antenna signal-pattern radar plot"
+    },
+    "gps": {
+      "title": "GPS",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "satellites": "Satellites",
+      "altitude": "Altitude",
+      "groundSpeed": "Ground Speed",
+      "heading": "Heading",
+      "noModule": "No GPS data — connect a GPS-equipped device.",
+      "noFix": "Acquiring…"
+    },
+    "map": {
+      "title": "Flight Path",
+      "toggleLabel": "Flight path map",
+      "metricRssi": "RSSI",
+      "metricLq": "Link quality"
+    }
+  },
+  "simulator": {
+    "title": "Telemetry Replay Simulator",
+    "description": "Replay a recorded telemetry session through the live dashboard — no hardware required.",
+    "badge": "SIMULATED",
+    "badgeTitle": "Simulated data — not a live device",
+    "source": {
+      "dropzone": "Import a session CSV",
+      "hint": "Drag an OmniLink session .csv here, or browse to select one.",
+      "browse": "Browse",
+      "reading": "Reading session…",
+      "loaded_one": "Loaded {{count}} frame",
+      "loaded_other": "Loaded {{count}} frames",
+      "replace": "Load a different session",
+      "errors": {
+        "read": "Could not read that file.",
+        "parse": "That file isn't a valid OmniLink session CSV.",
+        "empty": "That session has no telemetry rows.",
+        "unsupported": "Unsupported file — pick a .csv session export."
+      }
+    },
+    "transport": {
+      "title": "Transport",
+      "play": "Play",
+      "pause": "Pause",
+      "stop": "Stop",
+      "seek": "Seek through session",
+      "speed": "Speed",
+      "speedValue": "{{value}}×",
+      "frame": "Frame {{current}} / {{total}}",
+      "endReached": "End of session"
+    },
+    "export": {
+      "button": "Export session CSV",
+      "filename": "simulated-session.csv"
+    },
+    "empty": {
+      "title": "No session loaded",
+      "description": "Import a recorded telemetry session CSV to replay it through the dashboard."
+    }
+  },
+  "profiles": {
+    "title": "Config Profiles",
+    "untitled": "Untitled Profile",
+    "active": "Active",
+    "builtin": "Built-in preset",
+    "actions": {
+      "saveAs": "Save As",
+      "apply": "Apply",
+      "applied": "Applied",
+      "rename": "Rename",
+      "delete": "Delete",
+      "import": "Import .elrsp",
+      "export": "Export .elrsp"
+    },
+    "list": {
+      "title": "Saved Profiles",
+      "empty": {
+        "title": "No saved profiles",
+        "description": "Save the current configuration to create your first profile."
+      }
+    },
+    "empty": {
+      "title": "No profile selected",
+      "description": "Select a profile to preview its settings and compare against the current config."
+    },
+    "settings": {
+      "title": "Profile Settings"
+    },
+    "diff": {
+      "title": "Changes",
+      "subtitle": "Comparing this profile against the current device configuration.",
+      "noChanges": "No changes",
+      "identical": "This profile matches the current configuration.",
+      "changeCount_one": "{{count}} change",
+      "changeCount_other": "{{count}} changes",
+      "unchanged_one": "{{count}} unchanged setting",
+      "unchanged_other": "{{count}} unchanged settings"
+    },
+    "dialog": {
+      "saveTitle": "Save Current Config",
+      "saveDescription": "Save the device's current configuration as a new profile.",
+      "renameTitle": "Rename Profile",
+      "renameDescription": "Update this profile's name and description.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Racing 500Hz",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional notes about this profile"
+    },
+    "presets": {
+      "racing": {
+        "name": "Racing 500Hz",
+        "description": "Low-latency 500Hz link for competitive racing."
+      },
+      "longRange": {
+        "name": "Long Range 50Hz",
+        "description": "Maximum range and sensitivity for long-distance flights."
+      },
+      "freestyle": {
+        "name": "Freestyle 250Hz",
+        "description": "Balanced 250Hz link with dynamic power for freestyle."
+      },
+      "default": {
+        "name": "Default",
+        "description": "Factory baseline configuration."
+      }
+    },
+    "tabs": {
+      "saved": "Saved",
+      "community": "Community",
+      "folder": "Folder"
+    },
+    "import": {
+      "button": "Import .elrsp",
+      "title": "Import Profile",
+      "description": "Preview the changes this profile would apply, then import it into your saved profiles.",
+      "previewTitle": "Changes vs current configuration",
+      "confirm": "Import profile",
+      "cancel": "Cancel",
+      "parseError": "Could not read this .elrsp file: {{message}}",
+      "unsupportedVersion": "This profile uses an unsupported schema version and cannot be imported."
+    },
+    "export": {
+      "button": "Export .elrsp",
+      "filename": "{{name}}.elrsp"
+    },
+    "migrated": {
+      "badge": "Migrated",
+      "title": "Schema migrated"
+    },
+    "firmwareWarn": {
+      "title": "Firmware mismatch",
+      "description": "This profile targets firmware {{profileFw}}, which differs significantly from the connected device ({{deviceFw}}). You can still import it."
+    },
+    "community": {
+      "title": "Community Presets",
+      "description": "Curated, read-only presets for common targets and use-cases. Import one to add it to your saved profiles.",
+      "searchPlaceholder": "Search presets…",
+      "searchAria": "Search community presets",
+      "import": "Import",
+      "empty": {
+        "title": "No presets found",
+        "description": "No community presets match your search."
+      },
+      "categories": {
+        "racing": "Racing",
+        "long-range": "Long Range",
+        "freestyle": "Freestyle",
+        "cinematic": "Cinematic"
+      }
+    },
+    "errors": {
+      "saveFailed": "Could not save the profile to disk. Your changes may not survive a restart.",
+      "deleteFailed": "Could not delete the profile from disk. It may reappear on restart.",
+      "dismiss": "Dismiss"
+    }
+  },
+  "folderSync": {
+    "title": "Folder sync",
+    "description": "Keep your profiles in a folder you own — on this machine, and on every other one if you want.",
+    "mechanism": "OmniLink writes plain .elrsp files into the folder you pick, and reads whatever it finds there. Nothing is uploaded and there is no OmniLink server: point it at a folder inside Dropbox, Google Drive, OneDrive, Syncthing or a git checkout and that tool does the syncing. Every transfer below happens only when you press the button.",
+    "folderLabel": "Sync folder",
+    "inSyncTitle": "Already in sync",
+    "dialog": {
+      "title": "Choose a sync folder"
+    },
+    "actions": {
+      "choose": "Choose folder",
+      "change": "Change folder",
+      "refresh": "Re-read folder",
+      "forget": "Forget folder",
+      "dismissError": "Dismiss this error",
+      "push": "Push",
+      "pull": "Pull",
+      "keepMine": "Keep this machine's",
+      "keepTheirs": "Keep the folder's",
+      "keepBoth": "Keep both",
+      "skip": "Skip",
+      "remove": "Remove from folder",
+      "compare": "Compare"
+    },
+    "status": {
+      "local-only": "Only on this machine",
+      "folder-only": "Only in the folder",
+      "same": "In sync",
+      "conflict": "Differs"
+    },
+    "summary": {
+      "localOnly": "Only here: {{n}}",
+      "folderOnly": "Only in folder: {{n}}",
+      "same": "In sync: {{n}}",
+      "conflict": "Differing: {{n}}"
+    },
+    "side": {
+      "localUpdated": "This machine: {{when}}",
+      "folderUpdated": "Folder: {{when}}"
+    },
+    "empty": {
+      "title": "No sync folder yet",
+      "description": "Pick a folder and your saved profiles can be copied into it as .elrsp files. Nothing is read or written until you do."
+    },
+    "nothingToDo": {
+      "title": "Nothing to sync",
+      "description": "The folder and your saved profiles match. Save a profile, or drop an .elrsp file into the folder and re-read it."
+    },
+    "unavailable": {
+      "title": "Folder sync needs the desktop app",
+      "description": "Reading and writing a folder on your own machine is only possible in the OmniLink desktop app, not in a browser."
+    },
+    "unreadable": {
+      "title": "Some files could not be read",
+      "description": "These files are in the folder but are not valid .elrsp profiles. They were left exactly as they are."
+    },
+    "conflict": {
+      "diffCaption": "The folder's version is the baseline; this machine's is the change.",
+      "help": "Nothing is overwritten until you choose. “Keep both” renames this machine's copy and leaves the folder's under its own name, so neither is lost."
+    },
+    "remove": {
+      "title": "Remove from the folder?",
+      "description": "{{name}} will be deleted from the sync folder. The profiles saved on this machine are not touched.",
+      "confirm": "Remove file"
+    },
+    "errors": {
+      "not-granted": "No folder is available yet. Choose the folder again.",
+      "not-a-directory": "That path is not a folder.",
+      "invalid-name": "That profile name cannot become a file name in the folder.",
+      "outside-root": "That file resolves outside the folder you chose, so it was left untouched.",
+      "too-large": "That file is too large to be a profile.",
+      "not-a-file": "That entry in the folder is not a file.",
+      "not-utf8": "That file is not readable text.",
+      "parse": "That file is not a valid .elrsp profile.",
+      "io": "The folder could not be read or written."
+    }
+  },
+  "wizard": {
+    "title": "Flashing Wizard",
+    "subtitle": "A guided, step-by-step path to flashing your ExpressLRS device.",
+    "launch": "Open Flashing Wizard",
+    "mode": {
+      "label": "Wizard mode",
+      "static": "Static",
+      "staticHint": "The classic step-by-step wizard. Works fully offline and needs no account.",
+      "ai": "AI-assisted",
+      "aiHint": "Answer a few questions and get a recommended target and settings to review."
+    },
+    "ai": {
+      "title": "AI-assisted setup",
+      "subtitle": "Answer a few questions and Omnia will recommend a target and settings for you to review — you still confirm and flash yourself.",
+      "recommend": "Get recommendation",
+      "questions": {
+        "deviceRole": {
+          "label": "What are you flashing?",
+          "TX": "Transmitter (radio module)",
+          "RX": "Receiver (on the aircraft)"
+        },
+        "useCase": {
+          "label": "What kind of flying?",
+          "racing": "Racing",
+          "freestyle": "Freestyle",
+          "longRange": "Long range",
+          "cinematic": "Cinematic"
+        },
+        "region": {
+          "label": "Where do you fly?",
+          "us": "United States",
+          "eu": "Europe",
+          "au": "Australia",
+          "in": "India",
+          "global": "Other / global"
+        }
+      },
+      "summary": {
+        "title": "Recommended setup",
+        "confidence": "{{level}} confidence · {{percent}}%",
+        "confidenceAria": "{{level}} confidence, {{percent}} percent",
+        "brand": "Brand",
+        "model": "Model",
+        "device": "Device type",
+        "target": "Build target",
+        "band": "Band",
+        "firmware": "Firmware",
+        "method": "Flash method",
+        "binding": "Binding",
+        "bindingTraditional": "Traditional (button/3-way)",
+        "apply": "Apply & review",
+        "restart": "Change answers"
+      },
+      "confidenceLevel": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "explain": {
+        "title": "Why these settings",
+        "band24": "2.4 GHz gives lower latency and higher packet rates — the right trade-off for close-in flying.",
+        "band900": "900 MHz travels farther and punches through obstacles better, which suits long-range flying.",
+        "domain": "The {{band}} band matches your region's regulations, so the link is both legal and compatible.",
+        "model": "{{model}} is a solid match from the catalogue for what you described.",
+        "firmware": "Firmware {{version}} is the latest stable build for reliable, compatible links.",
+        "methodUart": "USB (UART) flashing is the most reliable way to do a first flash.",
+        "methodWifi": "WiFi (OTA) flashing is convenient once the device broadcasts its own network.",
+        "methodBetaflight": "Betaflight passthrough flashes the receiver through your flight controller's USB.",
+        "bindingTraditional": "Traditional binding needs no secret phrase to get started — you can switch to a binding phrase on the review screen."
+      },
+      "fallback": {
+        "title": "AI assistance isn't available right now",
+        "disabled": "No AI provider is configured. Add a key in Settings, or continue with the static wizard.",
+        "offline": "You appear to be offline, so AI help can't be reached. The static wizard still works fully offline.",
+        "useStatic": "Use the static wizard"
+      }
+    },
+    "steps": {
+      "brand": {
+        "title": "Brand",
+        "instruction": "Choose the manufacturer of the device you want to flash."
+      },
+      "model": {
+        "title": "Model",
+        "instruction": "Pick the exact device model so we use the right build target."
+      },
+      "frequency": {
+        "title": "Frequency",
+        "instruction": "Select the RF band, firmware version, and how to deliver it."
+      },
+      "binding": {
+        "title": "Binding",
+        "instruction": "Set a binding phrase, or use traditional button binding instead."
+      },
+      "review": {
+        "title": "Review",
+        "instruction": "Confirm your selections, then flash the device."
+      }
+    },
+    "nav": {
+      "back": "Back",
+      "next": "Next",
+      "startOver": "Start Over",
+      "flashAnother": "Flash Another Device"
+    },
+    "validation": {
+      "brand": "Select a brand to continue",
+      "model": "Select a device model to continue",
+      "frequency": "Choose a band, firmware version, and flash method",
+      "binding": "Enter a binding phrase or choose traditional binding"
+    },
+    "deviceType": {
+      "TX": "Transmitter",
+      "RX": "Receiver"
+    },
+    "brand": {
+      "modelCount_one": "{{count}} device",
+      "modelCount_other": "{{count}} devices"
+    },
+    "model": {
+      "bandCount_one": "{{count}} band",
+      "bandCount_other": "{{count}} bands",
+      "detected": "Detected: {{target}}"
+    },
+    "frequency": {
+      "bandTitle": "Frequency band",
+      "firmwareTitle": "Firmware version",
+      "methodTitle": "Flash method",
+      "latest": "Latest",
+      "prerelease": "Pre-release",
+      "showPrereleases": "Show pre-release (beta / RC) versions",
+      "releasesLoading": "Loading releases…",
+      "releasesOffline": "Offline — couldn't reach ExpressLRS GitHub; showing bundled versions",
+      "releasesRateLimited": "GitHub's hourly request limit was reached; showing bundled versions — try again in an hour",
+      "releasesLive": "Live from ExpressLRS GitHub",
+      "releasesCached": "Cached — couldn't reach ExpressLRS GitHub; last updated {{updated}}",
+      "releasesCachedUnknown": "Cached — couldn't reach ExpressLRS GitHub; showing the last list we fetched",
+      "changelogTitle": "Changelog — {{version}}",
+      "deviceIpLabel": "Device IP address",
+      "deviceIpPlaceholder": "10.0.0.1",
+      "deviceIpHint": "The device's WiFi address (default ELRS hotspot is 10.0.0.1).",
+      "deviceIpInvalid": "Enter a valid IP address or hostname.",
+      "wifiDevicesTitle": "Discovered WiFi devices",
+      "scan": "Scan",
+      "scanning": "Scanning…",
+      "stopScan": "Stop",
+      "noDevicesFound": "No devices found yet — start a scan or enter the IP manually.",
+      "pickDeviceHint": "Pick a discovered device to set its address, or enter one manually.",
+      "backpackNotFlashable": "Backpacks run their own firmware and can't receive the model selected here.",
+      "manualEntry": "Enter IP manually"
+    },
+    "domains": {
+      "ISM2400": "2.4 GHz ISM",
+      "FCC915": "FCC 915 (Americas)",
+      "EU868": "EU 868",
+      "AU915": "AU 915",
+      "IN866": "IN 866",
+      "EU433": "EU 433"
+    },
+    "methods": {
+      "wifi": {
+        "name": "WiFi",
+        "description": "Upload over the air via the device hotspot."
+      },
+      "uart": {
+        "name": "UART",
+        "description": "Flash directly over a USB serial connection."
+      },
+      "betaflight": {
+        "name": "Betaflight Passthrough",
+        "description": "Flash the receiver through the flight controller."
+      }
+    },
+    "binding": {
+      "modeTitle": "Binding method",
+      "phrase": {
+        "name": "Binding phrase",
+        "description": "A memorable phrase shared by TX and RX — no bind button needed."
+      },
+      "traditional": {
+        "name": "Traditional binding",
+        "description": "Bind manually with the button or 3-way switch after flashing."
+      },
+      "phraseLabel": "Binding phrase",
+      "phrasePlaceholder": "e.g. my-quad-link",
+      "uidLabel": "Derived UID",
+      "uidHint": "This is the exact UID that will be flashed (derived from your phrase).",
+      "traditionalNote": "After flashing, put the receiver in bind mode and bind it the usual way."
+    },
+    "review": {
+      "summaryTitle": "Configuration summary",
+      "traditionalBinding": "Traditional (bind button)",
+      "warning": "Don't disconnect or power off the device while flashing.",
+      "identityBlocked": "Flash blocked: the last device seen on this port isn't the model selected here, so this flash was already refused. Pick the model that matches your hardware — or connect the device again so OmniLink can re-check it.",
+      "fields": {
+        "brand": "Brand",
+        "model": "Model",
+        "deviceType": "Type",
+        "target": "Target",
+        "band": "Band",
+        "firmware": "Firmware",
+        "method": "Method",
+        "binding": "Binding",
+        "uid": "UID",
+        "deviceIp": "Device IP",
+        "source": "Firmware source"
+      }
+    },
+    "localFile": {
+      "select": "Select local .bin file",
+      "sectionLabel": "Or flash a firmware file from your computer",
+      "badge": "Local file",
+      "clear": "Remove",
+      "hint": "Flash a firmware .bin from your computer instead of a release. It is safety-checked against your device before flashing.",
+      "dialogTitle": "Select firmware file",
+      "filterName": "Firmware image",
+      "pickFailed": "Couldn't open the file picker.",
+      "backupName": "Pre-flash backup — {{target}}",
+      "backupWarning": "Couldn't back up the current configuration before flashing. The flash will still proceed, but there's no fresh recovery snapshot."
+    },
+    "flash": {
+      "start": "Flash",
+      "stages": {
+        "fetch": "Fetching firmware…",
+        "erase": "Erasing…",
+        "write": "Writing…",
+        "verify": "Verifying…",
+        "done": "Done"
+      },
+      "success": {
+        "title": "Flash complete",
+        "description": "{{model}} is now running ExpressLRS {{version}}."
+      },
+      "eta": "{{eta}} left",
+      "etaUnits": {
+        "minutes": "{{count}}m",
+        "seconds": "{{count}}s"
+      },
+      "log": {
+        "title": "Build log ({{count}} lines)"
+      },
+      "cancel": "Cancel flash",
+      "cancelUnavailable": "Cancel unavailable — the device is being written. Do not disconnect or power it off.",
+      "retry": "Try again",
+      "copyDiagnostic": "Copy diagnostic report",
+      "copied": "Copied",
+      "recoveryTitle": "How to fix it",
+      "categories": {
+        "wiring": "Connection or wiring problem.",
+        "driver": "USB serial driver problem.",
+        "firmwareMismatch": "Firmware or device-type mismatch.",
+        "networkTimeout": "Network timed out.",
+        "compilationError": "Firmware failed to compile.",
+        "unknown": "Something went wrong during flashing."
+      },
+      "errors": {
+        "txRxMismatch": "Flash blocked: this firmware is for a different device type (TX vs RX) than the device on this port. If you've changed devices, connect the new one so OmniLink can re-check it.",
+        "backpackCrossType": "Flash blocked: this Backpack firmware is for a different Backpack type (TX vs VRX) than the one connected.",
+        "backpackCrossFamily": "Flash blocked: the chosen destination is an ExpressLRS Backpack, which needs its own firmware — not the model selected in the wizard.",
+        "targetMismatch": "Flash blocked: this firmware file doesn't match the connected device's target.",
+        "connectedTargetMismatch": "Flash blocked: the device on this port isn't the model selected in the wizard. Pick the model that matches your hardware, or connect the device again so OmniLink can re-check it.",
+        "unknownMcu": "Flash blocked: this target's MCU family is unknown, so the correct flash offset can't be determined.",
+        "localFileUnreadable": "Couldn't read the selected firmware file",
+        "firmwareTooSmall": "The selected file is too small to be valid firmware",
+        "firmwareTooLarge": "The selected file is too large to be valid firmware",
+        "notElrsFirmware": "The selected file isn't a valid ExpressLRS firmware image",
+        "noOptionsRegion": "Firmware image is missing its options region",
+        "optionsTooLarge": "Selected options don't fit this firmware",
+        "firmwareDownloadFailed": "Couldn't download the firmware",
+        "firmwareNotAvailableForTarget": "This firmware version has no build for your device, so nothing was written to it. Pick a different version.",
+        "firmwareTruncated": "The firmware download was incomplete, so nothing was written to your device. Check your connection and try again.",
+        "firmwareDownloadTooLarge": "The download was far bigger than any firmware image, so it was abandoned and nothing was written to your device.",
+        "firmwareRedirectRefused": "The download was redirected somewhere unexpected, so it was refused and nothing was written to your device.",
+        "backpackFirmwareUnavailable": "Backpack firmware download isn't available yet — this needs a hardware-validated release fetch, so nothing was written to your device.",
+        "otaUploadFailed": "WiFi upload to the device failed",
+        "fcNotResponding": "Flight controller not responding",
+        "passthroughUnavailable": "Flight controller refused serial passthrough",
+        "toolFailed": "The flashing tool reported an error",
+        "toolNotFound": "A required flashing tool is missing",
+        "esptoolNotFound": "esptool isn't installed, so this device can't be flashed over USB. Nothing was written to your device.",
+        "otaRejected": "The device refused the firmware upload, so it is still running its old firmware.",
+        "verifyFailed": "The firmware written to the device didn't read back correctly.",
+        "deviceMayBePartiallyWritten": "Flashing failed after writing to the device had already started. Its firmware may be incomplete — flash it again before using it.",
+        "invalidFirmwareRequest": "That firmware version or target isn't a valid choice, so nothing was downloaded.",
+        "backupFailed": "Couldn't back up the current config",
+        "startFailed": "Couldn't start flashing",
+        "truncatedOptionsRegion": "Firmware image has a corrupt options region",
+        "optionsEncode": "Couldn't encode the selected options",
+        "httpClient": "Couldn't initialize the network client",
+        "noPort": "No serial port was selected",
+        "fcOpenFailed": "Couldn't open the flight-controller serial port",
+        "noDeviceIp": "No device IP address was provided",
+        "tempWrite": "Couldn't write the firmware to a temporary file",
+        "cancelled": "Flashing was cancelled",
+        "spawnFailed": "Couldn't start the flashing tool",
+        "fcWriteFailed": "Couldn't send data to the flight controller",
+        "fcReadFailed": "Couldn't read from the flight controller",
+        "multipart": "Couldn't build the firmware upload request",
+        "waitFailed": "Lost track of the flashing tool process"
+      },
+      "recovery": {
+        "checkUsb": "Check the USB cable and that the device is powered.",
+        "reconnect": "Unplug and reconnect the device, then retry.",
+        "bootloaderMode": "Put the device into bootloader/flashing mode and retry.",
+        "installDriver": "Install the USB-serial driver for your device.",
+        "checkPermissions": "Make sure no other app is using the serial port.",
+        "linuxUdev": "On Linux, add yourself to the dialout group or install the udev rules.",
+        "verifyTarget": "Confirm you picked the correct brand and model.",
+        "verifyDeviceType": "Make sure a TX firmware goes to a TX (and RX to an RX).",
+        "chooseAnotherVersion": "Go back and choose a different firmware version — retrying this one won't help.",
+        "checkNetwork": "Check your internet connection and try again.",
+        "retry": "Wait a moment and try again.",
+        "deviceWifiMode": "Confirm the device is in WiFi mode and reachable.",
+        "checkPlatformio": "Confirm PlatformIO is installed and on your PATH.",
+        "installEsptool": "Install esptool (pip install esptool) and make sure it's on your PATH, then try again.",
+        "configureFcUart": "In Betaflight/iNav Configurator, set the UART the receiver is wired to as Serial RX, then save and reboot.",
+        "updateFcFirmware": "Update the flight-controller firmware — older builds have no MSP serial passthrough.",
+        "flashOverUsb": "Or wire the receiver straight to a USB-serial adapter and flash it over UART instead.",
+        "reflashDevice": "Flash the device again with the same firmware before using it — don't rely on the firmware it had before.",
+        "keepDevicePowered": "Keep the device connected and powered for the whole flash; don't unplug it while it's writing.",
+        "viewLog": "Open the build log below for the full details.",
+        "reportIssue": "If it persists, copy the diagnostic report and ask for help."
+      }
+    }
+  },
+  "config": {
+    "groups": {
+      "link": "RF Link",
+      "power": "Power",
+      "model": "Model Match",
+      "binding": "Binding",
+      "antenna": "Antenna"
+    },
+    "fields": {
+      "packetRate": "Packet Rate",
+      "telemetryRatio": "Telemetry Ratio",
+      "switchMode": "Switch Mode",
+      "txPower": "TX Power",
+      "dynamicPower": "Dynamic Power",
+      "fanThreshold": "Fan Threshold",
+      "modelMatch": "Model Match",
+      "modelId": "Model ID",
+      "bindingPhrase": "Binding Phrase",
+      "antennaMode": "Antenna Mode"
+    },
+    "values": {
+      "on": "On",
+      "off": "Off"
+    }
+  },
+  "ai": {
+    "title": "Omnia",
+    "subtitle": "ExpressLRS assistant",
+    "openAssistant": "Open Omnia assistant",
+    "closeAssistant": "Close Omnia assistant",
+    "placeholder": "Ask Omnia about telemetry, power, binding…",
+    "inputLabel": "Message Omnia",
+    "send": "Send",
+    "clear": "Clear conversation",
+    "typing": "Omnia is typing…",
+    "disclaimer": "AI-generated — verify settings before flashing.",
+    "noKeyConfigured": "I need an API key to answer. Add one in Settings → AI assistant.",
+    "noConfig": "I need an AI configuration to answer. Add one in Settings → Omnia AI.",
+    "error": "Omnia couldn't answer: {{message}}",
+    "role": {
+      "you": "You",
+      "assistant": "Omnia"
+    },
+    "history": {
+      "title": "Chat history",
+      "show": "Chat history",
+      "newChat": "New chat",
+      "empty": "No saved chats yet.",
+      "untitled": "Untitled chat",
+      "delete": "Delete chat"
+    },
+    "empty": {
+      "title": "Hi, I'm Omnia",
+      "description": "Ask about your ExpressLRS setup — telemetry, power, binding, flashing, or profiles."
+    },
+    "suggestions": {
+      "telemetry": "How do I read my RSSI and link quality?",
+      "power": "What TX power should I use?",
+      "binding": "How does binding work?"
+    },
+    "suggestion": {
+      "label": "Suggested setting",
+      "review": "Review change",
+      "hideReview": "Hide review",
+      "reviewTitle": "Review this change before applying",
+      "apply": "Apply change",
+      "confirm": "Confirm apply",
+      "cancel": "Cancel",
+      "confirmPrompt": "This updates your active configuration. Apply it?",
+      "applied": "Change applied to your active configuration",
+      "appliedProfileName": "AI suggestion: {{key}}",
+      "lowConfidence": "Low-confidence suggestion — review it carefully before applying.",
+      "unsupported": "Not auto-applicable",
+      "unsupportedHint": "This suggestion is valid but doesn't map to a profile setting OmniLink can apply for you. Change it manually if you need it.",
+      "blocked": "Blocked for safety",
+      "blockedHint": "This suggestion targets a protected or unsupported field and can't be applied. Safety-critical settings (RF power, failsafe, binding) are never changed automatically."
+    },
+    "providers": {
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI",
+      "gemini": "Google Gemini",
+      "openrouter": "OpenRouter",
+      "ollama": "Ollama (local)"
+    },
+    "preview": {
+      "title": "Show what will be sent",
+      "description": "Only this sanitized, anonymized data leaves your device. Binding phrases, GPS, MAC/serial, IP and emails are never included.",
+      "empty": "No device context to send yet."
+    },
+    "controls": {
+      "provider": "Provider",
+      "model": "Model",
+      "config": "Configuration",
+      "noConfigs": "Add a configuration in Settings to chat."
+    },
+    "context": {
+      "label": "Context",
+      "description": "Choose what hardware context Omnia is grounded in.",
+      "auto": "Auto",
+      "device": "Connected device",
+      "wizard": "Wizard target",
+      "offline": "Offline (no device data)"
+    },
+    "sources": {
+      "title": "Sources for this chat",
+      "description": "Choose which knowledge sources ground this conversation. Turning one off here affects only this chat.",
+      "count": "{{enabled}} of {{total}} on",
+      "on": "On",
+      "off": "Off",
+      "untrusted": "Yours",
+      "enableAria": "Enable {{title}} for this chat",
+      "disableAria": "Disable {{title}} for this chat",
+      "allOff": "Every source is off for this chat — Omnia will answer without grounded sources."
+    },
+    "commands": {
+      "title": "Commands",
+      "explain": {
+        "label": "Explain",
+        "description": "Explain an ExpressLRS setting or concept.",
+        "prompt": "Explain how the following ExpressLRS setting or concept works, in plain terms: "
+      },
+      "troubleshoot": {
+        "label": "Troubleshoot",
+        "description": "Diagnose a link or flashing problem step by step.",
+        "prompt": "Help me troubleshoot this ExpressLRS issue, step by step: "
+      },
+      "telemetry": {
+        "label": "Telemetry",
+        "description": "Review my current telemetry for anything concerning.",
+        "prompt": "Review my current telemetry and flag anything that looks off: "
+      }
+    },
+    "attach": {
+      "button": "Attach file or log",
+      "label": "Attachments",
+      "remove": "Remove {{name}}"
+    },
+    "generating": "Generating…",
+    "stop": "Stop generation",
+    "code": {
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "goals": {
+      "categories": {
+        "telemetry": "Telemetry",
+        "flashing": "Flashing",
+        "tuning": "Tuning",
+        "troubleshooting": "Troubleshooting"
+      },
+      "telemetry": {
+        "label": "Read RSSI & link quality",
+        "prompt": "How do I read my RSSI and link quality, and what are healthy values?"
+      },
+      "linkHealth": {
+        "label": "Is my link healthy?",
+        "prompt": "Based on my telemetry, is my link healthy right now?"
+      },
+      "flashing": {
+        "label": "Flash my receiver",
+        "prompt": "Walk me through flashing ExpressLRS firmware onto my receiver."
+      },
+      "binding": {
+        "label": "How binding works",
+        "prompt": "How does ExpressLRS binding work, and how do I bind my RX to my TX?"
+      },
+      "power": {
+        "label": "Pick TX power",
+        "prompt": "What TX power should I use for my flying, and what are the trade-offs?"
+      },
+      "packetRate": {
+        "label": "Choose a packet rate",
+        "prompt": "How do I choose the right packet rate for range versus latency?"
+      },
+      "failsafe": {
+        "label": "Configure failsafe",
+        "prompt": "How should I configure failsafe on my ExpressLRS receiver?"
+      },
+      "dropouts": {
+        "label": "Fix signal dropouts",
+        "prompt": "I'm getting signal dropouts in flight — how do I diagnose and fix them?"
+      }
+    },
+    "citation": {
+      "title": "Based on your context",
+      "verify": "Verify against your active config before flashing.",
+      "none": "No device context",
+      "offline": "Offline knowledge base"
+    },
+    "rag": {
+      "title": "Sources",
+      "listLabel": "Cited sources",
+      "sourceLabel": "Source: {{title}}",
+      "confidence": "Relevance {{percent}}%",
+      "confidenceAria": "Relevance {{percent}} percent",
+      "noSource": {
+        "title": "No trusted source found",
+        "description": "Omnia has no trusted source that matches this question, so it should say so rather than answer unsupported."
+      },
+      "trust": {
+        "official": "Official",
+        "omnilinkNotes": "OmniLink notes"
+      },
+      "preview": {
+        "title": "Retrieved context",
+        "count": "{{count}} trusted excerpt(s) would ground this answer.",
+        "none": "No trusted source matches this draft — no excerpts will be sent, and Omnia will say it has no source."
+      }
+    }
+  },
+  "settings": {
+    "sections": {
+      "app": "Application",
+      "telemetry": "Telemetry & Maps",
+      "ai": "AI Assistant",
+      "data": "Data & Privacy",
+      "lab": "Lab (experimental)"
+    },
+    "update": {
+      "title": "App Update",
+      "description": "Check for a newer OmniLink release and install it directly. Updates are downloaded and verified on your device, then applied on restart.",
+      "currentVersion": "Current version",
+      "check": "Check for updates",
+      "upToDate": "You're on the latest version",
+      "available": "Version {{version}} is available",
+      "install": "Install & restart",
+      "downloading": "Downloading… {{progress}}%",
+      "restarting": "Update installed — restarting…",
+      "errorTitle": "Couldn't check for updates",
+      "errorHint": "Make sure the update endpoint is reachable and configured.",
+      "notConfiguredTitle": "Auto-update isn't available in this build",
+      "notConfigured": "In-app updates work only in a packaged, signed OmniLink release that's pointed at the update feed. A development or unsigned build has no updater channel — download the latest release from GitHub to update instead."
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose how OmniLink looks. Theme applies instantly and is remembered."
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose the display language for OmniLink. It applies instantly and is remembered.",
+      "label": "Display language",
+      "options": {
+        "en": "English",
+        "es": "Español"
+      }
+    },
+    "byok": {
+      "title": "Omnia AI (BYOK)",
+      "description": "Bring your own API key to power Omnia. Requests go directly from your device to the provider — never through an OmniLink server.",
+      "provider": "Provider",
+      "model": "Model",
+      "modelsLoading": "Loading available models…",
+      "modelsError": "Couldn't load models from the provider — showing defaults.",
+      "modelsLive": "Live models loaded from the provider.",
+      "modelsFallbackNoKey": "Showing default models. Add an API key below to load this provider's live model list.",
+      "baseUrl": "Base URL",
+      "baseUrlHint": "Endpoint for OpenAI-compatible providers (OpenAI, Gemini, OpenRouter, local Ollama).",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "sk-…",
+      "apiKeyHint": "Stored on your device and read only when sending a request. It is never shown again or sent to OmniLink.",
+      "noKeyNeeded": "This provider runs locally and needs no API key.",
+      "save": "Save key",
+      "clear": "Remove key",
+      "saved": "Key saved",
+      "statusSet": "Key configured",
+      "statusUnset": "No key — Omnia uses offline answers",
+      "empty": "No AI configurations yet. Add one to start chatting with Omnia.",
+      "addConfig": "Add configuration",
+      "newConfig": "New configuration",
+      "editConfig": "Edit configuration",
+      "saveConfig": "Save configuration",
+      "name": "Name",
+      "namePlaceholder": "e.g. Work OpenAI",
+      "setActive": "Set active",
+      "activeBadge": "Active",
+      "edit": "Edit configuration",
+      "delete": "Delete configuration",
+      "confirmDelete": "Remove “{{label}}”? This also deletes its stored API key.",
+      "keySet": "Key set",
+      "keyUnset": "No key",
+      "keyNotNeeded": "No key needed",
+      "apiKeyStoredPlaceholder": "Enter a new key to replace the stored one",
+      "apiKeyStoredHint": "A key is already stored for this configuration. Leave blank to keep it, or enter a new one to replace it."
+    },
+    "tiles": {
+      "title": "Offline map tiles",
+      "description": "The flight-path map framework and offline-pack machinery work fully offline. The base map and regional packs that ship today are solid-colour placeholders, not real geography — a licensed raster tile set is not yet bundled.",
+      "placeholderTitle": "Placeholder tiles",
+      "placeholderNotice": "The bundled base map and all regional packs are currently solid-colour placeholder tiles — real geographic tiles are not yet included (pending a licensed OpenStreetMap raster set). A flat-coloured map behind your flight path is expected, not a bug.",
+      "loading": "Loading tile packs…",
+      "bundled": "Bundled",
+      "baseMissing": "Not found",
+      "downloaded": "Downloaded",
+      "download": "Download",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "packMeta": "{{size}} · zoom {{minZoom}}–{{maxZoom}}",
+      "downloadingProgress": "Downloading… {{percent}}% ({{received}} / {{total}})",
+      "downloadingUnknown": "Downloading… {{received}}"
+    },
+    "retention": {
+      "title": "Session storage",
+      "description": "Automatically prune old recorded telemetry sessions to keep the local database small. Off by default — your recordings are kept until you turn this on.",
+      "enable": "Automatic cleanup",
+      "enableHint": "When on, OmniLink prunes sessions past the limits below each time the session list loads.",
+      "maxCount": "Keep newest sessions",
+      "maxCountHint": "Delete all but this many of the most recent recordings.",
+      "maxAgeDays": "Maximum age (days)",
+      "maxAgeDaysHint": "Delete recordings older than this many days.",
+      "on": "On",
+      "off": "Off"
+    },
+    "privacy": {
+      "title": "Your data",
+      "description": "Everything OmniLink stores stays on this device — there is no server. Export a copy of your local data, or permanently erase all of it.",
+      "exportTitle": "Export my data",
+      "exportHint": "Download a single JSON bundle of your local data: recorded telemetry sessions, chat history, config profiles, imported knowledge, and preferences. API keys are never included.",
+      "exportAction": "Export my data",
+      "exportFilename": "omnilink-data-export-{{name}}.json",
+      "backupsTitle": "Pre-flash device backups",
+      "backupsHint": "Before every flash, OmniLink saves a snapshot of the connected device as an .elrsp file. Open the folder to import one from the Profiles page.",
+      "backupsAction": "Open backups folder",
+      "deleteTitle": "Delete all my data",
+      "deleteHint": "Irreversibly erase everything on this device: telemetry, recorded sessions, chat history, profiles, imported knowledge, device-config backups, preferences, and API keys. This cannot be undone.",
+      "deleteAction": "Delete all my data",
+      "deleteConfirmWord": "DELETE",
+      "deleteConfirmTitle": "Delete all your data?",
+      "deleteConfirmBody": "This permanently erases ALL local data — telemetry, recorded sessions, chat history, profiles, imported knowledge, device-config backups, preferences, and API keys. It cannot be undone and nothing is uploaded anywhere.",
+      "deleteConfirmPrompt": "Type {{word}} to confirm.",
+      "deleteCancel": "Cancel",
+      "deleteConfirm": "Delete everything"
+    },
+    "knowledge": {
+      "title": "Trusted knowledge sources",
+      "description": "The sources Omnia is allowed to draw on. Each ships bundled and works offline; only official ExpressLRS references and OmniLink's own notes are included, and nothing outside this allowlist can appear here.",
+      "update": "Update",
+      "updateAria": "Update {{title}}",
+      "updateAll": "Update all",
+      "updateAllAria": "Update all knowledge sources",
+      "updateAllCurrent": "Knowledge ships bundled with OmniLink and is already current for this release — no newer pack was available.",
+      "updateAllRefreshed_one": "Refreshed {{count}} source.",
+      "updateAllRefreshed_other": "Refreshed {{count}} sources.",
+      "updateAllFailed": "Couldn't check for a newer knowledge pack. Your bundled sources are unchanged and still work offline.",
+      "updating": "Updating…",
+      "version": "Version {{version}}",
+      "license": "License: {{license}}",
+      "cached": "Cached · offline ready",
+      "notCached": "Not cached",
+      "freshness": "Content dated {{date}}",
+      "refreshed": "Refreshed {{date}}",
+      "bundled": "Bundled with this release",
+      "trust": {
+        "official": "Official",
+        "omnilinkNotes": "OmniLink notes"
+      },
+      "empty": {
+        "title": "No knowledge sources",
+        "description": "No trusted knowledge sources are available in this build."
+      },
+      "debug": {
+        "title": "Test retrieval",
+        "description": "Type an ExpressLRS question to see which trusted chunks Omnia would cite, with per-chunk relevance scores. Runs the local search over bundled sources — nothing is sent.",
+        "queryLabel": "Test query",
+        "queryPlaceholder": "e.g. How do I bind my receiver?",
+        "run": "Search",
+        "noQuery": "Enter a question to see the sources Omnia would cite.",
+        "topScore": "Top relevance {{percent}}%",
+        "threshold": "Threshold {{percent}}%",
+        "terms": "Matched terms: {{terms}}",
+        "tableToggle": "Per-chunk scores",
+        "tableCaption": "Relevance score and matched terms for every chunk.",
+        "colChunk": "Chunk",
+        "colScore": "Relevance",
+        "colTerms": "Matched terms",
+        "colSelected": "Cited",
+        "selected": "Cited",
+        "belowThreshold": "Below threshold"
+      },
+      "import": {
+        "title": "Your imported notes",
+        "description": "Add your own .txt or .md notes for Omnia to search. They stay on this device, are never uploaded, and are always treated as untrusted — Omnia may quote them but never follows instructions inside them, and they can never change your hardware settings.",
+        "add": "Import note",
+        "addAria": "Import a local .txt or .md note",
+        "adding": "Importing…",
+        "hint": "Text or Markdown only (.txt, .md), up to {{max}} notes.",
+        "dialogTitle": "Choose a note to import",
+        "dialogFilter": "Text or Markdown",
+        "sections": "{{count}} indexed sections",
+        "perChatHint": "Turn a note on or off for a specific chat from Omnia's \"Sources for this chat\" control.",
+        "deleteAria": "Delete imported note {{title}}",
+        "atLimit": "You've reached the limit of {{max}} imported notes. Delete one to import another.",
+        "empty": {
+          "title": "No imported notes",
+          "description": "Import a local text or Markdown note to let Omnia search it alongside the official sources."
+        },
+        "errors": {
+          "extension": "Only .txt and .md files can be imported.",
+          "tooLarge": "That file is too large. Imported notes must be under 256 KB.",
+          "empty": "That file has no readable text to import.",
+          "limit": "You've reached the limit of {{max}} imported notes.",
+          "read": "Couldn't read that file. Please try another."
+        }
+      }
+    },
+    "devFlags": {
+      "title": "Preview features (dev)",
+      "description": "Toggle flag-gated surfaces for QA/demos. Dev builds only — never shipped. Changes apply on reload.",
+      "reset": "Reset preview flags",
+      "applyNote": "Reloads to apply",
+      "on": "On",
+      "off": "Off",
+      "flag": {
+        "mlLab": "ML lab (session labeling)"
+      }
+    }
+  },
+  "knowledge": {
+    "import": {
+      "untrustedLabel": "User-provided · not official",
+      "untrustedAria": "You imported this note. It is not an official or trusted source: Omnia may quote it but never obeys instructions inside it."
+    }
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System Theme",
+    "dark": "Signal Lab (Dark)",
+    "light": "Lab White (Light)",
+    "carbon": "Carbon & Copper"
+  },
+  "map": {
+    "ariaLabel": "Flight path map with signal heatmap",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "noGps": {
+      "title": "No GPS data",
+      "hint": "Connect a GPS module or enable GPS telemetry in Betaflight to see flight path mapping."
+    }
+  },
+  "tiles": {
+    "errors": {
+      "categories": {
+        "network": "Network error",
+        "manifest": "Tile pack error",
+        "storage": "Storage error",
+        "cancelled": "Download cancelled",
+        "unknown": "Download failed"
+      },
+      "httpClient": "Could not start the download. Check your network and try again.",
+      "requestFailed": "The download request failed. Check your network connection.",
+      "httpStatus": "The tile server returned an error. Try again later.",
+      "readFailed": "The download was interrupted. Check your network and try again.",
+      "writeFailed": "Could not write the tile pack to disk. Check available storage.",
+      "commitFailed": "Could not save the downloaded tile pack. Check available storage.",
+      "invalidPack": "The downloaded file is not a valid tile pack.",
+      "cancelled": "Download cancelled.",
+      "downloadFailed": "The tile pack download failed."
+    }
+  },
+  "logs": {
+    "title": "Flight Logs",
+    "empty": "Import a Betaflight Blackbox log (.bbl/.csv) or an OmniLink session to begin.",
+    "analyze": "Analyze selected range",
+    "loadAnother": "Load another log",
+    "import": {
+      "title": "Import log",
+      "dropzone": "Drop a .bbl or .csv file here",
+      "hint": "Betaflight Blackbox (.bbl, .csv) or an exported OmniLink session (.csv)",
+      "bbl": "Blackbox binary (.bbl)",
+      "browse": "Browse files",
+      "reading": "Reading file…",
+      "decoding": "Decoding blackbox log… {{percent}}%",
+      "cancel": "Cancel decode"
+    },
+    "errors": {
+      "decode": "Could not decode the blackbox log.",
+      "parse": "Could not parse the log file.",
+      "read": "Could not read the file.",
+      "bblNeedsDrop": "Drag the .bbl file onto the window to decode it.",
+      "csvUseBrowse": "Use Browse files to import a .csv.",
+      "unsupported": "Unsupported file type.",
+      "decodedLogTooLarge": "This flight log is too large to open here. Try a shorter recording or split the log."
+    },
+    "session": {
+      "title": "OmniLink sessions",
+      "loading": "Loading recorded sessions…",
+      "loadError": "Could not load recorded sessions.",
+      "rowError": "Couldn't read this session — try again.",
+      "empty": "No recorded sessions yet.",
+      "csvHint": "Import an exported session CSV from above.",
+      "unknownTarget": "Unknown device",
+      "unknownFirmware": "Firmware n/a",
+      "recorded": "Recorded {{time}}",
+      "frames_one": "{{count}} frame",
+      "frames_other": "{{count}} frames",
+      "duration": "Duration {{duration}}",
+      "export": "Export",
+      "loadAria": "Load session from {{target}} recorded {{time}}",
+      "exportAria": "Export session from {{target}} recorded {{time}} as CSV",
+      "exportFilename": "omnilink-session-{{name}}.csv",
+      "summary": "{{sessions}} · {{frames}}",
+      "summarySessions_one": "{{count}} session",
+      "summarySessions_other": "{{count}} sessions",
+      "renameAria": "Rename this session",
+      "renameSave": "Save name",
+      "renameCancel": "Cancel rename",
+      "namePlaceholder": "Session name",
+      "deleteAria": "Delete session from {{target}} recorded {{time}}",
+      "deleteConfirmTitle": "Delete this session?",
+      "deleteConfirmBody": "This permanently removes the recording and all of its frames from OmniLink. This can't be undone.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel"
+    },
+    "scrubber": {
+      "title": "Timeline",
+      "label": "Scrub position",
+      "position": "Sample {{index}} / {{total}} · {{time}}",
+      "markStart": "Mark range start",
+      "markEnd": "Mark range end",
+      "clear": "Clear range",
+      "selection": "Range {{start}}–{{end}} ({{startTime}} → {{endTime}})",
+      "noSelection": "No range selected — the whole log will be analyzed."
+    },
+    "charts": {
+      "title": "Channels",
+      "empty": "No chartable channels in this log.",
+      "decimated": "Showing {{shown}} of {{total}} samples"
+    },
+    "path": {
+      "title": "Flight path",
+      "cursorFix": "Cursor: {{lat}}, {{lon}}",
+      "cursorNoFix": "No GPS fix at cursor"
+    }
+  },
+  "anomaly": {
+    "panel": {
+      "title": "Anomalies",
+      "empty": "No anomalies detected in this log.",
+      "count": "{{count}} detected"
+    },
+    "filter": {
+      "type": "Type",
+      "severity": "Severity",
+      "allTypes": "All types",
+      "allSeverities": "All severities"
+    },
+    "type": {
+      "signalLoss": "Signal loss",
+      "failsafe": "Failsafe",
+      "lqDrop": "Link quality drop",
+      "txPowerChange": "TX power change"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "message": {
+      "signalLoss": "Signal loss — RSSI fell to {{rssi}} dBm",
+      "failsafe": "Failsafe — link quality {{lq}}%",
+      "lqDrop": "Link quality dropped {{from}}% → {{to}}%",
+      "txPowerChange": "TX power changed {{from}} → {{to}} mW"
+    },
+    "sendToAi": "Send to AI",
+    "sendToAiAria": "Send this anomaly window to AI",
+    "marker": {
+      "aria": "{{type}} anomaly at {{time}}"
+    },
+    "jumpAria": "Jump to {{type}} at {{time}}"
+  },
+  "alerts": {
+    "regionLabel": "Live telemetry alerts",
+    "dismiss": "Dismiss alert",
+    "type": {
+      "signalLoss": "Low signal",
+      "lqDrop": "Low link quality",
+      "failsafe": "Link loss",
+      "gpsDistance": "Distance limit"
+    },
+    "message": {
+      "signalLoss": "Low signal — RSSI fell to {{rssi}} dBm",
+      "lqDrop": "Link quality low — {{lq}}%",
+      "failsafe": "Link lost — telemetry signal dropped to 0%",
+      "gpsDistance": "Aircraft {{distance}} m from home — beyond the set range"
+    },
+    "settings": {
+      "title": "Live alerts",
+      "description": "Raise an alert when the live telemetry link degrades. Each alarm trips and recovers at distinct thresholds — so a value hovering at the limit can't flap — and must stay bad for the debounce window before it fires.",
+      "mute": "Mute all alarms",
+      "muteHint": "Suppresses every in-app and OS notification while on. Alarms keep tracking the link but stay silent.",
+      "sound": "Play a sound on alert",
+      "soundHint": "Also plays a short beep when an alarm trips, alongside the on-screen and OS notification. Off by default; silenced by mute.",
+      "soundTest": "Test",
+      "muted": "Muted",
+      "unmuted": "Active",
+      "alertsActive": "Alerts active",
+      "on": "On",
+      "off": "Off",
+      "debounce": "Debounce (frames)",
+      "rssiTrip": "RSSI floor (dBm)",
+      "rssiClear": "Recover above (dBm)",
+      "lqTrip": "Link quality floor (%)",
+      "lqClear": "Recover above (%)",
+      "linkLossHint": "Fires when link quality stays pinned at 0% (failsafe).",
+      "gpsHint": "Fires when the aircraft moves beyond a set distance from its first GPS fix (home).",
+      "gpsTrip": "Distance limit (m)",
+      "gpsClear": "Recover within (m)"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "markRead": "Mark as read",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "unread_one": "{{count}} unread",
+    "unread_other": "{{count}} unread",
+    "badgeLabel": "Notifications, {{count}} unread",
+    "arrived": "New notification: {{title}}"
+  },
+  "diagnostics": {
+    "panel": {
+      "title": "Signal health",
+      "live": "Live link",
+      "session": "Session",
+      "compact": "Signal health",
+      "healthLabel": "Signal health score",
+      "factorsTitle": "Score factors",
+      "worstFactor": "Weakest:",
+      "allNominal": "All factors nominal",
+      "windowTrend": "Per-window health trend across the session",
+      "liveFindings": "Live findings",
+      "liveFindingsEmpty": "No live link issues detected."
+    },
+    "gauge": {
+      "scoreOf": "{{score}} / 100",
+      "outOf": "/ 100"
+    },
+    "factor": {
+      "lq": "Link quality",
+      "rssi": "RSSI (best)",
+      "snr": "SNR",
+      "packetRate": "Packet rate",
+      "txPower": "TX power"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "category": {
+      "signal": "Signal",
+      "link": "Link",
+      "power": "Power",
+      "stability": "Stability"
+    },
+    "rule": {
+      "lqCollapse": "Link quality collapse",
+      "rssiFloor": "RSSI at the floor",
+      "snrNoise": "Noisy SNR",
+      "packetInstability": "Packet-rate instability",
+      "txPowerSaturation": "TX power saturation"
+    },
+    "finding": {
+      "window": "{{start}}–{{end}}s",
+      "whyTitle": "Why this matters",
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "jumpAria": "Jump to {{rule}} at {{time}}",
+      "evidenceAria": "Evidence window from {{start}} to {{end}} seconds",
+      "confidenceLabel": "Confidence",
+      "confidence": "{{pct}}%",
+      "explain": "Explain",
+      "explainAria": "Ask Omnia to explain this finding",
+      "lqCollapse": "Link quality collapsed from {{from}}% to {{to}}%.",
+      "rssiFloor": "RSSI bottomed out at {{rssi}} dBm — the receiver was at its sensitivity floor.",
+      "snrNoise": "Noisy signal — SNR varied by ±{{stdDev}} dB over {{window}} samples.",
+      "packetInstability": "Unstable packet rate — {{changes}} rate changes within {{window}} samples.",
+      "txPowerSaturation": "TX power pinned at {{txPower}} mW while RSSI averaged {{avgRssi}} dBm — no power headroom left."
+    },
+    "detail": {
+      "from": "From",
+      "to": "To",
+      "rssi": "RSSI (dBm)",
+      "stdDev": "SNR std-dev",
+      "window": "Window",
+      "changes": "Rate changes",
+      "txPower": "TX power (mW)",
+      "avgRssi": "Avg RSSI (dBm)"
+    },
+    "why": {
+      "lqCollapse": "A sudden link-quality drop means control packets stopped getting through — the moment most likely to precede a failsafe.",
+      "rssiFloor": "At the noise floor the receiver can no longer separate signal from noise, so any further loss is an immediate dropout.",
+      "snrNoise": "A jumpy signal-to-noise ratio points to interference or a marginal antenna path that erodes range and reliability.",
+      "packetInstability": "A packet rate that keeps switching suggests the link is renegotiating under stress instead of holding a stable mode.",
+      "txPowerSaturation": "Running at maximum power with a weak link means there is no headroom left to push through — you are already at the edge of range."
+    },
+    "findings": {
+      "title": "Diagnostics",
+      "count": "{{count}} found",
+      "empty": "No link-health problems found in this session.",
+      "notEnoughData": "Not enough data in this session to run the diagnostics.",
+      "copy": "Copy summary",
+      "copied": "Copied",
+      "copyAria": "Copy the diagnostic summary to the clipboard",
+      "copyTitle": "OmniLink link diagnostics",
+      "copyHealth": "Signal health: {{score}} / 100",
+      "filterSeverity": "Filter by severity",
+      "allSeverities": "All severities",
+      "ask": "Ask Omnia",
+      "askAria": "Ask Omnia about this session's diagnostics"
+    },
+    "ai": {
+      "explainPrompt": "Explain this link-diagnostics finding ({{rule}}) in plain language and tell me what to check first. Use only the sanitized diagnostic evidence provided.",
+      "askSessionPrompt": "Explain my session's link diagnostics in plain language and tell me what to check first. Use only the sanitized diagnostic evidence provided."
+    },
+    "settings": {
+      "title": "Diagnostics settings",
+      "description": "Tune how sensitively the on-device diagnostics flag link-health problems. Everything runs locally — nothing is uploaded.",
+      "open": "Settings",
+      "sensitivity": "Sensitivity preset",
+      "preset": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "categories": "Categories",
+      "thresholds": "Fine-tune the thresholds for individual rules.",
+      "thresholdsSessionOnly": "Per-rule threshold overrides apply for this session only — they reset to the preset on reload.",
+      "advancedToggle": "Advanced thresholds",
+      "reset": "Reset to preset",
+      "on": "On",
+      "off": "Off",
+      "threshold": {
+        "lqFloor": "Link-quality floor",
+        "rssiFloor": "RSSI floor",
+        "snrStd": "SNR noise threshold",
+        "jitter": "Packet-rate jitter",
+        "txPoorRssi": "TX saturation RSSI"
+      }
+    },
+    "notification": {
+      "category": {
+        "signal": "Signal diagnostic",
+        "link": "Link diagnostic",
+        "power": "Power diagnostic",
+        "stability": "Stability diagnostic"
+      }
+    },
+    "marker": {
+      "aria": "{{rule}} at {{time}}"
+    },
+    "patterns": {
+      "title": "Post-flight patterns",
+      "mostLikely": "Most likely issue",
+      "evidence": "Evidence",
+      "checkFirst": "What to check first",
+      "notEnough": "Not enough evidence in this session to detect recurring patterns yet.",
+      "none": "No recurring patterns stood out in this session.",
+      "windows_one": "{{count}} evidence window",
+      "windows_other": "{{count}} evidence windows",
+      "secondary": "Other patterns",
+      "jumpAria": "Jump to {{pattern}} evidence"
+    },
+    "pattern": {
+      "repeatedLqDrops": "Repeated link-quality drops",
+      "headingDegradation": "Direction-correlated signal loss",
+      "gpsAreaDegradation": "Location-correlated signal loss",
+      "powerPacketLinkEvents": "Power/packet changes around link events"
+    },
+    "patternSummary": {
+      "repeatedLqDrops": "Link quality dropped {{drops}} separate times, down to {{lowestLq}}%.",
+      "headingDegradation": "Signal weakened whenever the craft faced about {{sectorDeg}}° — link quality there averaged {{sectorLq}}% versus {{baselineLq}}% elsewhere.",
+      "gpsAreaDegradation": "Signal was recurrently weak over {{areas}} spot(s) across {{passes}} passes — {{areaLq}}% there versus {{baselineLq}}% elsewhere.",
+      "powerPacketLinkEvents": "TX power and/or packet rate shifted around {{events}} link events."
+    },
+    "patternEvidence": {
+      "repeatedLqDrops": "{{drops}} link-quality collapses across the session; the deepest reached {{lowestLq}}%.",
+      "headingDegradation": "Depressed spans line up with a heading sector centred near {{sectorDeg}}°.",
+      "gpsAreaDegradation": "{{passes}} passes through {{areas}} area(s) each showed the same drop.",
+      "powerPacketLinkEvents": "Around {{events}} events, TX power rose by up to {{maxTxRampMw}} mW / packet rate changed {{packetRateChanges}} times."
+    },
+    "patternCheck": {
+      "repeatedLqDrops": "Repeated drops usually mean range or obstruction, not a one-off glitch — check antenna placement and fly a shorter range to confirm.",
+      "headingDegradation": "A direction-linked null points at antenna orientation or the airframe blocking the signal — reposition the antenna or add diversity facing the weak sector.",
+      "gpsAreaDegradation": "The same weak spot on every pass is environmental — note the location and avoid it, or gain altitude through it.",
+      "powerPacketLinkEvents": "Power ramping into every drop means you are at the edge of the link budget — reduce range or step up the antenna/TX setup."
+    },
+    "patternMarker": {
+      "aria": "{{pattern}} evidence at {{time}}"
+    },
+    "trends": {
+      "title": "Trends & Suggestions",
+      "subtitle": "Cross-session trends and conservative setup suggestions from your own analyzed sessions — local and offline.",
+      "emptyTitle": "No trends yet",
+      "emptyDescription": "Analyze a few sessions on the Session Analysis page and their diagnostic history builds up here into per-device trends and setup suggestions.",
+      "notEnough": "{{have}} of {{need}} sessions recorded — analyze more to see trends.",
+      "unknownDevice": "Unknown device",
+      "sessionCount_one": "{{count}} session recorded",
+      "sessionCount_other": "{{count}} sessions recorded",
+      "avgHealth": "Average health {{score}}/100",
+      "healthTrendAria": "Signal health over time for {{device}}",
+      "repeatedEvents": "Repeated events",
+      "eventSessions_one": "{{count}} session",
+      "eventSessions_other": "{{count}} sessions",
+      "weakRfModes": "Weak RF modes",
+      "weakRfMode": "{{packetRate}} Hz · avg health {{avgHealth}} across {{sessions}} sessions",
+      "suggestionsTitle": "Setup suggestions",
+      "noSuggestions": "No setup suggestions — nothing recurring stood out across your sessions yet.",
+      "excludedDevices_one": "{{count}} device has too few sessions to trend yet.",
+      "excludedDevices_other": "{{count}} devices have too few sessions to trend yet.",
+      "noTrendableDevices": "No device has 2 or more recorded sessions yet — analyze more sessions from the same device to see its trend."
+    },
+    "confidence": {
+      "measured": "Measured",
+      "likely": "Likely",
+      "worthChecking": "Worth checking"
+    },
+    "history": {
+      "resetTitle": "Reset history",
+      "resetConfirmTitle": "Reset diagnostic history?",
+      "resetConfirmBody": "This permanently clears every recorded session summary and the trends derived from them. This can't be undone.",
+      "resetConfirm": "Reset history",
+      "resetCancel": "Cancel"
+    },
+    "suggestion": {
+      "antennaCheck": {
+        "title": "Check your antenna",
+        "body": "Signal weakened the same way in {{sessions}} of {{ofSessions}} recorded sessions. Check antenna placement, connectors, and orientation."
+      },
+      "telemetryIntervalReview": {
+        "title": "Review your telemetry interval",
+        "body": "Packet-rate instability recurred in {{sessions}} of {{ofSessions}} sessions. Review your telemetry/update interval so the link isn't overloaded."
+      },
+      "packetRateReconsideration": {
+        "title": "Reconsider your packet rate",
+        "body": "Packet-rate instability recurred in {{sessions}} of {{ofSessions}} sessions. Consider a more robust (lower or fixed) packet rate for a steadier link.",
+        "bodyWeakRf": "A packet rate coincided with lower link health across {{sessions}} of {{ofSessions}} sessions. It may be worth trying a more robust (lower) rate to see if the link steadies."
+      },
+      "powerSettingReview": {
+        "title": "Review your power setting",
+        "body": "TX power sat pinned at maximum in {{sessions}} of {{ofSessions}} sessions. Review your power setting and whether more antenna gain would help."
+      },
+      "wiringPowerSuspicion": {
+        "title": "Suspect wiring or power",
+        "body": "A wiring/power pattern recurred in {{sessions}} of {{ofSessions}} sessions. Inspect power wiring, connectors, and grounding to the RX/VTX."
+      }
+    }
+  },
+  "mlLab": {
+    "title": "Session labeling (ML lab)",
+    "description": "Label your recorded sessions so they can train and evaluate a link-health model. This is a laboratory instrument: nothing here reaches users, and no model trained on today's data is fit to.",
+    "privacyNote": "Labels stay on this device. A label is a session id, one of six fixed values, and a revision — there is no free-text field, and nothing is uploaded.",
+    "sessions": {
+      "title": "Your recorded sessions",
+      "loading": "Reading stored sessions…",
+      "empty": "No recorded sessions",
+      "emptyHint": "Record a telemetry session from a connected device and it will appear here, ready to label.",
+      "meta": "{{frames}} frames · {{duration}}",
+      "unknownDuration": "duration unknown"
+    },
+    "label": {
+      "legend": "Label",
+      "aria": "Label for the session recorded at {{session}}",
+      "unlabeled": "Not labeled",
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "failsafe": "Failsafe",
+      "wiringSuspicion": "Wiring suspicion",
+      "antennaSuspicion": "Antenna suspicion",
+      "unknown": "Unknown — I cannot tell"
+    },
+    "readiness": {
+      "title": "Data readiness",
+      "verdictNotEnoughData": "Not enough data to train — {{have}} of the {{required}} labeled sessions the bar requires.",
+      "verdictBarMet": "Bar met — {{required}} labeled sessions across every class.",
+      "meaning": "The bar (D21) is {{perClass}} labeled sessions per class, across {{classes}} classes. It is not met, and it is not close. Any metric a model in this release reports is indicative only — it is not a gate pass, and no model trained on this corpus reaches a user.",
+      "provenance": "{{fixtures}} of those are OmniLink's bundled reference fixtures — not your recordings. Sessions you have labeled on this device: {{user}}.",
+      "unknownNote": "{{unknown}} labeled unknown, which counts toward no class.",
+      "tableCaption": "Labeled sessions per class against the required bar",
+      "colClass": "Class",
+      "colFixtures": "Fixtures",
+      "colYours": "Yours",
+      "colRequired": "Required",
+      "colShortfall": "Short by"
+    },
+    "model": {
+      "title": "Model prototype (M58)",
+      "badge": "Model-assisted · not validated",
+      "loading": "Loading the model prototype…",
+      "verdictFailed": "This model did NOT clear the M56 ship gate. clearsM56Gate() returned false.",
+      "verdictCleared": "This model cleared the M56 ship gate.",
+      "verdictReason": "It could not. The v2.0 rule engine scores a false-positive rate of {{baselineFp}} on the same held-out sessions, and the gate requires a model to be strictly below the rule engine. Nothing is strictly below zero — so no model clears this gate, not this one and not a perfect one. The rules were also written against these very sessions, so their perfect score is a ceiling, not field performance: there is nothing here to beat.",
+      "dataBar": "The model was fitted to {{rows}} healthy sessions. The data bar (D21) is {{required}} labeled sessions per class. Every number on this panel is indicative only — it is not a gate pass, and this prototype reaches no user.",
+      "scores": {
+        "caption": "The model prototype and the deterministic v2.0 rule engine, scored on the same sessions",
+        "colSet": "Scored on",
+        "colDetector": "Detector",
+        "colPrecision": "Precision",
+        "colRecall": "Recall",
+        "colFp": "False positives",
+        "colN": "Sessions",
+        "setTest": "Held-out test",
+        "setCorpus": "Whole corpus",
+        "detectorRules": "v2.0 rules",
+        "detectorModel": "Model (M58)",
+        "nCell": "{{sessions}} · {{negatives}} healthy",
+        "quantum": "The held-out set has {{negatives}} healthy sessions, so its false-positive rate can only move in {{quantum}}-point steps — it has four possible values and nothing in between. A rate computed on three sessions is not a measurement, and it must not be read as one."
+      },
+      "session": {
+        "title": "The session you have open",
+        "empty": "No session is loaded. Import one on the Session Analysis page and it will be scanned here — by the deterministic engine and by the model, side by side.",
+        "deterministic": "Deterministic v2.0 diagnostics",
+        "deterministicSummary": "Health {{health}} · {{findings}} findings",
+        "deterministicNote": "The production path. This is what the app acts on, and this release does not change it.",
+        "model": "Model-assisted (advisory)",
+        "modelSummary": "Score {{score}} · threshold {{threshold}} · {{verdict}}",
+        "flagged": "flagged",
+        "notFlagged": "not flagged",
+        "topFeatures": "Top contributing features: {{features}}",
+        "evidence": "Evidence window: samples {{start}}–{{end}}"
+      },
+      "advisoryNote": "The model is advisory only. It never writes device configuration or firmware, it never changes a diagnostic finding, and its output stays on this device."
+    },
+    "predictive": {
+      "title": "Predictive failsafe warning (M59) — experiment",
+      "badge": "Predicted · not measured",
+      "loading": "Loading the M59 experiment…",
+      "verdictFailed": "This experiment did NOT meet its acceptance. It is research-only, and it is NOT a validated feature.",
+      "verdictMet": "This experiment met its acceptance on the real corpus.",
+      "verdictReason": "It could not. The question M59 asked was \"can we warn a pilot before the link dies?\". On OmniLink's real reference flights the answer is no. In {{zeroLead}} of the {{events}} recorded link losses the link gives literally zero warning — quality falls from healthy to zero in a single 40 ms sample. Across all of them, the most warning ANY predictor could possibly extract is {{oracleMax}} ms, and the typical amount is {{oracleMedian}} ms. The target is {{target}} ms. There is no early-warning signal in the data to find.",
+      "nullTitle": "What the real flights show",
+      "nullCeiling": "Best case for any predictor: {{oracleMax}} ms of warning (typical: {{oracleMedian}} ms) against a {{target}} ms target.",
+      "nullCeilingNote": "This is a ceiling on what is possible, not a score this predictor achieved. It is measured from the recorded flights alone, with no model involved — so a better model cannot beat it.",
+      "nullPredictor": "This predictor warned ahead of {{predicted}} of the {{events}} recorded link losses. It caught {{late}} only after the link was already gone, and missed {{missed}} entirely.",
+      "nullLate": "Catching a link loss after it happens is detection, not prediction — and OmniLink's existing alerts already do that.",
+      "syntheticTitle": "On drawn test data (not real flights)",
+      "syntheticWarning": "The numbers below come from {{sessions}} sessions a generator DREW, not from real flights. They were drawn alongside this predictor, with degradation ramps deliberately made long enough that a {{target}} ms warning is available at all. They show the code runs. They are NOT evidence that it would work in the air, and they are NOT an acceptance pass.",
+      "syntheticLead": "On the drawn ramps it warns {{median}} ms ahead, on average.",
+      "syntheticFalseAlarms": "But it also raises a false alarm on {{falseAlarms}} of {{negatives}} drawn sessions that dipped and RECOVERED — including {{deepFalseAlarms}} of {{deepNegatives}} where the link nearly died and came back.",
+      "syntheticTension": "That is not a flaw to be fixed. Until the moment a link actually dies, a flight that recovers and a flight that does not look identical. Buying early warning means buying the false alarms that come with it.",
+      "safetyTitle": "If this ever ships, read this first",
+      "safety": "A predictive warning is a guess about the near future, not a measurement of the present. It can be wrong in both directions: it can warn when nothing is about to happen, and it can stay silent right up until the link is gone. It cannot be relied upon to keep an aircraft in the air, it does not replace your own judgement about range and line of sight, and it never changes anything on your hardware.",
+      "prototype": "Unvalidated prototype. On OmniLink's real reference flights this predictor found no early-warning signal at all. Nothing here is enabled for normal users.",
+      "warning": {
+        "title": "Predicted link loss",
+        "predictedLinkLoss": "At the current rate of decline, this link is projected to be lost in about {{ttlMs}} ms. Predicted, not measured — it may be wrong.",
+        "confidence": "Confidence in the projection: {{confidence}}",
+        "confidenceNote": "How far inside the reaction window the current rate of decline puts the link — NOT the probability of a crash.",
+        "evidence": "Based on samples {{start}}–{{end}}: link quality {{lqFit}} % falling {{lqSlope}} %/s; signal {{rssiFit}} dBm falling {{rssiSlope}} dB/s.",
+        "none": "No predicted link loss in this session."
+      },
+      "session": {
+        "title": "This session",
+        "empty": "Load a session to run the experimental predictor over it.",
+        "measured": "Measured now (M26 alerts)",
+        "measuredNote": "What the link IS doing. This is the shipped, deterministic path and this experiment does not change, reorder, or suppress any of it.",
+        "predicted": "Predicted ahead (M59, experimental)",
+        "count": "{{count}} predictive warning(s) raised."
+      }
+    }
+  },
+  "backpack": {
+    "kind": {
+      "tx": "Backpack (TX)",
+      "vrx": "Backpack (VRX)"
+    },
+    "config": {
+      "title": "Backpack settings",
+      "vtxChannel": {
+        "label": "VTX channel",
+        "help": "Video transmitter band and channel the Backpack tunes the linked VTX to (e.g. R1). Must match your goggles' channel."
+      },
+      "dvrControl": {
+        "label": "DVR control",
+        "help": "When the Backpack triggers the goggle DVR recording: off, automatically on arm, or manual only."
+      },
+      "headTracker": {
+        "label": "Head tracking",
+        "help": "Enable head-tracker pan/tilt/roll output from the Backpack to the linked gimbal or VRX."
+      }
+    }
+  },
+  "wifi": {
+    "source": {
+      "ap": "AP mode",
+      "mdns": "On network"
+    },
+    "discoveredTitle": "WiFi devices",
+    "scan": "Scan WiFi",
+    "scanning": "Scanning…",
+    "stopScan": "Stop scan",
+    "empty": "No WiFi devices discovered",
+    "apHint": "Self-hosted access point — join its network, reach it at 10.0.0.1",
+    "mdnsHint": "Already on your local network (mDNS)",
+    "deviceTitle": "{{name}} — {{address}}",
+    "errors": {
+      "categories": {
+        "adapter": "No WiFi adapter",
+        "scanTool": "WiFi scan unavailable",
+        "mdns": "Network discovery error",
+        "probe": "Device unreachable",
+        "unknown": "Discovery failed"
+      },
+      "mdnsInitFailed": "Could not start network discovery. WiFi devices already on your network may not appear."
+    }
+  },
+  "common": {
+    "notifications": "Notifications",
+    "loading": "Loading…",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close"
+  }
+}

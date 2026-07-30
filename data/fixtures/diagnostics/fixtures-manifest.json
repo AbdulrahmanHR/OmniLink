@@ -1,0 +1,922 @@
+{
+  "version": "1.0.0",
+  "generated": "static",
+  "description": "DL2 labeled diagnostic telemetry fixture corpus (M36). Canonical telemetry-session CSVs grouped by link-health class (healthy/warning/failsafe/wiring/antenna). lat/lon are always blank; no identifiers anywhere. Expected findings use the rule-id vocabulary: lq-collapse, rssi-floor, snr-noise, packet-instability, tx-power-saturation.",
+  "fixtures": [
+    {
+      "file": "healthy/healthy-clean-cruise-01.csv",
+      "label": "healthy",
+      "description": "Clean cruise, LQ 92-99, RSSI -56..-66, stable 100mW/250Hz.",
+      "sampleCount": 300,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-strong-link-02.csv",
+      "label": "healthy",
+      "description": "Strong short-range link, LQ 94-100, RSSI -50..-60, 50mW/500Hz.",
+      "sampleCount": 260,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-mid-range-03.csv",
+      "label": "healthy",
+      "description": "Mid-range steady link, LQ 91-98, RSSI -64..-74, 100mW/250Hz.",
+      "sampleCount": 360,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-long-cruise-04.csv",
+      "label": "healthy",
+      "description": "Long cruise near edge of comfort, LQ 90-97, RSSI -70..-80, 250mW/150Hz.",
+      "sampleCount": 460,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-low-rate-05.csv",
+      "label": "healthy",
+      "description": "Low packet-rate link, LQ 93-99, RSSI -58..-68, 100mW/50Hz.",
+      "sampleCount": 240,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-climb-06.csv",
+      "label": "healthy",
+      "description": "Climb and cruise, LQ 92-99, RSSI -62..-72, stable telemetry.",
+      "sampleCount": 320,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-benign-wiggle-07.csv",
+      "label": "healthy",
+      "description": "Benign small RSSI/LQ wiggle that must not trip any rule.",
+      "sampleCount": 300,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-hover-08.csv",
+      "label": "healthy",
+      "description": "Stationary hover, LQ 94-100, RSSI -54..-64, 25mW/250Hz.",
+      "sampleCount": 220,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-cruise-09.csv",
+      "label": "healthy",
+      "description": "Cruise at 500Hz, LQ 91-98, RSSI -60..-70, stable.",
+      "sampleCount": 340,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-edge-comfort-10.csv",
+      "label": "healthy",
+      "description": "Edge-of-comfort link, LQ 90-96, RSSI -74..-82, never at floor.",
+      "sampleCount": 400,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-short-hop-11.csv",
+      "label": "healthy",
+      "description": "Short hop, very clean, LQ 95-100, RSSI -52..-62.",
+      "sampleCount": 200,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "healthy/healthy-touring-12.csv",
+      "label": "healthy",
+      "description": "Touring flight, LQ 90-97, RSSI -68..-78, gentle gradual changes.",
+      "sampleCount": 440,
+      "expectClean": true,
+      "expectedFindings": []
+    },
+    {
+      "file": "warning/warning-lq-dips-01.csv",
+      "label": "warning",
+      "description": "Intermittent sharp LQ dips into the 50s; warning-level link-quality collapses, never critical.",
+      "sampleCount": 320,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 89,
+            "endIndex": 105
+          },
+          "note": "sharp LQ dip from ~90 to ~55, recovers"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 209,
+            "endIndex": 223
+          },
+          "note": "second sharp LQ dip into the high 50s"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-snr-noise-02.csv",
+      "label": "warning",
+      "description": "Sustained high SNR variance with marginal RSSI; warning-level noisy link.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "snr-noise",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 80,
+            "endIndex": 219
+          },
+          "note": "high SNR variance over a sustained window"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-packet-jitter-03.csv",
+      "label": "warning",
+      "description": "Erratic packet-rate jitter (150/250/500Hz) over a sustained window; warning-level instability.",
+      "sampleCount": 280,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "packet-instability",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 60,
+            "endIndex": 209
+          },
+          "note": "packet rate oscillates erratically 150/250/500"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-marginal-rssi-04.csv",
+      "label": "warning",
+      "description": "Chronically marginal RSSI (-90..-98, never at floor) with one LQ dip; warning-level only.",
+      "sampleCount": 340,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 149,
+            "endIndex": 167
+          },
+          "note": "LQ dip from ~78 to high-40s against a marginal RSSI baseline"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-mixed-05.csv",
+      "label": "warning",
+      "description": "Combined SNR noise then packet-rate jitter; two warning findings, nothing critical.",
+      "sampleCount": 360,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "snr-noise",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 40,
+            "endIndex": 149
+          },
+          "note": "noisy SNR window"
+        },
+        {
+          "ruleId": "packet-instability",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 200,
+            "endIndex": 319
+          },
+          "note": "packet-rate jitter window"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-tx-saturation-06.csv",
+      "label": "warning",
+      "description": "TX power saturated at 500mW throughout while RSSI poor (-92..-98) and LQ ~72; warning.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "tx-power-saturation",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 0,
+            "endIndex": 299
+          },
+          "note": "TX power pinned at 500mW (max) while RSSI stays poor and LQ degraded"
+        }
+      ]
+    },
+    {
+      "file": "warning/warning-recurring-dips-07.csv",
+      "label": "warning",
+      "description": "Recurring LQ dips that cross just below 50 and recover; warning-level collapses.",
+      "sampleCount": 380,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 69,
+            "endIndex": 83
+          },
+          "note": "recurring LQ dip crossing below 50, recovers"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 179,
+            "endIndex": 193
+          },
+          "note": "recurring LQ dip crossing below 50, recovers"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 289,
+            "endIndex": 303
+          },
+          "note": "recurring LQ dip crossing below 50, recovers"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-single-01.csv",
+      "label": "failsafe",
+      "description": "Healthy link then a sustained failsafe: LQ=0 for ~18 samples, RSSI at the floor; critical.",
+      "sampleCount": 320,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 149,
+            "endIndex": 170
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 153,
+            "endIndex": 170
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-double-02.csv",
+      "label": "failsafe",
+      "description": "Two separate failsafe losses (LQ=0, RSSI floor) with recovery between them; critical.",
+      "sampleCount": 420,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 109,
+            "endIndex": 124
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 113,
+            "endIndex": 124
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 279,
+            "endIndex": 302
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 283,
+            "endIndex": 302
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-deep-03.csv",
+      "label": "failsafe",
+      "description": "Failsafe with a very deep RSSI floor (~-128 dBm) during a long LQ=0 run; critical.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 139,
+            "endIndex": 158
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 143,
+            "endIndex": 158
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-long-tail-04.csv",
+      "label": "failsafe",
+      "description": "Extended failsafe in the final third of the flight; LQ=0 for ~40 samples; critical.",
+      "sampleCount": 360,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 299,
+            "endIndex": 342
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 303,
+            "endIndex": 342
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-after-warning-05.csv",
+      "label": "failsafe",
+      "description": "A warning LQ dip then a full failsafe (LQ=0, RSSI floor) later; critical.",
+      "sampleCount": 400,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 119,
+            "endIndex": 134
+          },
+          "note": "warning LQ dip preceding the loss"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 239,
+            "endIndex": 264
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 243,
+            "endIndex": 264
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-tx-max-06.csv",
+      "label": "failsafe",
+      "description": "Link fails with TX saturated at 500mW: tx-power-saturation plus a critical failsafe.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "tx-power-saturation",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 0,
+            "endIndex": 299
+          },
+          "note": "TX pinned at 500mW (max) throughout while link fails"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 149,
+            "endIndex": 172
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 153,
+            "endIndex": 172
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "failsafe/failsafe-early-07.csv",
+      "label": "failsafe",
+      "description": "Failsafe shortly after launch then recovery and a clean remainder; critical.",
+      "sampleCount": 340,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 39,
+            "endIndex": 56
+          },
+          "note": "link quality collapses to 0 (failsafe-level sustained loss)"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 43,
+            "endIndex": 56
+          },
+          "note": "RSSI pinned at/below the sensitivity floor"
+        }
+      ]
+    },
+    {
+      "file": "wiring/wiring-intermittent-01.csv",
+      "label": "wiring",
+      "description": "Asymmetric antennas (rssi2 ~35dB weaker) with one abrupt complete drop and packet jitter.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 130,
+            "endIndex": 133
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 129,
+            "endIndex": 133
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "packet-instability",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 30,
+            "endIndex": 269
+          },
+          "note": "packet jitter consistent with a flaky connection"
+        }
+      ]
+    },
+    {
+      "file": "wiring/wiring-asymmetric-02.csv",
+      "label": "wiring",
+      "description": "Strongly asymmetric antennas with two abrupt complete signal drops and fast recoveries.",
+      "sampleCount": 360,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 90,
+            "endIndex": 92
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 89,
+            "endIndex": 92
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 230,
+            "endIndex": 234
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 229,
+            "endIndex": 234
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        }
+      ]
+    },
+    {
+      "file": "wiring/wiring-jitter-03.csv",
+      "label": "wiring",
+      "description": "Near-continuous packet jitter with an abrupt complete drop; intermittent-wiring signature.",
+      "sampleCount": 320,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "packet-instability",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 20,
+            "endIndex": 299
+          },
+          "note": "near-continuous packet-rate jitter"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 160,
+            "endIndex": 163
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 159,
+            "endIndex": 163
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        }
+      ]
+    },
+    {
+      "file": "wiring/wiring-multi-drop-04.csv",
+      "label": "wiring",
+      "description": "Four short abrupt complete drops with fast recoveries; classic loose-connector pattern.",
+      "sampleCount": 400,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 70,
+            "endIndex": 72
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 69,
+            "endIndex": 72
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 160,
+            "endIndex": 162
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 159,
+            "endIndex": 162
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 250,
+            "endIndex": 252
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 249,
+            "endIndex": 252
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 330,
+            "endIndex": 332
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 329,
+            "endIndex": 332
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        }
+      ]
+    },
+    {
+      "file": "wiring/wiring-loose-antenna-05.csv",
+      "label": "wiring",
+      "description": "Very weak second antenna throughout with one deeper abrupt drop and packet jitter.",
+      "sampleCount": 300,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 180,
+            "endIndex": 185
+          },
+          "note": "abrupt complete RSSI drop to the floor (intermittent connection)"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 179,
+            "endIndex": 185
+          },
+          "note": "abrupt link-quality drop to 0 with fast recovery"
+        },
+        {
+          "ruleId": "packet-instability",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 100,
+            "endIndex": 249
+          },
+          "note": "packet jitter during the unstable segment"
+        }
+      ]
+    },
+    {
+      "file": "antenna/antenna-null-mild-01.csv",
+      "label": "antenna",
+      "description": "Heading sweeps repeatedly; LQ dips into the 30s only when heading is 120-200 deg; warning.",
+      "sampleCount": 320,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 47,
+            "endIndex": 76
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 185,
+            "endIndex": 215
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        }
+      ]
+    },
+    {
+      "file": "antenna/antenna-null-deep-02.csv",
+      "label": "antenna",
+      "description": "Deep directional null: LQ collapses to ~14 and RSSI hits the floor in the 120-200 sector; critical.",
+      "sampleCount": 360,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 50,
+            "endIndex": 83
+          },
+          "note": "heading-correlated LQ null collapses inside the weak sector"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 50,
+            "endIndex": 83
+          },
+          "note": "RSSI drops to the floor inside the weak heading sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 200,
+            "endIndex": 233
+          },
+          "note": "heading-correlated LQ null collapses inside the weak sector"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 200,
+            "endIndex": 233
+          },
+          "note": "RSSI drops to the floor inside the weak heading sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 350,
+            "endIndex": 359
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        }
+      ]
+    },
+    {
+      "file": "antenna/antenna-sector-rear-03.csv",
+      "label": "antenna",
+      "description": "Weak spot in the 200-280 deg sector; LQ dips to ~30 there, recovers elsewhere; warning.",
+      "sampleCount": 340,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 75,
+            "endIndex": 103
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 208,
+            "endIndex": 237
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        }
+      ]
+    },
+    {
+      "file": "antenna/antenna-narrow-null-04.csv",
+      "label": "antenna",
+      "description": "Narrow sharp directional null at 50-90 deg: LQ to ~12 and RSSI to floor; critical.",
+      "sampleCount": 380,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 18,
+            "endIndex": 32
+          },
+          "note": "heading-correlated LQ null collapses inside the weak sector"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 18,
+            "endIndex": 32
+          },
+          "note": "RSSI drops to the floor inside the weak heading sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 147,
+            "endIndex": 160
+          },
+          "note": "heading-correlated LQ null collapses inside the weak sector"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 147,
+            "endIndex": 160
+          },
+          "note": "RSSI drops to the floor inside the weak heading sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 275,
+            "endIndex": 289
+          },
+          "note": "heading-correlated LQ null collapses inside the weak sector"
+        },
+        {
+          "ruleId": "rssi-floor",
+          "severity": "critical",
+          "approxWindow": {
+            "startIndex": 275,
+            "endIndex": 289
+          },
+          "note": "RSSI drops to the floor inside the weak heading sector"
+        }
+      ]
+    },
+    {
+      "file": "antenna/antenna-wide-arc-05.csv",
+      "label": "antenna",
+      "description": "Wide weak arc 100-220 deg; LQ dips into the 30s across that heading band; warning.",
+      "sampleCount": 320,
+      "expectClean": false,
+      "expectedFindings": [
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 40,
+            "endIndex": 88
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        },
+        {
+          "ruleId": "lq-collapse",
+          "severity": "warning",
+          "approxWindow": {
+            "startIndex": 184,
+            "endIndex": 232
+          },
+          "note": "heading-correlated LQ null inside the weak sector"
+        }
+      ]
+    }
+  ]
+}

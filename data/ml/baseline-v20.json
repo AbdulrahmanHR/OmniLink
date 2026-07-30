@@ -1,0 +1,1911 @@
+{
+  "schemaVersion": "1.0.0",
+  "mlDatasetSchemaVersion": "1.0.0",
+  "corpus": {
+    "manifestVersion": "1.0.0",
+    "sessionCount": 36,
+    "sessionsByClass": {
+      "antennaSuspicion": 5,
+      "failsafe": 7,
+      "healthy": 12,
+      "warning": 7,
+      "wiringSuspicion": 5
+    },
+    "expectedFindingsByRule": {
+      "lq-collapse": 36,
+      "rssi-floor": 22,
+      "packet-instability": 5,
+      "snr-noise": 2,
+      "tx-power-saturation": 2
+    },
+    "expectedFindingCount": 67,
+    "failsafeEventCount": 17,
+    "fingerprint": "9b0a0e76e376d11c"
+  },
+  "honesty": {
+    "corpusSessions": 36,
+    "d21RequiredSessionsPerClass": 300,
+    "largestClassFractionOfD21": 0.04,
+    "d21Met": false,
+    "healthySessions": 12,
+    "fpRateQuantumPp": 8.3,
+    "indicativeNotAGatePass": true,
+    "baselineHeldOutFromCorpus": false,
+    "notes": [
+      "INDICATIVE, NOT A GATE PASS. Every report in this artifact carries gateEvaluated=false: D25's gate compares a MODEL against this baseline, and there is no model here.",
+      "The corpus is 36 sessions across 5 classes (healthy 12, warning 7, failsafe 7, wiring 5, antenna 5). D21 requires 300 labeled sessions PER CLASS. The largest class has 4% of that; the smallest has 1.7%.",
+      "The 12 healthy sessions are the only false-positive denominator that exists, so the FP rate can only take the 13 values 0/12..12/12. One flipped healthy session moves it by 8.3 points. Any FP comparison finer than that is noise.",
+      "The corpus is NOT held out from baseline A. The fixtures were authored alongside the v2.0 rules, and tests/unit/diagnostics/manifest-acceptance.test.ts asserts the engine reproduces them. Baseline A's perfect scores are a CEILING measured on its own training data, not an estimate of field performance.",
+      "Baseline A's measured false-positive rate is 0. D25's FP ceiling is a STRICT '<', so no model can clear it against this baseline: nothing is strictly below zero. The gate is unclearable on this corpus, and that is a fact about the corpus, not a fault in the gate."
+    ]
+  },
+  "scoring": {
+    "perSessionFlagRule": "A session is flagged when the detector produces >= 1 finding/event of ANY severity. Identical rule for both baselines. On this corpus it coincides with the >= 1 warning-or-higher definition: no healthy fixture produces any finding or any anomaly.",
+    "windowToleranceSamples": 8,
+    "perFindingScoredFor": [
+      "v20-rule-engine"
+    ],
+    "perFindingOmittedFor": [
+      "m15-anomaly-heuristic"
+    ],
+    "perFindingOmissionReason": "Baseline B emits AnomalyEvents (signalLoss|failsafe|lqDrop|txPowerChange), not DiagnosticFindings. That vocabulary does not map onto the 5 rule ids: 'failsafe' has no rule counterpart, nothing in B corresponds to snr-noise or packet-instability, and lqDrop/lq-collapse disagree about which detector owns a zero-bottomed drop. Defining a mapping would manufacture a correspondence the code does not have, so per-finding is NOT computed for B and the report carries the per-finding-not-scored limitation. A and B are compared where the comparison is genuine: the per-session 'is this session clean?' question both answer natively.",
+    "leadTime": {
+      "targetMs": 2000,
+      "onsetRule": "lq<=0 for >= 2 consecutive samples on the linkQuality channel (src/lib/anomaly.ts::DEFAULT_ANOMALY_CONFIG.failsafe.lqZeroSamples)",
+      "baselinePredictionCount": 0,
+      "rationale": "Neither baseline has an emission timestamp: evaluateSession and detectAnomalies are batch functions over a complete log and cannot be asked 'when did you know?'. The only timestamps they expose are the edges of their evidence windows, and the choice of edge sets the answer — over these fixtures the same failsafe yields a 'lead' of 40ms or 6080ms depending on whether you read the window start or the window end. So lead time is scored with the real event set and ZERO predictions: the baselines are DETECTORS, not predictors, and every onset reads as missed. That is a statement about their architecture, not a measured predictive failure. M59's predictor must supply genuine emission timestamps and will be scored against this same frozen event set."
+    },
+    "notes": [
+      "Per-finding matching is one-to-one, by ruleId + evidence-window overlap with the manifest window expanded by +/- 8 samples. Severity is not part of the match key.",
+      "Per-finding metrics are reported as RATES only where the rule has >= 20 ground-truth instances (lq-collapse n=36, rssi-floor n=22). snr-noise (n=2), tx-power-saturation (n=2) and packet-instability (n=5) are reported as RAW COUNTS: a rate computed from 2 instances is a lie with a decimal point."
+    ]
+  },
+  "wholeCorpus": {
+    "sessionCount": 36,
+    "negativeSessions": 12,
+    "positiveSessions": 24,
+    "sessionsByClass": {
+      "antennaSuspicion": 5,
+      "failsafe": 7,
+      "healthy": 12,
+      "warning": 7,
+      "wiringSuspicion": 5
+    },
+    "baselines": {
+      "v20-rule-engine": {
+        "schemaVersion": "1.0.0",
+        "perSession": {
+          "granularity": "per-session",
+          "counts": {
+            "truePositives": 24,
+            "falsePositives": 0,
+            "trueNegatives": 12,
+            "falseNegatives": 0
+          },
+          "positiveSessions": 24,
+          "negativeSessions": 12,
+          "precision": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 24,
+            "denominator": 24
+          },
+          "recall": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 24,
+            "denominator": 24
+          },
+          "falsePositiveRate": {
+            "kind": "rate",
+            "value": 0,
+            "numerator": 0,
+            "denominator": 12
+          },
+          "fpRateQuantumPp": 8.333333
+        },
+        "perFinding": {
+          "granularity": "per-finding",
+          "windowToleranceSamples": 8,
+          "byRule": [
+            {
+              "ruleId": "lq-collapse",
+              "expected": 36,
+              "predicted": 36,
+              "matched": 36,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "rate",
+                "value": 1,
+                "numerator": 36,
+                "denominator": 36
+              },
+              "recall": {
+                "kind": "rate",
+                "value": 1,
+                "numerator": 36,
+                "denominator": 36
+              }
+            },
+            {
+              "ruleId": "rssi-floor",
+              "expected": 22,
+              "predicted": 22,
+              "matched": 22,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "rate",
+                "value": 1,
+                "numerator": 22,
+                "denominator": 22
+              },
+              "recall": {
+                "kind": "rate",
+                "value": 1,
+                "numerator": 22,
+                "denominator": 22
+              }
+            },
+            {
+              "ruleId": "packet-instability",
+              "expected": 5,
+              "predicted": 5,
+              "matched": 5,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 5,
+                "denominator": 5,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 5,
+                "denominator": 5,
+                "minimumDenominator": 20
+              }
+            },
+            {
+              "ruleId": "snr-noise",
+              "expected": 2,
+              "predicted": 2,
+              "matched": 2,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              }
+            },
+            {
+              "ruleId": "tx-power-saturation",
+              "expected": 2,
+              "predicted": 2,
+              "matched": 2,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              }
+            }
+          ],
+          "overall": {
+            "expected": 67,
+            "predicted": 67,
+            "matched": 67,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "precision": {
+              "kind": "rate",
+              "value": 1,
+              "numerator": 67,
+              "denominator": 67
+            },
+            "recall": {
+              "kind": "rate",
+              "value": 1,
+              "numerator": 67,
+              "denominator": 67
+            }
+          }
+        },
+        "leadTime": {
+          "targetMs": 2000,
+          "horizonMs": null,
+          "eventCount": 17,
+          "predictedCount": 0,
+          "lateCount": 0,
+          "missedCount": 17,
+          "coverage": 0,
+          "medianLeadMs": null,
+          "p25LeadMs": null,
+          "p75LeadMs": null,
+          "minLeadMs": null,
+          "maxLeadMs": null,
+          "meetsTargetMedian": false,
+          "cases": [
+            {
+              "sessionId": "failsafe/failsafe-after-warning-05.csv",
+              "onsetMs": 9680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-deep-03.csv",
+              "onsetMs": 5680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-double-02.csv",
+              "onsetMs": 4480,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-double-02.csv",
+              "onsetMs": 11280,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-early-07.csv",
+              "onsetMs": 1680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-long-tail-04.csv",
+              "onsetMs": 12080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-single-01.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-tx-max-06.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-asymmetric-02.csv",
+              "onsetMs": 3600,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-asymmetric-02.csv",
+              "onsetMs": 9200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-intermittent-01.csv",
+              "onsetMs": 5200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-jitter-03.csv",
+              "onsetMs": 6400,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-loose-antenna-05.csv",
+              "onsetMs": 7200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 2800,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 6400,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 10000,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 13200,
+              "outcome": "missed",
+              "leadMs": null
+            }
+          ]
+        },
+        "gateEvaluated": false,
+        "passes": false,
+        "limitations": [
+          {
+            "code": "class-below-d21-minimum",
+            "label": "antennaSuspicion",
+            "detail": {
+              "total": 5,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "failsafe",
+            "detail": {
+              "total": 7,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "healthy",
+            "detail": {
+              "total": 12,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "warning",
+            "detail": {
+              "total": 7,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "wiringSuspicion",
+            "detail": {
+              "total": 5,
+              "required": 300
+            }
+          },
+          {
+            "code": "fp-rate-quantised",
+            "label": "corpus",
+            "detail": {
+              "negativeSessions": 12,
+              "quantumPp": 8.333333,
+              "required": 60
+            }
+          },
+          {
+            "code": "fp-ceiling-unclearable",
+            "label": "corpus",
+            "detail": {
+              "falsePositiveRate": 0,
+              "negativeSessions": 12
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "packet-instability",
+            "detail": {
+              "expected": 5,
+              "required": 20
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "snr-noise",
+            "detail": {
+              "expected": 2,
+              "required": 20
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "tx-power-saturation",
+            "detail": {
+              "expected": 2,
+              "required": 20
+            }
+          },
+          {
+            "code": "lead-time-no-predictions",
+            "label": "corpus",
+            "detail": {
+              "events": 17,
+              "predictions": 0
+            }
+          },
+          {
+            "code": "lead-time-coverage-incomplete",
+            "label": "corpus",
+            "detail": {
+              "events": 17,
+              "predicted": 0,
+              "late": 0,
+              "missed": 17
+            }
+          },
+          {
+            "code": "gate-not-evaluated",
+            "label": "corpus",
+            "detail": {}
+          }
+        ],
+        "cases": [
+          {
+            "sessionId": "antenna/antenna-narrow-null-04.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 6
+          },
+          {
+            "sessionId": "antenna/antenna-null-deep-02.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 5
+          },
+          {
+            "sessionId": "antenna/antenna-null-mild-01.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "antenna/antenna-sector-rear-03.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "antenna/antenna-wide-arc-05.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-clean-cruise-01.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-climb-06.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-cruise-09.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-edge-comfort-10.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-hover-08.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-long-cruise-04.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-low-rate-05.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-mid-range-03.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-short-hop-11.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-strong-link-02.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-touring-12.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-lq-dips-01.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "warning/warning-marginal-rssi-04.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 1
+          },
+          {
+            "sessionId": "warning/warning-mixed-05.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "warning/warning-packet-jitter-03.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 1
+          },
+          {
+            "sessionId": "warning/warning-recurring-dips-07.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "warning/warning-snr-noise-02.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 1
+          },
+          {
+            "sessionId": "warning/warning-tx-saturation-06.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 1
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 8
+          }
+        ]
+      },
+      "m15-anomaly-heuristic": {
+        "schemaVersion": "1.0.0",
+        "perSession": {
+          "granularity": "per-session",
+          "counts": {
+            "truePositives": 20,
+            "falsePositives": 0,
+            "trueNegatives": 12,
+            "falseNegatives": 4
+          },
+          "positiveSessions": 24,
+          "negativeSessions": 12,
+          "precision": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 20,
+            "denominator": 20
+          },
+          "recall": {
+            "kind": "rate",
+            "value": 0.833333,
+            "numerator": 20,
+            "denominator": 24
+          },
+          "falsePositiveRate": {
+            "kind": "rate",
+            "value": 0,
+            "numerator": 0,
+            "denominator": 12
+          },
+          "fpRateQuantumPp": 8.333333
+        },
+        "perFinding": null,
+        "leadTime": {
+          "targetMs": 2000,
+          "horizonMs": null,
+          "eventCount": 17,
+          "predictedCount": 0,
+          "lateCount": 0,
+          "missedCount": 17,
+          "coverage": 0,
+          "medianLeadMs": null,
+          "p25LeadMs": null,
+          "p75LeadMs": null,
+          "minLeadMs": null,
+          "maxLeadMs": null,
+          "meetsTargetMedian": false,
+          "cases": [
+            {
+              "sessionId": "failsafe/failsafe-after-warning-05.csv",
+              "onsetMs": 9680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-deep-03.csv",
+              "onsetMs": 5680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-double-02.csv",
+              "onsetMs": 4480,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-double-02.csv",
+              "onsetMs": 11280,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-early-07.csv",
+              "onsetMs": 1680,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-long-tail-04.csv",
+              "onsetMs": 12080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-single-01.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-tx-max-06.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-asymmetric-02.csv",
+              "onsetMs": 3600,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-asymmetric-02.csv",
+              "onsetMs": 9200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-intermittent-01.csv",
+              "onsetMs": 5200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-jitter-03.csv",
+              "onsetMs": 6400,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-loose-antenna-05.csv",
+              "onsetMs": 7200,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 2800,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 6400,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 10000,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-multi-drop-04.csv",
+              "onsetMs": 13200,
+              "outcome": "missed",
+              "leadMs": null
+            }
+          ]
+        },
+        "gateEvaluated": false,
+        "passes": false,
+        "limitations": [
+          {
+            "code": "class-below-d21-minimum",
+            "label": "antennaSuspicion",
+            "detail": {
+              "total": 5,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "failsafe",
+            "detail": {
+              "total": 7,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "healthy",
+            "detail": {
+              "total": 12,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "warning",
+            "detail": {
+              "total": 7,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "wiringSuspicion",
+            "detail": {
+              "total": 5,
+              "required": 300
+            }
+          },
+          {
+            "code": "fp-rate-quantised",
+            "label": "corpus",
+            "detail": {
+              "negativeSessions": 12,
+              "quantumPp": 8.333333,
+              "required": 60
+            }
+          },
+          {
+            "code": "fp-ceiling-unclearable",
+            "label": "corpus",
+            "detail": {
+              "falsePositiveRate": 0,
+              "negativeSessions": 12
+            }
+          },
+          {
+            "code": "per-finding-not-scored",
+            "label": "corpus",
+            "detail": {
+              "expectedFindings": 67
+            }
+          },
+          {
+            "code": "lead-time-no-predictions",
+            "label": "corpus",
+            "detail": {
+              "events": 17,
+              "predictions": 0
+            }
+          },
+          {
+            "code": "lead-time-coverage-incomplete",
+            "label": "corpus",
+            "detail": {
+              "events": 17,
+              "predicted": 0,
+              "late": 0,
+              "missed": 17
+            }
+          },
+          {
+            "code": "gate-not-evaluated",
+            "label": "corpus",
+            "detail": {}
+          }
+        ],
+        "cases": [
+          {
+            "sessionId": "antenna/antenna-narrow-null-04.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 6
+          },
+          {
+            "sessionId": "antenna/antenna-null-deep-02.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 5
+          },
+          {
+            "sessionId": "antenna/antenna-null-mild-01.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "antenna/antenna-sector-rear-03.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "antenna/antenna-wide-arc-05.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-clean-cruise-01.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-climb-06.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-cruise-09.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-edge-comfort-10.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-hover-08.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-long-cruise-04.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-low-rate-05.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-mid-range-03.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-short-hop-11.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-strong-link-02.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-touring-12.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-lq-dips-01.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "warning/warning-marginal-rssi-04.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 1
+          },
+          {
+            "sessionId": "warning/warning-mixed-05.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": false,
+            "outcome": "falseNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-packet-jitter-03.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": false,
+            "outcome": "falseNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-recurring-dips-07.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          },
+          {
+            "sessionId": "warning/warning-snr-noise-02.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": false,
+            "outcome": "falseNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-tx-saturation-06.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": false,
+            "outcome": "falseNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 8
+          }
+        ]
+      }
+    }
+  },
+  "heldOutTestSplit": {
+    "sessionCount": 9,
+    "negativeSessions": 3,
+    "positiveSessions": 6,
+    "sessionsByClass": {
+      "antennaSuspicion": 1,
+      "failsafe": 2,
+      "healthy": 3,
+      "warning": 2,
+      "wiringSuspicion": 1
+    },
+    "baselines": {
+      "v20-rule-engine": {
+        "schemaVersion": "1.0.0",
+        "perSession": {
+          "granularity": "per-session",
+          "counts": {
+            "truePositives": 6,
+            "falsePositives": 0,
+            "trueNegatives": 3,
+            "falseNegatives": 0
+          },
+          "positiveSessions": 6,
+          "negativeSessions": 3,
+          "precision": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 6,
+            "denominator": 6
+          },
+          "recall": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 6,
+            "denominator": 6
+          },
+          "falsePositiveRate": {
+            "kind": "rate",
+            "value": 0,
+            "numerator": 0,
+            "denominator": 3
+          },
+          "fpRateQuantumPp": 33.333333
+        },
+        "perFinding": {
+          "granularity": "per-finding",
+          "windowToleranceSamples": 8,
+          "byRule": [
+            {
+              "ruleId": "lq-collapse",
+              "expected": 7,
+              "predicted": 7,
+              "matched": 7,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 7,
+                "denominator": 7,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 7,
+                "denominator": 7,
+                "minimumDenominator": 20
+              }
+            },
+            {
+              "ruleId": "rssi-floor",
+              "expected": 3,
+              "predicted": 3,
+              "matched": 3,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 3,
+                "denominator": 3,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 3,
+                "denominator": 3,
+                "minimumDenominator": 20
+              }
+            },
+            {
+              "ruleId": "packet-instability",
+              "expected": 2,
+              "predicted": 2,
+              "matched": 2,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 2,
+                "denominator": 2,
+                "minimumDenominator": 20
+              }
+            },
+            {
+              "ruleId": "snr-noise",
+              "expected": 1,
+              "predicted": 1,
+              "matched": 1,
+              "falseNegatives": 0,
+              "falsePositives": 0,
+              "precision": {
+                "kind": "count",
+                "numerator": 1,
+                "denominator": 1,
+                "minimumDenominator": 20
+              },
+              "recall": {
+                "kind": "count",
+                "numerator": 1,
+                "denominator": 1,
+                "minimumDenominator": 20
+              }
+            }
+          ],
+          "overall": {
+            "expected": 13,
+            "predicted": 13,
+            "matched": 13,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "precision": {
+              "kind": "count",
+              "numerator": 13,
+              "denominator": 13,
+              "minimumDenominator": 20
+            },
+            "recall": {
+              "kind": "count",
+              "numerator": 13,
+              "denominator": 13,
+              "minimumDenominator": 20
+            }
+          }
+        },
+        "leadTime": {
+          "targetMs": 2000,
+          "horizonMs": null,
+          "eventCount": 3,
+          "predictedCount": 0,
+          "lateCount": 0,
+          "missedCount": 3,
+          "coverage": 0,
+          "medianLeadMs": null,
+          "p25LeadMs": null,
+          "p75LeadMs": null,
+          "minLeadMs": null,
+          "maxLeadMs": null,
+          "meetsTargetMedian": false,
+          "cases": [
+            {
+              "sessionId": "failsafe/failsafe-long-tail-04.csv",
+              "onsetMs": 12080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-single-01.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-loose-antenna-05.csv",
+              "onsetMs": 7200,
+              "outcome": "missed",
+              "leadMs": null
+            }
+          ]
+        },
+        "gateEvaluated": false,
+        "passes": false,
+        "limitations": [
+          {
+            "code": "class-below-d21-minimum",
+            "label": "antennaSuspicion",
+            "detail": {
+              "total": 1,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "failsafe",
+            "detail": {
+              "total": 2,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "healthy",
+            "detail": {
+              "total": 3,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "warning",
+            "detail": {
+              "total": 2,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "wiringSuspicion",
+            "detail": {
+              "total": 1,
+              "required": 300
+            }
+          },
+          {
+            "code": "fp-rate-quantised",
+            "label": "corpus",
+            "detail": {
+              "negativeSessions": 3,
+              "quantumPp": 33.333333,
+              "required": 60
+            }
+          },
+          {
+            "code": "fp-ceiling-unclearable",
+            "label": "corpus",
+            "detail": {
+              "falsePositiveRate": 0,
+              "negativeSessions": 3
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "lq-collapse",
+            "detail": {
+              "expected": 7,
+              "required": 20
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "rssi-floor",
+            "detail": {
+              "expected": 3,
+              "required": 20
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "packet-instability",
+            "detail": {
+              "expected": 2,
+              "required": 20
+            }
+          },
+          {
+            "code": "per-finding-rule-n-too-small",
+            "label": "snr-noise",
+            "detail": {
+              "expected": 1,
+              "required": 20
+            }
+          },
+          {
+            "code": "lead-time-no-predictions",
+            "label": "corpus",
+            "detail": {
+              "events": 3,
+              "predictions": 0
+            }
+          },
+          {
+            "code": "lead-time-coverage-incomplete",
+            "label": "corpus",
+            "detail": {
+              "events": 3,
+              "predicted": 0,
+              "late": 0,
+              "missed": 3
+            }
+          },
+          {
+            "code": "gate-not-evaluated",
+            "label": "corpus",
+            "detail": {}
+          }
+        ],
+        "cases": [
+          {
+            "sessionId": "antenna/antenna-wide-arc-05.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-edge-comfort-10.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-mid-range-03.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-lq-dips-01.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "warning/warning-mixed-05.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 3
+          }
+        ]
+      },
+      "m15-anomaly-heuristic": {
+        "schemaVersion": "1.0.0",
+        "perSession": {
+          "granularity": "per-session",
+          "counts": {
+            "truePositives": 5,
+            "falsePositives": 0,
+            "trueNegatives": 3,
+            "falseNegatives": 1
+          },
+          "positiveSessions": 6,
+          "negativeSessions": 3,
+          "precision": {
+            "kind": "rate",
+            "value": 1,
+            "numerator": 5,
+            "denominator": 5
+          },
+          "recall": {
+            "kind": "rate",
+            "value": 0.833333,
+            "numerator": 5,
+            "denominator": 6
+          },
+          "falsePositiveRate": {
+            "kind": "rate",
+            "value": 0,
+            "numerator": 0,
+            "denominator": 3
+          },
+          "fpRateQuantumPp": 33.333333
+        },
+        "perFinding": null,
+        "leadTime": {
+          "targetMs": 2000,
+          "horizonMs": null,
+          "eventCount": 3,
+          "predictedCount": 0,
+          "lateCount": 0,
+          "missedCount": 3,
+          "coverage": 0,
+          "medianLeadMs": null,
+          "p25LeadMs": null,
+          "p75LeadMs": null,
+          "minLeadMs": null,
+          "maxLeadMs": null,
+          "meetsTargetMedian": false,
+          "cases": [
+            {
+              "sessionId": "failsafe/failsafe-long-tail-04.csv",
+              "onsetMs": 12080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "failsafe/failsafe-single-01.csv",
+              "onsetMs": 6080,
+              "outcome": "missed",
+              "leadMs": null
+            },
+            {
+              "sessionId": "wiring/wiring-loose-antenna-05.csv",
+              "onsetMs": 7200,
+              "outcome": "missed",
+              "leadMs": null
+            }
+          ]
+        },
+        "gateEvaluated": false,
+        "passes": false,
+        "limitations": [
+          {
+            "code": "class-below-d21-minimum",
+            "label": "antennaSuspicion",
+            "detail": {
+              "total": 1,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "failsafe",
+            "detail": {
+              "total": 2,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "healthy",
+            "detail": {
+              "total": 3,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "warning",
+            "detail": {
+              "total": 2,
+              "required": 300
+            }
+          },
+          {
+            "code": "class-below-d21-minimum",
+            "label": "wiringSuspicion",
+            "detail": {
+              "total": 1,
+              "required": 300
+            }
+          },
+          {
+            "code": "fp-rate-quantised",
+            "label": "corpus",
+            "detail": {
+              "negativeSessions": 3,
+              "quantumPp": 33.333333,
+              "required": 60
+            }
+          },
+          {
+            "code": "fp-ceiling-unclearable",
+            "label": "corpus",
+            "detail": {
+              "falsePositiveRate": 0,
+              "negativeSessions": 3
+            }
+          },
+          {
+            "code": "per-finding-not-scored",
+            "label": "corpus",
+            "detail": {
+              "expectedFindings": 13
+            }
+          },
+          {
+            "code": "lead-time-no-predictions",
+            "label": "corpus",
+            "detail": {
+              "events": 3,
+              "predictions": 0
+            }
+          },
+          {
+            "code": "lead-time-coverage-incomplete",
+            "label": "corpus",
+            "detail": {
+              "events": 3,
+              "predicted": 0,
+              "late": 0,
+              "missed": 3
+            }
+          },
+          {
+            "code": "gate-not-evaluated",
+            "label": "corpus",
+            "detail": {}
+          }
+        ],
+        "cases": [
+          {
+            "sessionId": "antenna/antenna-wide-arc-05.csv",
+            "label": "antennaSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "label": "failsafe",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          },
+          {
+            "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-edge-comfort-10.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "healthy/healthy-mid-range-03.csv",
+            "label": "healthy",
+            "clean": true,
+            "flagged": false,
+            "outcome": "trueNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "warning/warning-lq-dips-01.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 4
+          },
+          {
+            "sessionId": "warning/warning-mixed-05.csv",
+            "label": "warning",
+            "clean": false,
+            "flagged": false,
+            "outcome": "falseNegative",
+            "findingCount": 0
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "label": "wiringSuspicion",
+            "clean": false,
+            "flagged": true,
+            "outcome": "truePositive",
+            "findingCount": 2
+          }
+        ]
+      }
+    },
+    "seed": 2551,
+    "ratios": {
+      "train": 0.6,
+      "val": 0.2,
+      "test": 0.2
+    }
+  },
+  "gateBaseline": {
+    "baselineId": "v20-rule-engine",
+    "granularity": "per-session",
+    "split": "test",
+    "baselineFpRate": 0,
+    "baselineRecall": 1,
+    "fpCeilingClearable": false
+  }
+}

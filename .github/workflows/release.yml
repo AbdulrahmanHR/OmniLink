@@ -1,0 +1,234 @@
+name: Release
+
+# Tag-triggered cross-platform release pipeline (M21).
+#
+# Push a version tag (vX.Y.Z) and this builds installers for Windows, macOS and
+# Linux, then uploads them — together with the updater artifacts
+# (latest.json + .sig) — to a SINGLE draft GitHub Release for that tag. Review
+# the draft, then publish it (publishing makes the M22 updater feed reachable;
+# /releases/latest/download/latest.json does not serve a draft).
+#
+# A guard fails the run fast if the pushed tag (vX.Y.Z) does NOT match the app
+# version in package.json and src-tauri/tauri.conf.json, so the Release and its
+# assets are always named for the exact tagged version (acceptance). Bump the
+# version (and update the changelog) to match the tag before releasing.
+#
+# ───────────────────────────────────────────────────────────────────────────
+# Signing secrets — Settings → Secrets and variables → Actions:
+#
+#   REQUIRED (updater artifact signing). createUpdaterArtifacts is ON, so the
+#   build FAILS without these — they are NOT optional:
+#     TAURI_SIGNING_PRIVATE_KEY           minisign private key for update artifacts
+#     TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
+#
+#   OPTIONAL (code signing). Absent ⇒ that platform builds UNSIGNED but still
+#   succeeds (Gatekeeper / SmartScreen warn). Present ⇒ signed/notarized:
+#
+#   macOS Developer-ID signing + notarization (tauri-action wires these natively):
+#     APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD / APPLE_SIGNING_IDENTITY /
+#     APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID
+#
+#   Windows Authenticode:
+#     Tauri signs via bundle.windows.certificateThumbprint in tauri.conf.json,
+#     which expects the certificate to already live in the runner's Windows
+#     certificate store — it cannot be wired from a repo secret alone without an
+#     extra "import the .pfx" step, so it is left OFF (thumbprint null). The
+#     .msi/.exe still build and attach, just unsigned. To enable: import the
+#     cert in a pre-build step and set the thumbprint (see bundle.windows there).
+# ───────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: # manual run — select a vX.Y.Z TAG as the ref (produces a draft)
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # 1) Verify the tag matches the app version, then create ONE draft Release for
+  #    the tag. Every platform job uploads its installers + updater artifacts to
+  #    this single release (via releaseId), avoiding the find-or-create race of a
+  #    bare matrix.
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify tag matches app version
+        shell: bash
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*)
+              tag="${GITHUB_REF_NAME#v}"
+              pkg=$(node -p "require('./package.json').version")
+              conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+              echo "tag=$tag  package.json=$pkg  tauri.conf.json=$conf"
+              if [ "$tag" != "$pkg" ] || [ "$tag" != "$conf" ]; then
+                echo "::error::Tag v$tag does not match the app version (package.json=$pkg, tauri.conf.json=$conf). Bump the version (and changelog) to match the tag before releasing."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::The Release workflow must run on a version tag (refs/tags/vX.Y.Z); got $GITHUB_REF. Re-run workflow_dispatch with a tag selected as the ref."
+              exit 1
+              ;;
+          esac
+
+      - name: Create draft release
+        id: create
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '')
+            const version = tag.replace(/^v/, '')
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `OmniLink v${version}`,
+              body: `Download and install OmniLink v${version} from the assets below.`,
+              draft: true,
+              prerelease: false,
+            })
+            core.setOutput('release_id', data.id)
+
+  # 2) Build each platform and upload its bundles + updater artifacts to the
+  #    draft release created above.
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: create-release
+    permissions:
+      contents: write # upload installers to the release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS: one universal .dmg for Apple Silicon + Intel.
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          # Linux: .deb + .AppImage. Built on 22.04 for the broadest glibc
+          # compatibility of the produced installers.
+          - platform: ubuntu-22.04
+            args: ''
+            rust-targets: ''
+          # Windows: .msi + .exe (NSIS).
+          - platform: windows-latest
+            args: ''
+            rust-targets: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install system dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Empty on Linux/Windows; the two Apple targets on the mac leg.
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # The Cargo cache restores src-tauri/target/, which can include installers
+      # from previous (older-version) runs. Delete the bundle output before
+      # building so ONLY the current tag's installers are produced and attached —
+      # no older-version installer can leak into the Release.
+      - name: Remove stale installers from the build cache (Unix)
+        if: matrix.platform != 'windows-latest'
+        run: rm -rf src-tauri/target/release/bundle src-tauri/target/universal-apple-darwin/release/bundle
+
+      - name: Remove stale installers from the build cache (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bundle = "src-tauri/target/release/bundle"
+          if (Test-Path $bundle) { Remove-Item -Recurse -Force $bundle }
+
+      # Export Apple signing env ONLY when a real certificate secret is present.
+      # GitHub sets `${{ secrets.X }}` to an EMPTY STRING when the secret is
+      # absent; feeding empty APPLE_* vars to tauri makes its macOS bundler try
+      # to codesign with an empty keychain cert and fail the whole build
+      # ("SecKeychainItemImport: ... parameters ... not valid"). Gating here
+      # means: no cert ⇒ vars unset ⇒ macOS builds UNSIGNED (Gatekeeper warns);
+      # cert present ⇒ Developer-ID signing/notarization engages automatically.
+      - name: Configure Apple code-signing (macOS, only when certs provided)
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ]; then
+            {
+              echo "APPLE_CERTIFICATE<<__OMNILINK_EOF__"
+              echo "$APPLE_CERTIFICATE"
+              echo "__OMNILINK_EOF__"
+              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD"
+              echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY"
+              echo "APPLE_ID=$APPLE_ID"
+              echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+            } >> "$GITHUB_ENV"
+            echo "macOS code-signing configured (APPLE_CERTIFICATE present)."
+          else
+            echo "No APPLE_CERTIFICATE secret — macOS will build UNSIGNED (Gatekeeper will warn)."
+          fi
+
+      - name: Build & upload installers to the release
+        uses: tauri-apps/tauri-action@v0
+        with:
+          # releaseId targets the single draft created above — tauri-action
+          # builds the bundles + updater artifacts and uploads them to it.
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Updater artifact signing (minisign) — REQUIRED (createUpdaterArtifacts).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # macOS Developer-ID signing/notarization is NOT set here on purpose —
+          # the "Configure Apple code-signing" step above exports APPLE_* into
+          # $GITHUB_ENV only when a real cert secret exists, so an absent cert no
+          # longer forces an empty-certificate codesign failure.

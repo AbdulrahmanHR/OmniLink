@@ -1,0 +1,164 @@
+name: Bug report
+description: Something in OmniLink does not work the way it should
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug.
+
+        **Security issues do not belong here.** If this is a vulnerability —
+        especially anything touching the flash path or a binding phrase — please
+        report it privately instead:
+        [open a security advisory](https://github.com/AbdulrahmanHR/OmniLink/security/advisories/new).
+        See [SECURITY.md](https://github.com/AbdulrahmanHR/OmniLink/blob/main/SECURITY.md).
+
+        Almost every hardware bug turns out to be specific to a particular radio,
+        firmware version, or connection mode — so the environment fields below are
+        genuinely load-bearing, not bureaucracy. Please fill them in.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched [existing issues](https://github.com/AbdulrahmanHR/OmniLink/issues?q=is%3Aissue) and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go through a private advisory).
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. What did you expect, and what did you get instead?
+      placeholder: |
+        Expected: ...
+        Actually got: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact sequence. If it only happens sometimes, say roughly how often.
+      placeholder: |
+        1. Open the Flash page
+        2. Select ... → ... → ...
+        3. Click Start Flash
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: OmniLink version
+      description: Settings → About, or the installer filename. If you built from source, give the commit SHA.
+      placeholder: "2.5.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux — Debian/Ubuntu
+        - Linux — Fedora
+        - Linux — Arch
+        - Linux — other
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version and install method
+      description: e.g. "Ubuntu 24.04, .deb" or "Windows 11 23H2, .msi" or "macOS 15.2, .dmg"
+      placeholder: "Ubuntu 24.04, installed from the .deb"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection-mode
+    attributes:
+      label: Connection mode
+      description: How was OmniLink talking to the device when this happened?
+      options:
+        - Serial (USB)
+        - WiFi (device self-AP or mDNS)
+        - Backpack
+        - Flight-controller bridge (MSP passthrough)
+        - Not connected / not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: radio-model
+    attributes:
+      label: Radio / RX brand and model
+      description: >
+        The ExpressLRS hardware involved. Be specific — "BETAFPV 2.4GHz Nano TX"
+        and "BETAFPV 2.4GHz Micro TX 1W" are different targets and have aliased in
+        the past. Write "none" if no hardware was attached.
+      placeholder: "RadioMaster TX16S + Ranger Micro TX, EP1 RX"
+    validations:
+      required: true
+
+  - type: input
+    id: elrs-firmware
+    attributes:
+      label: ExpressLRS firmware version on the device
+      description: e.g. "3.5.3", or "unknown" if you could not read it.
+      placeholder: "3.5.3"
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error message and logs
+      description: >
+        Paste the exact error text. In OmniLink, click the red **Error** chip in the
+        top bar to expand the full message. Logs are `omnilink-app.<date>.log` (and
+        `omnilink-crash.log` after a crash) in the app log directory: Linux
+        `~/.local/share/com.omnilink.app/logs/`, macOS
+        `~/Library/Logs/com.omnilink.app/`, Windows `%APPDATA%\com.omnilink.app\logs\`.
+        This is automatically formatted as code — no backticks needed.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag images in here. Very useful for UI and telemetry-rendering bugs.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before you submit
+      options:
+        - label: >
+            I have checked that the text and screenshots above contain **no binding
+            phrase**, no API key, and no GPS coordinates of somewhere I care about.
+          required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Workarounds you found, when it started, whether a previous version worked.
+    validations:
+      required: false

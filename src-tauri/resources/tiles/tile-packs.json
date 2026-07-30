@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "base": {
+    "id": "base-world",
+    "name": "World base map",
+    "minZoom": 0,
+    "maxZoom": 5,
+    "sizeBytes": 12381
+  },
+  "packs": [
+    {
+      "id": "europe-west",
+      "name": "Western Europe",
+      "continent": "europe",
+      "country": null,
+      "minZoom": 6,
+      "maxZoom": 12,
+      "sizeBytes": 16627,
+      "url": "bundled:packs/europe-west.ompack",
+      "sha256": null
+    },
+    {
+      "id": "north-america-us",
+      "name": "United States",
+      "continent": "north-america",
+      "country": "us",
+      "minZoom": 6,
+      "maxZoom": 12,
+      "sizeBytes": 16587,
+      "url": "bundled:packs/north-america-us.ompack",
+      "sha256": null
+    },
+    {
+      "id": "asia-east",
+      "name": "East Asia",
+      "continent": "asia",
+      "country": null,
+      "minZoom": 6,
+      "maxZoom": 12,
+      "sizeBytes": 16635,
+      "url": "bundled:packs/asia-east.ompack",
+      "sha256": null
+    },
+    {
+      "id": "oceania-au",
+      "name": "Australia",
+      "continent": "oceania",
+      "country": "au",
+      "minZoom": 6,
+      "maxZoom": 12,
+      "sizeBytes": 16611,
+      "url": "bundled:packs/oceania-au.ompack",
+      "sha256": null
+    }
+  ]
+}

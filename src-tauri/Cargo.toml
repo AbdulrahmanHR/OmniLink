@@ -1,0 +1,102 @@
+[package]
+name = "omnilink"
+version = "3.0.2"
+description = "Cross-platform desktop app for configuring, flashing, and monitoring ExpressLRS drone-radio hardware. Offline-first, no account, BYOK AI."
+authors = ["AbdulrahmanHR"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/AbdulrahmanHR/OmniLink"
+homepage = "https://github.com/AbdulrahmanHR/OmniLink"
+readme = "../README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "omnilink_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+# In-app self-update (Settings -> "App Update"). `updater` fetches + verifies a
+# signed release manifest from the endpoints in tauri.conf.json; `process`
+# exposes relaunch() so the UI can restart into the freshly-installed binary.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+# M25: native file-open dialog so the user can pick a local firmware `.bin` to
+# flash (FR-FLASH local-file path). The JS `@tauri-apps/plugin-dialog` `open()`
+# drives this command; gated by the `dialog:default` capability.
+tauri-plugin-dialog = "2"
+# M7-API: SQLite persistence for telemetry frames. `sqlite` feature pulls a
+# bundled libsqlite3 (via sqlx) so no system sqlite is required.
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Serial enumeration + I/O for the CRSF handshake. `default-features = false`
+# drops the libudev dependency (uses sysfs enumeration on Linux), which keeps
+# the build working without libudev-dev. This is the same crate
+# `tauri-plugin-serialport` wraps; we depend on it directly so the CRSF state
+# machine and reader loop live in Rust (M6 requires a real Rust parser).
+serialport = { version = "4", default-features = false }
+# M8-API: firmware flashing engine.
+# - reqwest (blocking): GitHub Releases fetch (FR-FLASH-01) + WiFi HTTP OTA
+#   upload (FR-FLASH-09). Blocking client because the flash worker runs on its
+#   own std::thread (mirrors the device.rs reader-thread pattern), not async.
+#   `multipart` is for the WiFi `/update` upload; TLS comes from the workspace's
+#   already-resolved reqwest (native-tls).
+reqwest = { version = "0.13", features = ["blocking", "json", "multipart"] }
+# MD5 for the ExpressLRS binding-phrase -> 6-byte UID derivation (pure Rust).
+md-5 = "0.10"
+# FLASH-8: the firmware image handed to esptool must not be a predictable name
+# in the world-writable system temp dir. `NamedTempFile` creates it O_EXCL with
+# mode 0600 under a random name (and unlinks it on drop), inside the app-data
+# staging dir. Already in Cargo.lock as a transitive dependency, so making it
+# direct pulls in no new crate.
+tempfile = "3"
+# M9-API: async backoff sleep for the BYOK AI retry policy (NFR-ERR-01). Only
+# the `time` feature is needed; the async runtime itself is Tauri's (already
+# pulls tokio transitively, so this adds no new crate to the lock).
+tokio = { version = "1", features = ["time"] }
+# M18-API: pure-Rust mDNS service discovery for WiFi-mode ELRS devices already
+# on the LAN (FR-DISC-02). No async runtime + no system deps (avahi/bonjour).
+# Browsed inside the wifi-scan worker thread; see commands/wifi.rs.
+mdns-sd = "0.20"
+# M14 (FR-LOG-01): in-process Betaflight/INAV blackbox `.bbl` decoder. Pure Rust
+# (`no_std` + alloc, transitively pulls only `uom`, `bitvec`, `hashbrown`,
+# `memchr`, `time`, `tracing`) — NO C toolchain / no external `blackbox_decode`
+# sidecar. `commands/logs.rs` reads the `.bbl` bytes and emits a
+# `blackbox_decode`-compatible CSV the importer (`src/lib/blackbox.ts`) parses.
+# `uom` gives unit-aware volts/amps/deg-per-s/metres so the CSV matches the
+# physical units the reference CLI writes.
+blackbox-log = "0.4.3"
+# M10 (NFR-LOG-01/02/03): structured logging + daily-rotating crash-safe log
+# file. Pure Rust, no C toolchain. `tracing` is the facade the whole backend
+# now logs through; `tracing-subscriber` installs the global stderr+file
+# subscriber with a `RUST_LOG`-overridable `EnvFilter`; `tracing-appender`
+# provides the `rolling::daily` file writer + `non_blocking` off-thread flush.
+# See `src/logging.rs` for init + the panic hook.
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+tracing-appender = "0.2.5"
+
+# M30 (BYOK keychain): store API keys in the OS secret store instead of a 0600
+# plaintext file. Target-gated so Linux uses the PURE-RUST async Secret Service
+# backend (zbus over `crypto-rust` + `tokio`) — NO libsecret/libdbus C link, so
+# it builds headless (WSL/CI). `sync-secret-service` is banned (it links libdbus
+# C). macOS/Windows use their native credential stores. A 0600-file fallback
+# (see commands/secret_store.rs) keeps headless/no-daemon environments working.
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["async-secret-service", "crypto-rust", "tokio"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+

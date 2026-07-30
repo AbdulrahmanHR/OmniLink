@@ -1,0 +1,43 @@
+name: Crowdin sync
+
+# Community-translation sync (NFR-I18N-04). SCAFFOLDING — inert until wired.
+#
+# Pushes the English source (`src/locales/en/translation.json`, per crowdin.yml)
+# up to Crowdin and opens a PR bringing finished community translations back
+# down into `src/locales/<lang>/translation.json`.
+#
+# Deliberately `workflow_dispatch` ONLY (manual): it does NOT run on push/cron,
+# so it can never fail a normal CI run while the two required secrets are absent.
+# To activate: create a Crowdin project, add repo secrets
+#   CROWDIN_PROJECT_ID           the numeric Crowdin project id
+#   CROWDIN_PERSONAL_TOKEN       a Crowdin personal access token
+# then run this workflow from the Actions tab. Merging the download PR must keep
+# the `translationStrings` key-parity test green (see docs/TRANSLATIONS.md).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  synchronize-with-crowdin:
+    name: Upload sources + download translations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Crowdin push + pull
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: true
+          download_translations: true
+          # Open a PR with the pulled translations rather than committing to the
+          # default branch directly.
+          localization_branch_name: chore/crowdin-translations
+          create_pull_request: true
+          pull_request_title: "chore(i18n): sync community translations from Crowdin"
+          pull_request_body: "Automated Crowdin download. Verify `npm run test` (translation key-parity) before merge."
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}

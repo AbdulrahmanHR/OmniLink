@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-longrange-explorer-50",
+  "name": "Long Range Explorer 50Hz",
+  "description": "Maximum-penetration link for long-range wings and exploration flights where range beats refresh rate.",
+  "category": "long-range",
+  "tags": ["long-range", "wing", "penetration", "50hz"],
+  "firmwareVersion": "3.3.2",
+  "settings": {
+    "packetRate": 50,
+    "telemetryRatio": "1:8",
+    "switchMode": "Wide",
+    "txPower": 1000,
+    "dynamicPower": true,
+    "modelMatch": true,
+    "modelId": 7,
+    "bindingPhrase": "lr-wing-explorer",
+    "antennaMode": "Diversity",
+    "fanThreshold": 250
+  }
+}

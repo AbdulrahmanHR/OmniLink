@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-racing-pro-500",
+  "name": "Racing Pro 500Hz",
+  "description": "Low-latency 5\" race quad setup tuned for close-proximity tracks and minimal control delay.",
+  "category": "racing",
+  "tags": ["racing", "5-inch", "low-latency", "500hz"],
+  "firmwareVersion": "3.4.1",
+  "settings": {
+    "packetRate": 500,
+    "telemetryRatio": "1:128",
+    "switchMode": "Wide",
+    "txPower": 250,
+    "dynamicPower": false,
+    "modelMatch": true,
+    "modelId": 1,
+    "bindingPhrase": "race-pro-quad",
+    "antennaMode": "Diversity",
+    "fanThreshold": 100
+  }
+}

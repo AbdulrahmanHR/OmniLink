@@ -1,0 +1,106 @@
+name: macOS Build
+
+# Builds a macOS installer (.dmg) so the app can be tried on real hardware from
+# a Mac. Artifacts are attached to each run — download, install, test. No code
+# signing / notarization (Gatekeeper will warn). Mirrors windows-build.yml.
+
+on:
+  # Restored at M68. Long-lived branches only (project policy §7) — never a
+  # sub-branch such as `3.0.0`; a sub-branch's installers get built when it is
+  # merged back into `v3`, which is already a trigger.
+  push:
+    branches: [main, v3]
+  workflow_dispatch: # lets you trigger a build manually from the Actions tab
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+# Least privilege, workflow-wide (M74). Read the checkout, upload an artifact —
+# nothing else. The artifact-prune step that needed `actions: write` has been
+# deleted (see the retention note on the upload step).
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    name: Build macOS installer
+    runs-on: macos-latest
+    # Skip in forks (M74). This workflow needs TAURI_SIGNING_PRIVATE_KEY —
+    # `createUpdaterArtifacts` is on, so tauri-action FAILS without it — and a
+    # fork has no such secret. Without this guard, anyone who forks the repo and
+    # pushes to their own `main` gets an immediately-red "macOS Build" that they
+    # cannot fix, and macOS runners bill at 10× the Linux minute rate against
+    # their free allowance. It is never on the pull_request path (see the trigger
+    # above), so this changes nothing for PRs.
+    if: github.repository == 'AbdulrahmanHR/OmniLink'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        # Universal binary: build for both Apple Silicon and Intel.
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Remove stale installers from the build cache
+        # The Cargo cache restores src-tauri/target/, which includes any
+        # installers produced by previous (older-version) runs. Delete the
+        # bundle output before building so the uploaded artifact contains ONLY
+        # the current version's installer, never older versions.
+        run: rm -rf src-tauri/target/release/bundle src-tauri/target/universal-apple-darwin/release/bundle
+
+      - name: Build Tauri app (macOS universal)
+        uses: tauri-apps/tauri-action@v0
+        # No tagName/releaseId -> tauri-action only builds the bundles,
+        # it does not create a GitHub Release.
+        # Signing key required because createUpdaterArtifacts is enabled.
+        # Add these as repo secrets (Settings -> Secrets and variables -> Actions).
+        with:
+          args: --target universal-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: omnilink-macos-installers
+          if-no-files-found: error
+          # Raised 7 → 14 at M74, and the artifact-prune step that used to keep
+          # this workflow at a single live artifact is DELETED. It needed
+          # `actions: write`, which is the scope a fork's read-only GITHUB_TOKEN
+          # will never have, and it existed only to defend an account-level
+          # Actions storage quota that public repositories do not consume.
+          #
+          # 14 rather than 30 (the CI Playwright report's figure) because a .dmg
+          # is tens of MB and the repository is still private until M73, where
+          # the quota is real. Retention is deliberately proportional to size.
+          retention-days: 14
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg

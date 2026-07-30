@@ -1,0 +1,3535 @@
+{
+  "schemaVersion": "1.0.0",
+  "predictor": {
+    "predictorId": "m59-ttl-trend",
+    "schemaVersion": "1.0.0",
+    "model": {
+      "kind": "projected-time-to-link-loss",
+      "windowSamples": 25,
+      "tripThreshold": 0.5,
+      "clearThreshold": 0.25,
+      "tripFrames": 3,
+      "creditHorizonMs": 10000,
+      "derivation": "Fit a line to the last 25 samples of link quality and of best-antenna RSSI. Project each to its floor (LQ = 0; RSSI = -100 dBm) at its fitted decay rate; take the sooner. Warn when that projected time-to-loss falls to or below 2000 ms - the pilot's reaction window - for 3 consecutive frames. The trip threshold of 0.5 is NOT a free parameter: risk = clamp01(1 - ttl / (2 x 2000)), so 'risk >= 0.5' and 'ttl <= 2000 ms' are the same statement. The threshold IS the product requirement, restated in the units the telemetry provides."
+    },
+    "limits": [
+      "It requires a TREND. A channel that is not falling contributes an infinite time-to-loss and therefore ZERO risk, however bad its absolute level. A standing fault - a wiring session's constant RSSI imbalance, a link sitting flat at a terrible-but-stable LQ 30 - produces NO warning from this predictor. That is deliberate: M58's early-warning probe manufactured an unbounded-horizon 'median lead 4920 ms' by flagging exactly such a standing fault at sample 0 and crediting it with predicting a failsafe seconds later. This predictor is structurally incapable of that artifact.",
+      "Detecting a fault that is already present is DETECTION, which the shipped v2.0 rules and the M26 live alerts already do. This predictor only ever claims PREDICTION, and it is scored only on prediction.",
+      "It cannot predict an INSTANTANEOUS failure, and no predictor can. The 9 wiring-class onsets in the real corpus go from LQ >= 86 to LQ 0 in a SINGLE sample. There is no precursor to fit a line to. This is not a limitation of the model; it is a limitation of physics.",
+      "Its confidence is a confidence in the PROJECTION, not a probability of a crash. It says how far inside the reaction window the current fitted decay rate puts the link. It says nothing about how likely that rate is to continue, which it has no way to know and does not claim to."
+    ]
+  },
+  "corpora": {
+    "real": {
+      "manifestVersion": "1.0.0",
+      "sessionCount": 36,
+      "fingerprint": "9b0a0e76e376d11c"
+    },
+    "synthetic": {
+      "fingerprint": "ac8e0af4a4bd8416",
+      "sessionCount": 72,
+      "seed": 2551,
+      "generator": "src/lib/ml/syntheticCorpus.ts"
+    }
+  },
+  "honesty": {
+    "indicativeNotAGatePass": true,
+    "syntheticCorpusNotFieldEvidence": true,
+    "syntheticCorpusIsAcceptanceEvidence": false,
+    "d21Met": false,
+    "realCorpusSessions": 36,
+    "syntheticCorpusSessions": 72,
+    "notes": [
+      "M59 ACCEPTANCE ON THE REAL CORPUS: NOT MET. The predictor warned before 0 of the 17 frozen failsafe onsets. There is NO median lead time (medianLeadMs is null) because there are no creditable predictions to take a median of - which is a STRONGER null than a median of 0 ms would be: 0 ms would mean 'it warned, with no lead'; null means 'it never warned in time at all'. It caught 12 of the onsets only AFTER the link was already gone (that is DETECTION, which the shipped M26 alerts already do) and said nothing at all about 5. The target is a 2000 ms MEDIAN lead.",
+      "AND IT IS NOT MEETABLE BY ANY PREDICTOR. The ORACLE bound - the maximum lead extractable from this corpus by anything, measured with no reference to any model - is a median of 0 ms and a maximum of 80 ms. 9 of the 17 frozen failsafe onsets give LITERALLY ZERO warning: link quality goes from healthy to 0 in a single sample. There is no signal in this corpus to predict from. That is the headline finding of M59, and it is a legitimate milestone output: the question was 'can we warn before a failsafe', and on the data we have the answer is NO, with a number.",
+      "The 80 ms maximum independently reproduces MEASURED_MAX_FIXTURE_LEAD_MS = 80, which was frozen in mlConsts.ts before this evaluation existed. Two derivations, one number.",
+      "The null does NOT depend on how 'the link first showed something' is defined. Under the MAXIMALLY GENEROUS definition - any downward movement in LQ at all, including a single-point noise wiggle no real detector could act on - the ceiling rises only to a median of 40 ms and a maximum of 120 ms. Still ~17x short of the target. Both bounds are in realCorpus.leadCeiling.",
+      "The null does NOT depend on the creditability horizon either. realCorpus.horizonSensitivity re-scores lead time at 2000 ms, at 10000 ms, and UNBOUNDED, and the answer does not move.",
+      "THE NAIVE LEAD TIME IS AN ARTIFACT, AND IT IS PUBLISHED SO YOU CAN SEE THAT IT IS. realCorpus.leadTimeNaive reports a median of 3520 ms - which is IMPOSSIBLE, because the oracle ceiling above is 80 ms. It arises by crediting warnings the predictor ITSELF LATER WITHDREW: failsafe-after-warning-05.csv dips to LQ 40, RECOVERS TO LQ 91, and only then dies seconds later. A timestamp-only scorer credits the warning raised on that dip with 'predicting' the failsafe. The identical dip shape appears in the 7 'warning' fixtures, WHICH NEVER FAILSAFE - where the very same warning is scored as a false alarm. The same signal, counted as a triumph or a failure depending on what happened afterwards, is not a predictor; it is a coin flip with a timestamp. The headline number (realCorpus.report.leadTime) credits ONLY warnings the predictor was still standing behind when the link died. 7 withdrawn warnings were dropped. This is the same artifact M58 hit and correctly disbelieved.",
+      "THE SECOND HALF OF THE ACCEPTANCE ALSO FAILS, INDEPENDENTLY AND STRUCTURALLY. D25's FP ceiling is a strict '<' against a measured v2.0 baseline FP rate of 0.000; nothing is strictly below zero, so no predictor clears it - not this one, not a flawless one. baseline-v20.json records the fact as gateBaseline.fpCeilingClearable: false. This is the same structural failure M58 hit. It matters that the two halves fail INDEPENDENTLY: even with a reachable FP ceiling, M59 would still fail on 0 ms of lead.",
+      "THE SYNTHETIC CORPUS IS NOT EVIDENCE OF FIELD PERFORMANCE, AND ITS NUMBERS ARE NOT AN ACCEPTANCE PASS. It was authored alongside this predictor. Its ramps were drawn to be long enough that a 2-second lead is AVAILABLE - that choice alone is what produces any lead time at all. It measures 'can the detector find a ramp we drew?'. It cannot speak to 'can the detector predict a real failsafe?'.",
+      "The synthetic corpus draws exactly ONE failure mode: a smooth monotone collapse of a single latent link margin (flying out of range). It does NOT draw the instantaneous failures the real 'wiring' fixtures contain. A predictor scored on it is being scored on the one failure mode that is predictable BY ASSUMPTION.",
+      "The synthetic near-miss negatives are drawn from the SAME ramp family as the positives and differ only in what happens after the bottom - so before the bottom, a deep near-miss and a positive are THE SAME SIGNAL. Lead time and false alarms on confusable negatives are therefore in direct physical tension. The synthetic false-alarm rate against the near-miss negatives is 25 of 30, and syntheticCorpus.falseAlarmsByBucket shows which depth band they came from. A predictor that achieved lead time WITHOUT firing on the deep band would not be predicting; it would be peeking at the future.",
+      "For the record, and NOT as an acceptance result: on the synthetic corpus the predictor's median lead is 2200 ms over 30 of 30 events. This demonstrates the PIPELINE RUNS. It demonstrates nothing about the field.",
+      "AND EVEN ON THE CORPUS DRAWN TO BE FINDABLE, THE CONCEPT DOES NOT CLEAR THE BAR. The predictor achieves its lead time on the synthetic ramps ONLY by firing on the near-miss negatives too: it false-alarms on 10/10 of the DEEP near-misses - sessions that decayed just as hard and then RECOVERED. That is not a defect in the predictor; it is the physics. Before the bottom of the ramp, a deep near-miss and a true failsafe are THE SAME SIGNAL, and no causal predictor can separate them, because the information that separates them does not yet exist. Buying 2 seconds of lead means buying the false alarms that come with it. The synthetic false-alarm rate is therefore FAR above the M56 FP ceiling of 0.000 - so the experiment stays RESEARCH-ONLY even on its own most favourable data, and NOT ONLY because the ceiling is unclearable.",
+      "D21 is unmet by a factor of ~40: the real corpus is 36 labeled sessions against a bar of 300 PER CLASS. The predictor here is deterministic and fits no weights, so it is not limited by that - but the CORPUS it is evaluated on is, and every real-corpus number in this artifact carries the small-n limitations the harness attaches to it."
+    ]
+  },
+  "acceptance": {
+    "meetsLeadTimeTarget": false,
+    "measuredMedianLeadMs": null,
+    "creditablePredictions": 0,
+    "lateDetections": 12,
+    "missedEvents": 5,
+    "targetLeadMs": 2000,
+    "oracleMaxLeadMs": 80,
+    "oracleMedianLeadMs": 0,
+    "oracleMaxLeadAnyMovementMs": 120,
+    "oracleMedianLeadAnyMovementMs": 40,
+    "targetReachableOnRealCorpus": false,
+    "clearsFpCeiling": false,
+    "fpCeilingClearable": false,
+    "acceptanceMetOnRealCorpus": false
+  },
+  "realCorpus": {
+    "sessionCount": 36,
+    "positiveSessions": 12,
+    "negativeSessions": 24,
+    "eventCount": 17,
+    "report": {
+      "schemaVersion": "1.0.0",
+      "perSession": {
+        "granularity": "per-session",
+        "counts": {
+          "truePositives": 12,
+          "falsePositives": 10,
+          "trueNegatives": 14,
+          "falseNegatives": 0
+        },
+        "positiveSessions": 12,
+        "negativeSessions": 24,
+        "precision": {
+          "kind": "rate",
+          "value": 0.545455,
+          "numerator": 12,
+          "denominator": 22
+        },
+        "recall": {
+          "kind": "rate",
+          "value": 1,
+          "numerator": 12,
+          "denominator": 12
+        },
+        "falsePositiveRate": {
+          "kind": "rate",
+          "value": 0.416667,
+          "numerator": 10,
+          "denominator": 24
+        },
+        "fpRateQuantumPp": 4.166667
+      },
+      "perFinding": null,
+      "leadTime": {
+        "targetMs": 2000,
+        "horizonMs": 10000,
+        "eventCount": 17,
+        "predictedCount": 0,
+        "lateCount": 12,
+        "missedCount": 5,
+        "coverage": 0,
+        "medianLeadMs": null,
+        "p25LeadMs": null,
+        "p75LeadMs": null,
+        "minLeadMs": null,
+        "maxLeadMs": null,
+        "meetsTargetMedian": false,
+        "cases": [
+          {
+            "sessionId": "failsafe/failsafe-after-warning-05.csv",
+            "onsetMs": 9680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-deep-03.csv",
+            "onsetMs": 5680,
+            "outcome": "late",
+            "leadMs": -40
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 4480,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "failsafe/failsafe-double-02.csv",
+            "onsetMs": 11280,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-early-07.csv",
+            "onsetMs": 1680,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-long-tail-04.csv",
+            "onsetMs": 12080,
+            "outcome": "late",
+            "leadMs": -40
+          },
+          {
+            "sessionId": "failsafe/failsafe-single-01.csv",
+            "onsetMs": 6080,
+            "outcome": "late",
+            "leadMs": -80
+          },
+          {
+            "sessionId": "failsafe/failsafe-tx-max-06.csv",
+            "onsetMs": 6080,
+            "outcome": "late",
+            "leadMs": -40
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 3600,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-asymmetric-02.csv",
+            "onsetMs": 9200,
+            "outcome": "late",
+            "leadMs": -120
+          },
+          {
+            "sessionId": "wiring/wiring-intermittent-01.csv",
+            "onsetMs": 5200,
+            "outcome": "late",
+            "leadMs": -120
+          },
+          {
+            "sessionId": "wiring/wiring-jitter-03.csv",
+            "onsetMs": 6400,
+            "outcome": "late",
+            "leadMs": -120
+          },
+          {
+            "sessionId": "wiring/wiring-loose-antenna-05.csv",
+            "onsetMs": 7200,
+            "outcome": "late",
+            "leadMs": -120
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 2800,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 6400,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 10000,
+            "outcome": "missed",
+            "leadMs": null
+          },
+          {
+            "sessionId": "wiring/wiring-multi-drop-04.csv",
+            "onsetMs": 13200,
+            "outcome": "late",
+            "leadMs": -80
+          }
+        ]
+      },
+      "gateEvaluated": false,
+      "passes": false,
+      "limitations": [
+        {
+          "code": "class-below-d21-minimum",
+          "label": "antennaSuspicion",
+          "detail": {
+            "total": 5,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "failsafe",
+          "detail": {
+            "total": 7,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "healthy",
+          "detail": {
+            "total": 12,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "warning",
+          "detail": {
+            "total": 7,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "wiringSuspicion",
+          "detail": {
+            "total": 5,
+            "required": 300
+          }
+        },
+        {
+          "code": "fp-rate-quantised",
+          "label": "corpus",
+          "detail": {
+            "negativeSessions": 24,
+            "quantumPp": 4.166667,
+            "required": 60
+          }
+        },
+        {
+          "code": "per-finding-not-scored",
+          "label": "corpus",
+          "detail": {
+            "expectedFindings": 0
+          }
+        },
+        {
+          "code": "lead-time-coverage-incomplete",
+          "label": "corpus",
+          "detail": {
+            "events": 17,
+            "predicted": 0,
+            "late": 12,
+            "missed": 5
+          }
+        },
+        {
+          "code": "gate-not-evaluated",
+          "label": "corpus",
+          "detail": {}
+        }
+      ],
+      "cases": [
+        {
+          "sessionId": "antenna/antenna-narrow-null-04.csv",
+          "label": "antennaSuspicion",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 3
+        },
+        {
+          "sessionId": "antenna/antenna-null-deep-02.csv",
+          "label": "antennaSuspicion",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "antenna/antenna-null-mild-01.csv",
+          "label": "antennaSuspicion",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "antenna/antenna-sector-rear-03.csv",
+          "label": "antennaSuspicion",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "antenna/antenna-wide-arc-05.csv",
+          "label": "antennaSuspicion",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "failsafe/failsafe-after-warning-05.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "failsafe/failsafe-deep-03.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "failsafe/failsafe-early-07.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-long-tail-04.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "failsafe/failsafe-single-01.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "failsafe/failsafe-tx-max-06.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-clean-cruise-01.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-climb-06.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-cruise-09.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-edge-comfort-10.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-hover-08.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-long-cruise-04.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-low-rate-05.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-mid-range-03.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-short-hop-11.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-strong-link-02.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "healthy/healthy-touring-12.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-lq-dips-01.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "warning/warning-marginal-rssi-04.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 3
+        },
+        {
+          "sessionId": "warning/warning-mixed-05.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-packet-jitter-03.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "warning/warning-recurring-dips-07.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 3
+        },
+        {
+          "sessionId": "warning/warning-snr-noise-02.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "warning/warning-tx-saturation-06.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "wiring/wiring-intermittent-01.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-jitter-03.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-loose-antenna-05.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "label": "wiringSuspicion",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 4
+        }
+      ]
+    },
+    "leadTimeNaive": {
+      "targetMs": 2000,
+      "horizonMs": 10000,
+      "eventCount": 17,
+      "predictedCount": 7,
+      "lateCount": 10,
+      "missedCount": 0,
+      "coverage": 0.411765,
+      "medianLeadMs": 3520,
+      "p25LeadMs": 3460,
+      "p75LeadMs": 5060,
+      "minLeadMs": 3080,
+      "maxLeadMs": 6720,
+      "meetsTargetMedian": true,
+      "cases": [
+        {
+          "sessionId": "failsafe/failsafe-after-warning-05.csv",
+          "onsetMs": 9680,
+          "outcome": "predicted",
+          "leadMs": 4640
+        },
+        {
+          "sessionId": "failsafe/failsafe-deep-03.csv",
+          "onsetMs": 5680,
+          "outcome": "late",
+          "leadMs": -40
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "onsetMs": 4480,
+          "outcome": "late",
+          "leadMs": -80
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "onsetMs": 11280,
+          "outcome": "predicted",
+          "leadMs": 6720
+        },
+        {
+          "sessionId": "failsafe/failsafe-early-07.csv",
+          "onsetMs": 1680,
+          "outcome": "late",
+          "leadMs": -80
+        },
+        {
+          "sessionId": "failsafe/failsafe-long-tail-04.csv",
+          "onsetMs": 12080,
+          "outcome": "late",
+          "leadMs": -40
+        },
+        {
+          "sessionId": "failsafe/failsafe-single-01.csv",
+          "onsetMs": 6080,
+          "outcome": "late",
+          "leadMs": -80
+        },
+        {
+          "sessionId": "failsafe/failsafe-tx-max-06.csv",
+          "onsetMs": 6080,
+          "outcome": "predicted",
+          "leadMs": 3440
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "onsetMs": 3600,
+          "outcome": "late",
+          "leadMs": -120
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "onsetMs": 9200,
+          "outcome": "predicted",
+          "leadMs": 5480
+        },
+        {
+          "sessionId": "wiring/wiring-intermittent-01.csv",
+          "onsetMs": 5200,
+          "outcome": "late",
+          "leadMs": -120
+        },
+        {
+          "sessionId": "wiring/wiring-jitter-03.csv",
+          "onsetMs": 6400,
+          "outcome": "late",
+          "leadMs": -120
+        },
+        {
+          "sessionId": "wiring/wiring-loose-antenna-05.csv",
+          "onsetMs": 7200,
+          "outcome": "late",
+          "leadMs": -120
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetMs": 2800,
+          "outcome": "late",
+          "leadMs": -80
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetMs": 6400,
+          "outcome": "predicted",
+          "leadMs": 3520
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetMs": 10000,
+          "outcome": "predicted",
+          "leadMs": 3480
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetMs": 13200,
+          "outcome": "predicted",
+          "leadMs": 3080
+        }
+      ]
+    },
+    "withdrawnWarnings": 7,
+    "predictiveFpRate": {
+      "kind": "rate",
+      "value": 0.416667,
+      "numerator": 10,
+      "denominator": 24
+    },
+    "fpRateQuantumPp": 4.166667,
+    "healthyOnlyFpRate": {
+      "kind": "rate",
+      "value": 0,
+      "numerator": 0,
+      "denominator": 12
+    },
+    "falseAlarmsByBucket": [
+      {
+        "bucket": "antenna",
+        "negatives": 5,
+        "falseAlarms": 5,
+        "fpRate": {
+          "kind": "rate",
+          "value": 1,
+          "numerator": 5,
+          "denominator": 5
+        },
+        "fpRateQuantumPp": 20
+      },
+      {
+        "bucket": "healthy",
+        "negatives": 12,
+        "falseAlarms": 0,
+        "fpRate": {
+          "kind": "rate",
+          "value": 0,
+          "numerator": 0,
+          "denominator": 12
+        },
+        "fpRateQuantumPp": 8.333333
+      },
+      {
+        "bucket": "warning",
+        "negatives": 7,
+        "falseAlarms": 5,
+        "fpRate": {
+          "kind": "rate",
+          "value": 0.714286,
+          "numerator": 5,
+          "denominator": 7
+        },
+        "fpRateQuantumPp": 14.285714
+      }
+    ],
+    "horizonSensitivity": [
+      {
+        "horizonMs": 2000,
+        "eventCount": 17,
+        "predictedCount": 0,
+        "lateCount": 12,
+        "missedCount": 5,
+        "coverage": 0,
+        "medianLeadMs": null,
+        "maxLeadMs": null,
+        "meetsTargetMedian": false
+      },
+      {
+        "horizonMs": 10000,
+        "eventCount": 17,
+        "predictedCount": 0,
+        "lateCount": 12,
+        "missedCount": 5,
+        "coverage": 0,
+        "medianLeadMs": null,
+        "maxLeadMs": null,
+        "meetsTargetMedian": false
+      },
+      {
+        "horizonMs": null,
+        "eventCount": 17,
+        "predictedCount": 0,
+        "lateCount": 12,
+        "missedCount": 5,
+        "coverage": 0,
+        "medianLeadMs": null,
+        "maxLeadMs": null,
+        "meetsTargetMedian": false
+      }
+    ],
+    "leadCeiling": {
+      "channel": "linkQuality",
+      "source": "src/lib/ml/predictive.ts::measureCorpusLeadCeiling",
+      "eventCount": 17,
+      "targetMs": 2000,
+      "threshold": {
+        "definition": "first sample of the run of LQ < 50 (the v2.0 lq-collapse absThreshold, from dataset.ts::FEATURE_LQ_LOW_PCT) ending at the onset",
+        "medianMs": 0,
+        "maxMs": 80,
+        "minMs": 0,
+        "zeroLeadEvents": 9,
+        "targetReachable": false
+      },
+      "anyMovement": {
+        "definition": "first sample of the maximal strictly-decreasing LQ run ending at the onset (credits a single-point noise wiggle; the most generous bound anyone could argue for)",
+        "medianMs": 40,
+        "maxMs": 120,
+        "minMs": 0,
+        "zeroLeadEvents": 7,
+        "targetReachable": false
+      },
+      "targetReachable": false,
+      "cases": [
+        {
+          "sessionId": "failsafe/failsafe-after-warning-05.csv",
+          "onsetIndex": 242,
+          "onsetMs": 9680,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-deep-03.csv",
+          "onsetIndex": 142,
+          "onsetMs": 5680,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "onsetIndex": 112,
+          "onsetMs": 4480,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-double-02.csv",
+          "onsetIndex": 282,
+          "onsetMs": 11280,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-early-07.csv",
+          "onsetIndex": 42,
+          "onsetMs": 1680,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-long-tail-04.csv",
+          "onsetIndex": 302,
+          "onsetMs": 12080,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "failsafe/failsafe-single-01.csv",
+          "onsetIndex": 152,
+          "onsetMs": 6080,
+          "thresholdCeilingMs": 40,
+          "anyMovementCeilingMs": 120
+        },
+        {
+          "sessionId": "failsafe/failsafe-tx-max-06.csv",
+          "onsetIndex": 152,
+          "onsetMs": 6080,
+          "thresholdCeilingMs": 80,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "onsetIndex": 90,
+          "onsetMs": 3600,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-asymmetric-02.csv",
+          "onsetIndex": 230,
+          "onsetMs": 9200,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-intermittent-01.csv",
+          "onsetIndex": 130,
+          "onsetMs": 5200,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-jitter-03.csv",
+          "onsetIndex": 160,
+          "onsetMs": 6400,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-loose-antenna-05.csv",
+          "onsetIndex": 180,
+          "onsetMs": 7200,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 40
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetIndex": 70,
+          "onsetMs": 2800,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetIndex": 160,
+          "onsetMs": 6400,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetIndex": 250,
+          "onsetMs": 10000,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "wiring/wiring-multi-drop-04.csv",
+          "onsetIndex": 330,
+          "onsetMs": 13200,
+          "thresholdCeilingMs": 0,
+          "anyMovementCeilingMs": 40
+        }
+      ]
+    },
+    "results": [
+      {
+        "sessionId": "antenna/antenna-narrow-null-04.csv",
+        "label": "antennaSuspicion",
+        "bucket": "antenna",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 3,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 1000,
+        "firstConfidence": 0.903306
+      },
+      {
+        "sessionId": "antenna/antenna-null-deep-02.csv",
+        "label": "antennaSuspicion",
+        "bucket": "antenna",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2400,
+        "firstConfidence": 0.800146
+      },
+      {
+        "sessionId": "antenna/antenna-null-mild-01.csv",
+        "label": "antennaSuspicion",
+        "bucket": "antenna",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2280,
+        "firstConfidence": 0.715953
+      },
+      {
+        "sessionId": "antenna/antenna-sector-rear-03.csv",
+        "label": "antennaSuspicion",
+        "bucket": "antenna",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3360,
+        "firstConfidence": 0.731368
+      },
+      {
+        "sessionId": "antenna/antenna-wide-arc-05.csv",
+        "label": "antennaSuspicion",
+        "bucket": "antenna",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2200,
+        "firstConfidence": 0.736654
+      },
+      {
+        "sessionId": "failsafe/failsafe-after-warning-05.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 1,
+        "firstWarningMs": 5040,
+        "firstConfidence": 0.732207
+      },
+      {
+        "sessionId": "failsafe/failsafe-deep-03.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5720,
+        "firstConfidence": 0.990464
+      },
+      {
+        "sessionId": "failsafe/failsafe-double-02.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 1,
+        "firstWarningMs": 4560,
+        "firstConfidence": 0.938
+      },
+      {
+        "sessionId": "failsafe/failsafe-early-07.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 1760,
+        "firstConfidence": 0.96291
+      },
+      {
+        "sessionId": "failsafe/failsafe-long-tail-04.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 12120,
+        "firstConfidence": 0.933509
+      },
+      {
+        "sessionId": "failsafe/failsafe-single-01.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6160,
+        "firstConfidence": 0.948838
+      },
+      {
+        "sessionId": "failsafe/failsafe-tx-max-06.csv",
+        "label": "failsafe",
+        "bucket": "failsafe",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 1,
+        "firstWarningMs": 2640,
+        "firstConfidence": 0.56338
+      },
+      {
+        "sessionId": "healthy/healthy-benign-wiggle-07.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-clean-cruise-01.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-climb-06.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-cruise-09.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-edge-comfort-10.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-hover-08.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-long-cruise-04.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-low-rate-05.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-mid-range-03.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-short-hop-11.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-strong-link-02.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "healthy/healthy-touring-12.csv",
+        "label": "healthy",
+        "bucket": "healthy",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "warning/warning-lq-dips-01.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3920,
+        "firstConfidence": 0.687399
+      },
+      {
+        "sessionId": "warning/warning-marginal-rssi-04.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 3,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2640,
+        "firstConfidence": 0.573333
+      },
+      {
+        "sessionId": "warning/warning-mixed-05.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "warning/warning-packet-jitter-03.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "warning/warning-recurring-dips-07.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 3,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3080,
+        "firstConfidence": 0.733156
+      },
+      {
+        "sessionId": "warning/warning-snr-noise-02.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3160,
+        "firstConfidence": 0.52871
+      },
+      {
+        "sessionId": "warning/warning-tx-saturation-06.csv",
+        "label": "warning",
+        "bucket": "warning",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2680,
+        "firstConfidence": 0.611123
+      },
+      {
+        "sessionId": "wiring/wiring-asymmetric-02.csv",
+        "label": "wiringSuspicion",
+        "bucket": "wiring",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 1,
+        "firstWarningMs": 3720,
+        "firstConfidence": 0.874531
+      },
+      {
+        "sessionId": "wiring/wiring-intermittent-01.csv",
+        "label": "wiringSuspicion",
+        "bucket": "wiring",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5320,
+        "firstConfidence": 0.939416
+      },
+      {
+        "sessionId": "wiring/wiring-jitter-03.csv",
+        "label": "wiringSuspicion",
+        "bucket": "wiring",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6520,
+        "firstConfidence": 0.941952
+      },
+      {
+        "sessionId": "wiring/wiring-loose-antenna-05.csv",
+        "label": "wiringSuspicion",
+        "bucket": "wiring",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7320,
+        "firstConfidence": 0.961795
+      },
+      {
+        "sessionId": "wiring/wiring-multi-drop-04.csv",
+        "label": "wiringSuspicion",
+        "bucket": "wiring",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 4,
+        "withdrawnBeforeOnset": 3,
+        "firstWarningMs": 2880,
+        "firstConfidence": 0.907227
+      }
+    ]
+  },
+  "syntheticCorpus": {
+    "sessionCount": 72,
+    "positiveSessions": 30,
+    "negativeSessions": 42,
+    "eventCount": 30,
+    "report": {
+      "schemaVersion": "1.0.0",
+      "perSession": {
+        "granularity": "per-session",
+        "counts": {
+          "truePositives": 30,
+          "falsePositives": 25,
+          "trueNegatives": 17,
+          "falseNegatives": 0
+        },
+        "positiveSessions": 30,
+        "negativeSessions": 42,
+        "precision": {
+          "kind": "rate",
+          "value": 0.545455,
+          "numerator": 30,
+          "denominator": 55
+        },
+        "recall": {
+          "kind": "rate",
+          "value": 1,
+          "numerator": 30,
+          "denominator": 30
+        },
+        "falsePositiveRate": {
+          "kind": "rate",
+          "value": 0.595238,
+          "numerator": 25,
+          "denominator": 42
+        },
+        "fpRateQuantumPp": 2.380952
+      },
+      "perFinding": null,
+      "leadTime": {
+        "targetMs": 2000,
+        "horizonMs": 10000,
+        "eventCount": 30,
+        "predictedCount": 30,
+        "lateCount": 0,
+        "missedCount": 0,
+        "coverage": 1,
+        "medianLeadMs": 2200,
+        "p25LeadMs": 1880,
+        "p75LeadMs": 2950,
+        "minLeadMs": 880,
+        "maxLeadMs": 4480,
+        "meetsTargetMedian": true,
+        "cases": [
+          {
+            "sessionId": "synthetic/ramp/ramp-01.csv",
+            "onsetMs": 8240,
+            "outcome": "predicted",
+            "leadMs": 2520
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-02.csv",
+            "onsetMs": 7240,
+            "outcome": "predicted",
+            "leadMs": 3000
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-03.csv",
+            "onsetMs": 6800,
+            "outcome": "predicted",
+            "leadMs": 1880
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-04.csv",
+            "onsetMs": 4320,
+            "outcome": "predicted",
+            "leadMs": 1080
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-05.csv",
+            "onsetMs": 5520,
+            "outcome": "predicted",
+            "leadMs": 1760
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-06.csv",
+            "onsetMs": 4840,
+            "outcome": "predicted",
+            "leadMs": 1080
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-07.csv",
+            "onsetMs": 9480,
+            "outcome": "predicted",
+            "leadMs": 2600
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-08.csv",
+            "onsetMs": 10560,
+            "outcome": "predicted",
+            "leadMs": 4440
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-09.csv",
+            "onsetMs": 7200,
+            "outcome": "predicted",
+            "leadMs": 3320
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-10.csv",
+            "onsetMs": 6080,
+            "outcome": "predicted",
+            "leadMs": 1680
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-11.csv",
+            "onsetMs": 10960,
+            "outcome": "predicted",
+            "leadMs": 2640
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-12.csv",
+            "onsetMs": 3840,
+            "outcome": "predicted",
+            "leadMs": 880
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-13.csv",
+            "onsetMs": 5280,
+            "outcome": "predicted",
+            "leadMs": 2120
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-14.csv",
+            "onsetMs": 8840,
+            "outcome": "predicted",
+            "leadMs": 3000
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-15.csv",
+            "onsetMs": 4720,
+            "outcome": "predicted",
+            "leadMs": 1240
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-16.csv",
+            "onsetMs": 7360,
+            "outcome": "predicted",
+            "leadMs": 2080
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-17.csv",
+            "onsetMs": 9680,
+            "outcome": "predicted",
+            "leadMs": 4480
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-18.csv",
+            "onsetMs": 7840,
+            "outcome": "predicted",
+            "leadMs": 2600
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-19.csv",
+            "onsetMs": 8800,
+            "outcome": "predicted",
+            "leadMs": 2800
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-20.csv",
+            "onsetMs": 5920,
+            "outcome": "predicted",
+            "leadMs": 2240
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-21.csv",
+            "onsetMs": 4480,
+            "outcome": "predicted",
+            "leadMs": 1960
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-22.csv",
+            "onsetMs": 5600,
+            "outcome": "predicted",
+            "leadMs": 1960
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-23.csv",
+            "onsetMs": 6600,
+            "outcome": "predicted",
+            "leadMs": 1880
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-24.csv",
+            "onsetMs": 9720,
+            "outcome": "predicted",
+            "leadMs": 2160
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-25.csv",
+            "onsetMs": 9680,
+            "outcome": "predicted",
+            "leadMs": 3160
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-26.csv",
+            "onsetMs": 8560,
+            "outcome": "predicted",
+            "leadMs": 2680
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-27.csv",
+            "onsetMs": 6320,
+            "outcome": "predicted",
+            "leadMs": 3600
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-28.csv",
+            "onsetMs": 6000,
+            "outcome": "predicted",
+            "leadMs": 2160
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-29.csv",
+            "onsetMs": 7160,
+            "outcome": "predicted",
+            "leadMs": 3200
+          },
+          {
+            "sessionId": "synthetic/ramp/ramp-30.csv",
+            "onsetMs": 5000,
+            "outcome": "predicted",
+            "leadMs": 1280
+          }
+        ]
+      },
+      "gateEvaluated": false,
+      "passes": false,
+      "limitations": [
+        {
+          "code": "class-below-d21-minimum",
+          "label": "warning",
+          "detail": {
+            "total": 30,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "failsafe",
+          "detail": {
+            "total": 30,
+            "required": 300
+          }
+        },
+        {
+          "code": "class-below-d21-minimum",
+          "label": "healthy",
+          "detail": {
+            "total": 12,
+            "required": 300
+          }
+        },
+        {
+          "code": "fp-rate-quantised",
+          "label": "corpus",
+          "detail": {
+            "negativeSessions": 42,
+            "quantumPp": 2.380952,
+            "required": 60
+          }
+        },
+        {
+          "code": "per-finding-not-scored",
+          "label": "corpus",
+          "detail": {
+            "expectedFindings": 0
+          }
+        },
+        {
+          "code": "gate-not-evaluated",
+          "label": "corpus",
+          "detail": {}
+        }
+      ],
+      "cases": [
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-01.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-02.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-03.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-04.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-05.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-06.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-07.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-08.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-09.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-deep-10.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-01.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-02.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-03.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-04.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-05.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-06.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-07.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-08.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-09.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-moderate-10.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-01.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-02.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-03.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-04.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-05.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-06.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-07.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": true,
+          "outcome": "falsePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-08.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-09.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/near-miss/near-miss-shallow-10.csv",
+          "label": "warning",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-01.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-02.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-03.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-04.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-05.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-06.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-07.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-08.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-09.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-10.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-11.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-12.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-13.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-14.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-15.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-16.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-17.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-18.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-19.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-20.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-21.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-22.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-23.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-24.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-25.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-26.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-27.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 2
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-28.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-29.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-30.csv",
+          "label": "failsafe",
+          "clean": false,
+          "flagged": true,
+          "outcome": "truePositive",
+          "findingCount": 1
+        },
+        {
+          "sessionId": "synthetic/steady/steady-01.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-02.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-03.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-04.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-05.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-06.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-07.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-08.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-09.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-10.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-11.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        },
+        {
+          "sessionId": "synthetic/steady/steady-12.csv",
+          "label": "healthy",
+          "clean": true,
+          "flagged": false,
+          "outcome": "trueNegative",
+          "findingCount": 0
+        }
+      ]
+    },
+    "leadTimeNaive": {
+      "targetMs": 2000,
+      "horizonMs": 10000,
+      "eventCount": 30,
+      "predictedCount": 30,
+      "lateCount": 0,
+      "missedCount": 0,
+      "coverage": 1,
+      "medianLeadMs": 2200,
+      "p25LeadMs": 1880,
+      "p75LeadMs": 2950,
+      "minLeadMs": 880,
+      "maxLeadMs": 4480,
+      "meetsTargetMedian": true,
+      "cases": [
+        {
+          "sessionId": "synthetic/ramp/ramp-01.csv",
+          "onsetMs": 8240,
+          "outcome": "predicted",
+          "leadMs": 2520
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-02.csv",
+          "onsetMs": 7240,
+          "outcome": "predicted",
+          "leadMs": 3000
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-03.csv",
+          "onsetMs": 6800,
+          "outcome": "predicted",
+          "leadMs": 1880
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-04.csv",
+          "onsetMs": 4320,
+          "outcome": "predicted",
+          "leadMs": 1080
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-05.csv",
+          "onsetMs": 5520,
+          "outcome": "predicted",
+          "leadMs": 1760
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-06.csv",
+          "onsetMs": 4840,
+          "outcome": "predicted",
+          "leadMs": 1080
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-07.csv",
+          "onsetMs": 9480,
+          "outcome": "predicted",
+          "leadMs": 2600
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-08.csv",
+          "onsetMs": 10560,
+          "outcome": "predicted",
+          "leadMs": 4440
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-09.csv",
+          "onsetMs": 7200,
+          "outcome": "predicted",
+          "leadMs": 3320
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-10.csv",
+          "onsetMs": 6080,
+          "outcome": "predicted",
+          "leadMs": 1680
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-11.csv",
+          "onsetMs": 10960,
+          "outcome": "predicted",
+          "leadMs": 2640
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-12.csv",
+          "onsetMs": 3840,
+          "outcome": "predicted",
+          "leadMs": 880
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-13.csv",
+          "onsetMs": 5280,
+          "outcome": "predicted",
+          "leadMs": 2120
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-14.csv",
+          "onsetMs": 8840,
+          "outcome": "predicted",
+          "leadMs": 3000
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-15.csv",
+          "onsetMs": 4720,
+          "outcome": "predicted",
+          "leadMs": 1240
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-16.csv",
+          "onsetMs": 7360,
+          "outcome": "predicted",
+          "leadMs": 2080
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-17.csv",
+          "onsetMs": 9680,
+          "outcome": "predicted",
+          "leadMs": 4480
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-18.csv",
+          "onsetMs": 7840,
+          "outcome": "predicted",
+          "leadMs": 2600
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-19.csv",
+          "onsetMs": 8800,
+          "outcome": "predicted",
+          "leadMs": 2800
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-20.csv",
+          "onsetMs": 5920,
+          "outcome": "predicted",
+          "leadMs": 2240
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-21.csv",
+          "onsetMs": 4480,
+          "outcome": "predicted",
+          "leadMs": 1960
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-22.csv",
+          "onsetMs": 5600,
+          "outcome": "predicted",
+          "leadMs": 1960
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-23.csv",
+          "onsetMs": 6600,
+          "outcome": "predicted",
+          "leadMs": 1880
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-24.csv",
+          "onsetMs": 9720,
+          "outcome": "predicted",
+          "leadMs": 2160
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-25.csv",
+          "onsetMs": 9680,
+          "outcome": "predicted",
+          "leadMs": 3160
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-26.csv",
+          "onsetMs": 8560,
+          "outcome": "predicted",
+          "leadMs": 2680
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-27.csv",
+          "onsetMs": 6320,
+          "outcome": "predicted",
+          "leadMs": 3600
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-28.csv",
+          "onsetMs": 6000,
+          "outcome": "predicted",
+          "leadMs": 2160
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-29.csv",
+          "onsetMs": 7160,
+          "outcome": "predicted",
+          "leadMs": 3200
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-30.csv",
+          "onsetMs": 5000,
+          "outcome": "predicted",
+          "leadMs": 1280
+        }
+      ]
+    },
+    "withdrawnWarnings": 0,
+    "predictiveFpRate": {
+      "kind": "rate",
+      "value": 0.595238,
+      "numerator": 25,
+      "denominator": 42
+    },
+    "fpRateQuantumPp": 2.380952,
+    "healthyOnlyFpRate": {
+      "kind": "rate",
+      "value": 0,
+      "numerator": 0,
+      "denominator": 12
+    },
+    "falseAlarmsByBucket": [
+      {
+        "bucket": "deep",
+        "negatives": 10,
+        "falseAlarms": 10,
+        "fpRate": {
+          "kind": "rate",
+          "value": 1,
+          "numerator": 10,
+          "denominator": 10
+        },
+        "fpRateQuantumPp": 10
+      },
+      {
+        "bucket": "moderate",
+        "negatives": 10,
+        "falseAlarms": 10,
+        "fpRate": {
+          "kind": "rate",
+          "value": 1,
+          "numerator": 10,
+          "denominator": 10
+        },
+        "fpRateQuantumPp": 10
+      },
+      {
+        "bucket": "shallow",
+        "negatives": 10,
+        "falseAlarms": 5,
+        "fpRate": {
+          "kind": "rate",
+          "value": 0.5,
+          "numerator": 5,
+          "denominator": 10
+        },
+        "fpRateQuantumPp": 10
+      },
+      {
+        "bucket": "steady",
+        "negatives": 12,
+        "falseAlarms": 0,
+        "fpRate": {
+          "kind": "rate",
+          "value": 0,
+          "numerator": 0,
+          "denominator": 12
+        },
+        "fpRateQuantumPp": 8.333333
+      }
+    ],
+    "horizonSensitivity": [
+      {
+        "horizonMs": 2000,
+        "eventCount": 30,
+        "predictedCount": 11,
+        "lateCount": 3,
+        "missedCount": 16,
+        "coverage": 0.366667,
+        "medianLeadMs": 1680,
+        "maxLeadMs": 1960,
+        "meetsTargetMedian": false
+      },
+      {
+        "horizonMs": 10000,
+        "eventCount": 30,
+        "predictedCount": 30,
+        "lateCount": 0,
+        "missedCount": 0,
+        "coverage": 1,
+        "medianLeadMs": 2200,
+        "maxLeadMs": 4480,
+        "meetsTargetMedian": true
+      },
+      {
+        "horizonMs": null,
+        "eventCount": 30,
+        "predictedCount": 30,
+        "lateCount": 0,
+        "missedCount": 0,
+        "coverage": 1,
+        "medianLeadMs": 2200,
+        "maxLeadMs": 4480,
+        "meetsTargetMedian": true
+      }
+    ],
+    "leadCeiling": {
+      "channel": "linkQuality",
+      "source": "src/lib/ml/predictive.ts::measureCorpusLeadCeiling",
+      "eventCount": 30,
+      "targetMs": 2000,
+      "threshold": {
+        "definition": "first sample of the run of LQ < 50 (the v2.0 lq-collapse absThreshold, from dataset.ts::FEATURE_LQ_LOW_PCT) ending at the onset",
+        "medianMs": 1800,
+        "maxMs": 4560,
+        "minMs": 600,
+        "zeroLeadEvents": 0,
+        "targetReachable": false
+      },
+      "anyMovement": {
+        "definition": "first sample of the maximal strictly-decreasing LQ run ending at the onset (credits a single-point noise wiggle; the most generous bound anyone could argue for)",
+        "medianMs": 640,
+        "maxMs": 1600,
+        "minMs": 0,
+        "zeroLeadEvents": 4,
+        "targetReachable": false
+      },
+      "targetReachable": false,
+      "cases": [
+        {
+          "sessionId": "synthetic/ramp/ramp-01.csv",
+          "onsetIndex": 206,
+          "onsetMs": 8240,
+          "thresholdCeilingMs": 2280,
+          "anyMovementCeilingMs": 240
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-02.csv",
+          "onsetIndex": 181,
+          "onsetMs": 7240,
+          "thresholdCeilingMs": 2320,
+          "anyMovementCeilingMs": 40
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-03.csv",
+          "onsetIndex": 170,
+          "onsetMs": 6800,
+          "thresholdCeilingMs": 1520,
+          "anyMovementCeilingMs": 600
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-04.csv",
+          "onsetIndex": 108,
+          "onsetMs": 4320,
+          "thresholdCeilingMs": 640,
+          "anyMovementCeilingMs": 1480
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-05.csv",
+          "onsetIndex": 138,
+          "onsetMs": 5520,
+          "thresholdCeilingMs": 1120,
+          "anyMovementCeilingMs": 920
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-06.csv",
+          "onsetIndex": 121,
+          "onsetMs": 4840,
+          "thresholdCeilingMs": 680,
+          "anyMovementCeilingMs": 800
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-07.csv",
+          "onsetIndex": 237,
+          "onsetMs": 9480,
+          "thresholdCeilingMs": 2560,
+          "anyMovementCeilingMs": 80
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-08.csv",
+          "onsetIndex": 264,
+          "onsetMs": 10560,
+          "thresholdCeilingMs": 4080,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-09.csv",
+          "onsetIndex": 180,
+          "onsetMs": 7200,
+          "thresholdCeilingMs": 2320,
+          "anyMovementCeilingMs": 40
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-10.csv",
+          "onsetIndex": 152,
+          "onsetMs": 6080,
+          "thresholdCeilingMs": 1200,
+          "anyMovementCeilingMs": 1320
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-11.csv",
+          "onsetIndex": 274,
+          "onsetMs": 10960,
+          "thresholdCeilingMs": 2520,
+          "anyMovementCeilingMs": 120
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-12.csv",
+          "onsetIndex": 96,
+          "onsetMs": 3840,
+          "thresholdCeilingMs": 600,
+          "anyMovementCeilingMs": 680
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-13.csv",
+          "onsetIndex": 132,
+          "onsetMs": 5280,
+          "thresholdCeilingMs": 1480,
+          "anyMovementCeilingMs": 760
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-14.csv",
+          "onsetIndex": 221,
+          "onsetMs": 8840,
+          "thresholdCeilingMs": 2960,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-15.csv",
+          "onsetIndex": 118,
+          "onsetMs": 4720,
+          "thresholdCeilingMs": 840,
+          "anyMovementCeilingMs": 840
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-16.csv",
+          "onsetIndex": 184,
+          "onsetMs": 7360,
+          "thresholdCeilingMs": 1560,
+          "anyMovementCeilingMs": 1600
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-17.csv",
+          "onsetIndex": 242,
+          "onsetMs": 9680,
+          "thresholdCeilingMs": 4560,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-18.csv",
+          "onsetIndex": 196,
+          "onsetMs": 7840,
+          "thresholdCeilingMs": 1960,
+          "anyMovementCeilingMs": 1320
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-19.csv",
+          "onsetIndex": 220,
+          "onsetMs": 8800,
+          "thresholdCeilingMs": 2320,
+          "anyMovementCeilingMs": 400
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-20.csv",
+          "onsetIndex": 148,
+          "onsetMs": 5920,
+          "thresholdCeilingMs": 1560,
+          "anyMovementCeilingMs": 1160
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-21.csv",
+          "onsetIndex": 112,
+          "onsetMs": 4480,
+          "thresholdCeilingMs": 1360,
+          "anyMovementCeilingMs": 1440
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-22.csv",
+          "onsetIndex": 140,
+          "onsetMs": 5600,
+          "thresholdCeilingMs": 1640,
+          "anyMovementCeilingMs": 760
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-23.csv",
+          "onsetIndex": 165,
+          "onsetMs": 6600,
+          "thresholdCeilingMs": 1280,
+          "anyMovementCeilingMs": 720
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-24.csv",
+          "onsetIndex": 243,
+          "onsetMs": 9720,
+          "thresholdCeilingMs": 2320,
+          "anyMovementCeilingMs": 320
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-25.csv",
+          "onsetIndex": 242,
+          "onsetMs": 9680,
+          "thresholdCeilingMs": 3080,
+          "anyMovementCeilingMs": 0
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-26.csv",
+          "onsetIndex": 214,
+          "onsetMs": 8560,
+          "thresholdCeilingMs": 2240,
+          "anyMovementCeilingMs": 200
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-27.csv",
+          "onsetIndex": 158,
+          "onsetMs": 6320,
+          "thresholdCeilingMs": 2440,
+          "anyMovementCeilingMs": 40
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-28.csv",
+          "onsetIndex": 150,
+          "onsetMs": 6000,
+          "thresholdCeilingMs": 1520,
+          "anyMovementCeilingMs": 880
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-29.csv",
+          "onsetIndex": 179,
+          "onsetMs": 7160,
+          "thresholdCeilingMs": 2480,
+          "anyMovementCeilingMs": 40
+        },
+        {
+          "sessionId": "synthetic/ramp/ramp-30.csv",
+          "onsetIndex": 125,
+          "onsetMs": 5000,
+          "thresholdCeilingMs": 880,
+          "anyMovementCeilingMs": 960
+        }
+      ]
+    },
+    "results": [
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-01.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7320,
+        "firstConfidence": 0.555365
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-02.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6640,
+        "firstConfidence": 0.526372
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-03.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5200,
+        "firstConfidence": 0.544286
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-04.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6320,
+        "firstConfidence": 0.52
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-05.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5920,
+        "firstConfidence": 0.526105
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-06.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5640,
+        "firstConfidence": 0.553737
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-07.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3440,
+        "firstConfidence": 0.550373
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-08.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6680,
+        "firstConfidence": 0.574306
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-09.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 4560,
+        "firstConfidence": 0.527778
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-deep-10.csv",
+        "label": "warning",
+        "bucket": "deep",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5720,
+        "firstConfidence": 0.577669
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-01.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5760,
+        "firstConfidence": 0.626351
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-02.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7560,
+        "firstConfidence": 0.541466
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-03.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6440,
+        "firstConfidence": 0.550989
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-04.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7480,
+        "firstConfidence": 0.548941
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-05.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6960,
+        "firstConfidence": 0.571937
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-06.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7280,
+        "firstConfidence": 0.576028
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-07.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3480,
+        "firstConfidence": 0.55891
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-08.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 8000,
+        "firstConfidence": 0.571715
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-09.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6120,
+        "firstConfidence": 0.526424
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-moderate-10.csv",
+        "label": "warning",
+        "bucket": "moderate",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 8040,
+        "firstConfidence": 0.566503
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-01.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7200,
+        "firstConfidence": 0.513875
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-02.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-03.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 10520,
+        "firstConfidence": 0.521284
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-04.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3280,
+        "firstConfidence": 0.591186
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-05.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-06.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7720,
+        "firstConfidence": 0.548382
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-07.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5000,
+        "firstConfidence": 0.5392
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-08.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-09.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/near-miss/near-miss-shallow-10.csv",
+        "label": "warning",
+        "bucket": "shallow",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-01.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5720,
+        "firstConfidence": 0.528962
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-02.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 4240,
+        "firstConfidence": 0.572203
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-03.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 4920,
+        "firstConfidence": 0.553258
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-04.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3240,
+        "firstConfidence": 0.621355
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-05.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3760,
+        "firstConfidence": 0.566763
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-06.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3760,
+        "firstConfidence": 0.601055
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-07.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6880,
+        "firstConfidence": 0.517393
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-08.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6120,
+        "firstConfidence": 0.515134
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-09.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3880,
+        "firstConfidence": 0.640639
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-10.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 4400,
+        "firstConfidence": 0.606667
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-11.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 8320,
+        "firstConfidence": 0.55351
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-12.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2960,
+        "firstConfidence": 0.677114
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-13.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3160,
+        "firstConfidence": 0.592747
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-14.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5840,
+        "firstConfidence": 0.578875
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-15.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3480,
+        "firstConfidence": 0.624404
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-16.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5280,
+        "firstConfidence": 0.546747
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-17.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5200,
+        "firstConfidence": 0.571111
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-18.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5240,
+        "firstConfidence": 0.513126
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-19.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6000,
+        "firstConfidence": 0.542429
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-20.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3680,
+        "firstConfidence": 0.515527
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-21.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2520,
+        "firstConfidence": 0.571343
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-22.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3640,
+        "firstConfidence": 0.5532
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-23.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 4720,
+        "firstConfidence": 0.558224
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-24.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 7560,
+        "firstConfidence": 0.560461
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-25.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 6520,
+        "firstConfidence": 0.521888
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-26.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 5880,
+        "firstConfidence": 0.533333
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-27.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 2,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 2720,
+        "firstConfidence": 0.551334
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-28.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3840,
+        "firstConfidence": 0.519598
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-29.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3960,
+        "firstConfidence": 0.578501
+      },
+      {
+        "sessionId": "synthetic/ramp/ramp-30.csv",
+        "label": "failsafe",
+        "bucket": "ramp",
+        "failsafed": true,
+        "warned": true,
+        "warningCount": 1,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": 3720,
+        "firstConfidence": 0.586874
+      },
+      {
+        "sessionId": "synthetic/steady/steady-01.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-02.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-03.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-04.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-05.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-06.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-07.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-08.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-09.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-10.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-11.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      },
+      {
+        "sessionId": "synthetic/steady/steady-12.csv",
+        "label": "healthy",
+        "bucket": "steady",
+        "failsafed": false,
+        "warned": false,
+        "warningCount": 0,
+        "withdrawnBeforeOnset": 0,
+        "firstWarningMs": null,
+        "firstConfidence": null
+      }
+    ]
+  }
+}

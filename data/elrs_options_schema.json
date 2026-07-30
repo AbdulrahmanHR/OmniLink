@@ -1,0 +1,181 @@
+{
+  "_comment": "OmniLink device-config schema. SOURCED from ExpressLRS firmware src/python/binary_configurator.py (binary-patch options) + build_flags.py (compile-time defines). Modern ELRS 3.0+ patches these as a JSON options block into a PRE-BUILT binary — no compilation needed for the common case. Compile-from-source is only required for custom/unlisted targets or the build-flag-only options. This file IS the data-driven source for FR-FLASH-03 (structured form) and FR-WIZ-03 (plain-English wizard). help/label text is OmniLink's value-add — extend freely. Verify defaults against the firmware version in use; values here track ELRS master as of June 2026.",
+  "_schema": "omnilink-options-v1",
+  "mechanisms": {
+    "binary_patch": "Common config written into a flashed/pre-built binary via the ELRS options block. No compile. Covers the 'binding','regulatory','telemetry','wifi','link','fc' groups below.",
+    "compile_flag": "Requires compile-from-source (PlatformIO). Covers the 'build_only' group. Triggered only when user changes one of those, or selects an unlisted custom target."
+  },
+  "groups": {
+    "binding": {
+      "label": "Binding",
+      "fields": {
+        "binding_phrase": {
+          "type": "string", "mechanism": "binary_patch", "default": "",
+          "label": "Binding phrase",
+          "help": "A secret word/phrase shared between TX and RX so they bind to each other and ignore other links. MD5-hashed into a 6-byte UID. SENSITIVE — never sent to the AI API (FR-AI-06/NFR-PRIV-01).",
+          "maps_to": "uid", "sensitive": true
+        },
+        "uid": {
+          "type": "uint8[6]", "mechanism": "binary_patch", "default": null,
+          "label": "UID (advanced)",
+          "help": "Raw 6-byte binding UID. Normally derived from the binding phrase; only set directly if you know the exact UID.",
+          "sensitive": true
+        },
+        "lock_on_first_connection": {
+          "type": "bool", "mechanism": "binary_patch", "default": true,
+          "label": "Lock RF mode on first connection",
+          "help": "After the link is established, lock the RF mode so it won't drop to a slower/longer-range rate mid-flight. Recommended ON for most pilots.",
+          "define": "LOCK_ON_FIRST_CONNECTION"
+        }
+      }
+    },
+    "regulatory": {
+      "label": "Regulatory domain",
+      "fields": {
+        "domain": {
+          "type": "enum", "mechanism": "binary_patch", "default": null,
+          "label": "Regulatory domain",
+          "help": "Legal RF band/power rules for your country. Only applies to SX127x (900MHz/sub-GHz) hardware; 2.4GHz (SX128x) ignores it. Flashing the wrong domain can be illegal and reduce range.",
+          "choices": ["us_433", "us_433_wide", "eu_433", "au_433", "in_866", "eu_868", "au_915", "fcc_915"],
+          "applies_to": ["900MHz", "433MHz", "868MHz"],
+          "safety_critical": true
+        }
+      }
+    },
+    "telemetry": {
+      "label": "Telemetry",
+      "fields": {
+        "tlm_report_interval_ms": {
+          "type": "int", "mechanism": "binary_patch", "default": 240, "min": 0, "unit": "ms",
+          "label": "Telemetry report interval",
+          "help": "Minimum time between telemetry packets sent down from the RX. Lower = fresher telemetry but slightly less link bandwidth for control. 240ms is the ELRS default.",
+          "maps_to": "tlm-interval",
+          "define": "TLM_REPORT_INTERVAL_MS"
+        }
+      }
+    },
+    "wifi": {
+      "label": "WiFi / Home network",
+      "fields": {
+        "home_ssid": {
+          "type": "string", "mechanism": "binary_patch", "default": "", "max_len": 32,
+          "label": "Home WiFi SSID",
+          "help": "Optional. If set, the device auto-joins this network in WiFi mode instead of starting its own access point — convenient for OTA updates at the bench."
+        },
+        "home_password": {
+          "type": "string", "mechanism": "binary_patch", "default": "", "max_len": 64,
+          "label": "Home WiFi password", "sensitive": true,
+          "help": "Password for the Home WiFi SSID above. Stored on the device; treated as sensitive by OmniLink."
+        },
+        "auto_wifi_interval_s": {
+          "type": "int", "mechanism": "binary_patch", "default": null, "unit": "s",
+          "label": "Auto-WiFi timeout",
+          "help": "If the device can't establish a radio link within this many seconds of power-on, it automatically starts WiFi mode (handy for recovering a misconfigured RX). Leave unset to disable.",
+          "maps_to": "auto-wifi",
+          "define": "AUTO_WIFI_ON_INTERVAL"
+        }
+      }
+    },
+    "fc": {
+      "label": "Flight controller",
+      "fields": {
+        "rx_baud": {
+          "type": "int", "mechanism": "binary_patch", "default": 420000, "unit": "baud",
+          "label": "RX↔FC baud rate",
+          "help": "Serial speed between the receiver and the flight controller (Betaflight/iNav). 420000 is the standard CRSF rate; only change if your FC UART can't handle it.",
+          "maps_to": "rx-baud"
+        },
+        "airport_baud": {
+          "type": "int", "mechanism": "binary_patch", "default": null, "unit": "baud",
+          "label": "AirPort baud rate",
+          "help": "Only for AirPort (serial-bridge) builds — the baud rate of the transparent serial link. Leave unset unless you specifically use AirPort."
+        }
+      }
+    },
+    "link": {
+      "label": "Link / model",
+      "_note": "Profile-facing link tunables that map to a ProfileSettings key (M54). Safe entries (model_match, telemetry_ratio) are AI-suggestable through the M54 closed allowlist; tx_power is RF output power and is safety_critical → never AI-suggestable.",
+      "fields": {
+        "model_match": {
+          "type": "bool", "mechanism": "binary_patch", "default": false,
+          "label": "Model match",
+          "help": "When on, the RX only accepts control from a TX broadcasting the matching model id, so you can't fly the wrong model's rates. Non-safety-critical convenience toggle.",
+          "define": "MODEL_MATCH", "maps_to": "modelMatch"
+        },
+        "telemetry_ratio": {
+          "type": "enum", "mechanism": "binary_patch", "default": "1:64",
+          "label": "Telemetry ratio",
+          "help": "How often a downlink telemetry packet takes an uplink slot. Higher ratios give fresher telemetry at a small cost to control bandwidth. Non-safety-critical.",
+          "choices": ["Off", "1:128", "1:64", "1:32", "1:16", "1:8", "1:4", "1:2", "Std"],
+          "define": "TELEMETRY_RATIO", "maps_to": "telemetryRatio"
+        },
+        "tx_power": {
+          "type": "enum", "mechanism": "binary_patch", "default": "100", "unit": "mW",
+          "label": "TX power",
+          "help": "RF output power in milliwatts. Regulatory- and thermal-critical: raising it can exceed legal limits and overheat the module. SAFETY-CRITICAL — never AI-suggestable (excluded from the M54 allowlist).",
+          "choices": ["10", "25", "50", "100", "250", "500", "1000"],
+          "define": "TX_POWER", "maps_to": "txPower", "safety_critical": true
+        }
+      }
+    },
+    "backpack": {
+      "label": "Backpack",
+      "_note": "ExpressLRS Backpack (TX-side telemetry/control bridge + VRX-side video companion) settings, FR-FLASH-11c. All binary-patchable into the pre-built Backpack binary — no compile.",
+      "fields": {
+        "vtx_channel": {
+          "type": "enum", "mechanism": "binary_patch", "default": "R1",
+          "label": "VTX channel",
+          "help": "The video transmitter band + channel the Backpack tunes to (40-channel raceband set: A/B/E/F/R bands, channels 1-8). R1 (Raceband 1) is a common default. Must match your goggles/receiver.",
+          "choices": [
+            "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8",
+            "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8",
+            "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8",
+            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8",
+            "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"
+          ]
+        },
+        "dvr_control": {
+          "type": "enum", "mechanism": "binary_patch", "default": "armed",
+          "label": "DVR recording trigger",
+          "help": "When the Backpack tells the goggles' DVR to record: 'off' never auto-records, 'armed' starts/stops with the craft arm/disarm state, 'manual' leaves recording fully under your control.",
+          "choices": ["off", "armed", "manual"]
+        },
+        "head_tracker": {
+          "type": "bool", "mechanism": "binary_patch", "default": false,
+          "label": "Head tracking",
+          "help": "Enable forwarding of goggle head-tracker pan/tilt/roll data over the Backpack link to drive a gimbal. Leave off unless you have a head-tracking setup."
+        }
+      }
+    },
+    "build_only": {
+      "label": "Advanced (requires compile-from-source)",
+      "_note": "Changing any of these forces the compile path (Decision #3 Hybrid engine). Sourced from build_flags.py.",
+      "fields": {
+        "unlock_higher_power": {
+          "type": "bool", "mechanism": "compile_flag", "default": false,
+          "label": "Unlock higher power",
+          "help": "Removes the firmware power cap on hardware that supports more output than the default limit. Advanced — higher power draws more current/heat and may exceed legal limits. Compile-time only.",
+          "define": "UNLOCK_HIGHER_POWER",
+          "safety_critical": true
+        },
+        "fan_min_runtime_s": {
+          "type": "int", "mechanism": "binary_patch", "default": 30, "unit": "s",
+          "label": "Fan minimum runtime",
+          "help": "On TX modules with a cooling fan, the minimum time the fan keeps running once it turns on. Prevents rapid on/off cycling.",
+          "maps_to": "fan-min-runtime",
+          "define": "FAN_MIN_RUNTIME"
+        }
+      }
+    }
+  },
+  "flash_methods": {
+    "_comment": "ELRS UploadMethod enum (binary_flash.py). Maps to FR-FLASH-09 transports.",
+    "wifi": "WiFi HTTP OTA (FR-FLASH-09)",
+    "uart": "Direct USB serial (FR-FLASH-09)",
+    "bf": "Betaflight passthrough via FC (FR-FLASH-09a MSP passthrough)",
+    "etx": "EdgeTX/handset passthrough (TX modules)",
+    "stlink": "ST-Link debug probe (STM32 targets)",
+    "stock": "Stock bootloader",
+    "dir": "Write to directory (build output only)"
+  }
+}

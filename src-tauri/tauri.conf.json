@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OmniLink",
+  "version": "3.0.2",
+  "identifier": "com.omnilink.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "OmniLink",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage", "msi", "nsis", "app", "dmg"],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "certificateThumbprint": null
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/lib/udev/rules.d/60-omnilink-elrs.rules": "resources/linux/60-omnilink-elrs.rules"
+        }
+      }
+    },
+    "resources": [
+      "resources/tiles/tile-packs.json",
+      "resources/tiles/base-world.ompack",
+      "resources/tiles/packs/europe-west.ompack",
+      "resources/tiles/packs/north-america-us.ompack",
+      "resources/tiles/packs/asia-east.ompack",
+      "resources/tiles/packs/oceania-au.ompack",
+      "resources/linux/60-omnilink-elrs.rules"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/AbdulrahmanHR/OmniLink/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5N0JBRUNGNzc2QjQxQkYKUldTL1FXdDN6NjU3dWRxRWlEbi92eDJKelgySjltbVVDWmJhSXhjazJJeThlbzE2b2JDbnVnRFgK"
+    }
+  }
+}

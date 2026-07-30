@@ -1,0 +1,20 @@
+{
+  "id": "preset-cinematic-smooth-150",
+  "name": "Cinematic Smooth 150Hz",
+  "description": "Legacy cinematic cruise profile for smooth filming runs — predates fan control (v0 schema).",
+  "category": "cinematic",
+  "tags": ["cinematic", "smooth", "filming", "150hz"],
+  "firmwareVersion": "3.2.1",
+  "savedAt": 1700000000000,
+  "settings": {
+    "packetRate": 150,
+    "telemetryRatio": "1:64",
+    "switchMode": "Hybrid",
+    "txPower": 100,
+    "dynamicPower": true,
+    "modelMatch": true,
+    "modelId": 5,
+    "bindingPhrase": "cine-smooth-cruise",
+    "antennaMode": "Diversity"
+  }
+}

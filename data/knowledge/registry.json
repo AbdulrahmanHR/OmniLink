@@ -1,0 +1,45 @@
+{
+  "_comment": "Trusted knowledge source registry (M49, D16/D17). Consumed by src/lib/knowledge/registry.ts::parseRegistry. `schemaVersion` MUST match REGISTRY_SCHEMA_VERSION or the registry is rejected as incompatible. Each source's `trustLevel` MUST be exactly \"official\" or \"omnilink-notes\" and `license` one of the recorded SourceLicense values. `path` points at a bundled pack under data/knowledge/. Only D16-legal sources ship by default: official ExpressLRS reference docs (GPL-3.0-or-later, the ExpressLRS project license) and OmniLink's own curated notes (CC-BY-4.0). New sources are admitted ONLY through src/lib/knowledge/allowlist.ts.",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "elrs-getting-started",
+      "title": "ExpressLRS — Getting Started",
+      "version": "1.0.0",
+      "path": "packs/elrs-getting-started.md",
+      "url": "https://www.expresslrs.org/quick-start/getting-started/",
+      "freshnessDate": "2026-06-01",
+      "license": "GPL-3.0-or-later",
+      "trustLevel": "official"
+    },
+    {
+      "id": "elrs-binding",
+      "title": "ExpressLRS — Binding",
+      "version": "1.0.0",
+      "path": "packs/elrs-binding.md",
+      "url": "https://www.expresslrs.org/quick-start/binding/",
+      "freshnessDate": "2026-06-01",
+      "license": "GPL-3.0-or-later",
+      "trustLevel": "official"
+    },
+    {
+      "id": "elrs-packet-rates",
+      "title": "ExpressLRS — Packet Rates and Telemetry",
+      "version": "1.0.0",
+      "path": "packs/elrs-packet-rates.md",
+      "url": "https://www.expresslrs.org/info/signal-health/",
+      "freshnessDate": "2026-06-01",
+      "license": "GPL-3.0-or-later",
+      "trustLevel": "official"
+    },
+    {
+      "id": "omnilink-notes",
+      "title": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "version": "1.0.0",
+      "path": "packs/omnilink-notes.md",
+      "freshnessDate": "2026-06-01",
+      "license": "CC-BY-4.0",
+      "trustLevel": "omnilink-notes"
+    }
+  ]
+}

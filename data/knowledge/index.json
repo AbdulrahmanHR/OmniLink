@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "scorer": "bm25",
+  "chunks": [
+    {
+      "sourceId": "elrs-getting-started",
+      "sourceTitle": "ExpressLRS — Getting Started",
+      "chunkId": "elrs-getting-started#0",
+      "title": "ExpressLRS — Getting Started",
+      "text": "ExpressLRS (ELRS) is an open-source, high-performance radio control link for FPV\ndrones and other RC aircraft. It runs on inexpensive hardware and is optimised\nfor low latency and long range. A complete ELRS link has two halves: a\n**transmitter (TX)** module that plugs into your radio, and a **receiver (RX)**\nthat lives on the aircraft."
+    },
+    {
+      "sourceId": "elrs-getting-started",
+      "sourceTitle": "ExpressLRS — Getting Started",
+      "chunkId": "elrs-getting-started#1",
+      "title": "The two halves of a link",
+      "text": "- **Transmitter (TX):** an external module (in the JR/Nano bay of a radio) or an\ninternal module built into the radio. It broadcasts the control link.\n- **Receiver (RX):** a small board on the aircraft that receives control packets\nand returns telemetry over the CRSF protocol to the flight controller.\nFor a link to work, the TX and RX must run **compatible firmware versions** and\nuse the **same frequency band** and the **same binding phrase**."
+    },
+    {
+      "sourceId": "elrs-getting-started",
+      "sourceTitle": "ExpressLRS — Getting Started",
+      "chunkId": "elrs-getting-started#2",
+      "title": "Frequency bands",
+      "text": "ExpressLRS ships in two radio bands, and a TX and RX must match:\n- **2.4 GHz** — the most common band. Uses the global ISM band, so it works in\nmost regions with minimal restriction. Supports the highest packet rates and\nthe lowest latency.\n- **900 MHz** — better penetration and long-range performance, at lower maximum\npacket rates. The exact sub-band and legal power depend on your regulatory\ndomain."
+    },
+    {
+      "sourceId": "elrs-getting-started",
+      "sourceTitle": "ExpressLRS — Getting Started",
+      "chunkId": "elrs-getting-started#3",
+      "title": "Regulatory domains",
+      "text": "Legal frequencies and power limits are set by your region. ExpressLRS firmware is\nbuilt per **regulatory domain** so it only transmits where you are allowed to:\n- **2.4 GHz** — `Regulatory_Domain_ISM_2400` is used worldwide.\n- **900 MHz** — `Regulatory_Domain_FCC_915` (Americas, 902–928 MHz),\n`Regulatory_Domain_EU_868` (Europe, 868 MHz), and\n`Regulatory_Domain_AU_915` / `Regulatory_Domain_IN_866` for other regions.\nAlways flash the domain that is legal where you fly. Using the wrong domain can\nbreak the law and will not interoperate with correctly-configured gear."
+    },
+    {
+      "sourceId": "elrs-getting-started",
+      "sourceTitle": "ExpressLRS — Getting Started",
+      "chunkId": "elrs-getting-started#4",
+      "title": "Flashing firmware",
+      "text": "ExpressLRS hardware is configured by flashing firmware built for your exact\ntarget (the specific TX or RX board). OmniLink flashes ELRS firmware directly —\nover USB (UART/passthrough) or over WiFi — without needing the separate\nExpressLRS Configurator. Every flash writes firmware matched to the selected\ntarget, and a mismatched TX/RX target is blocked before any write."
+    },
+    {
+      "sourceId": "elrs-binding",
+      "sourceTitle": "ExpressLRS — Binding",
+      "chunkId": "elrs-binding#0",
+      "title": "ExpressLRS — Binding",
+      "text": "Binding is the step that pairs one receiver to one transmitter so the receiver\nonly accepts packets from your radio. ExpressLRS supports two binding methods: a\n**binding phrase** (recommended) and traditional **manual binding**."
+    },
+    {
+      "sourceId": "elrs-binding",
+      "sourceTitle": "ExpressLRS — Binding",
+      "chunkId": "elrs-binding#1",
+      "title": "Binding phrase (recommended)",
+      "text": "A binding phrase is a secret word or sentence you set in the firmware for both\nthe TX and the RX. ExpressLRS hashes the phrase into a unique link identity (the\nUID), so any TX and RX flashed with the **same phrase are automatically bound**\n— no button presses required.\n- Choose a phrase that is memorable but not trivially guessable.\n- Flash the **identical** phrase to every TX and RX you want on the same link.\n- Changing the phrase later requires re-flashing the affected devices."
+    },
+    {
+      "sourceId": "elrs-binding",
+      "sourceTitle": "ExpressLRS — Binding",
+      "chunkId": "elrs-binding#2",
+      "title": "Binding phrase (recommended)",
+      "text": "Because the phrase never leaves your own equipment and is only stored as a hash,\nit is treated as a **private secret**. Tools should never transmit or log a\nbinding phrase."
+    },
+    {
+      "sourceId": "elrs-binding",
+      "sourceTitle": "ExpressLRS — Binding",
+      "chunkId": "elrs-binding#3",
+      "title": "Manual (traditional) binding",
+      "text": "If no binding phrase is set, ExpressLRS falls back to manual binding:\n1. Power on the receiver. On first boot (or after a bind command) it enters\n**bind mode**, indicated by a fast-blinking LED.\n2. Put the transmitter into bind mode from the radio's ExpressLRS Lua script or\nthe module menu.\n3. The devices exchange identity and the LED goes solid once bound.\nManual binding is useful for a quick pairing, but a binding phrase is more\nrobust: it survives re-flashes and avoids accidental cross-binding at a busy\nfield."
+    },
+    {
+      "sourceId": "elrs-binding",
+      "sourceTitle": "ExpressLRS — Binding",
+      "chunkId": "elrs-binding#4",
+      "title": "Verifying a bind",
+      "text": "A bound link shows a solid receiver LED and live telemetry (link quality, RSSI)\nflowing back to the radio and flight controller. If the LED keeps blinking, the\nphrases differ, the bands differ, or the firmware versions are incompatible."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#0",
+      "title": "ExpressLRS — Packet Rates and Telemetry",
+      "text": "The **packet rate** is how many control packets per second the link sends. It is\nthe central trade-off in ExpressLRS: higher rates give lower latency, while lower\nrates give more range and better penetration for the same transmit power."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#1",
+      "title": "Common packet rates (2.4 GHz)",
+      "text": "- **50 Hz** — maximum range and sensitivity, highest latency. Good for\nlong-range cruising.\n- **150 Hz** — a balanced all-round rate with good range.\n- **250 Hz / 333 Hz Full** — lower latency for freestyle and general flying.\n- **500 Hz** — low latency for racing; shorter range than the slower rates.\n- **D250 / D500 / F500 / F1000** — higher-rate modes (some using the FLRC\nmodulation) that push latency down further at the cost of range.\n900 MHz hardware supports lower maximum rates (for example 25 Hz, 50 Hz, 100 Hz,\n200 Hz) but reaches further for a given power."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#2",
+      "title": "LoRa vs FLRC",
+      "text": "- **LoRa** modulation is used for the range-oriented rates — it is very\nsensitive and penetrates obstacles well.\n- **FLRC** is used for the highest rates (for example F1000) — it trades some\nsensitivity for the lowest possible latency."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#3",
+      "title": "Telemetry ratio",
+      "text": "Telemetry travels on the same link, so some downlink slots are spent sending\ntelemetry back instead of control updates. The **telemetry ratio** controls how\noften that happens — for example `1:128` sends telemetry rarely (maximising\ncontrol throughput), while `1:2` sends it very often."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#4",
+      "title": "Telemetry ratio",
+      "text": "- Use **Std** (or a sparse ratio like 1:64 / 1:128) at high packet rates so\ncontrol packets are not starved.\n- A denser ratio gives smoother telemetry (RSSI, link quality, battery, GPS) at\nthe cost of some control-link headroom.\n- **Dynamic** telemetry lets the firmware pick the ratio automatically based on\nthe packet rate."
+    },
+    {
+      "sourceId": "elrs-packet-rates",
+      "sourceTitle": "ExpressLRS — Packet Rates and Telemetry",
+      "chunkId": "elrs-packet-rates#5",
+      "title": "Choosing a rate",
+      "text": "For most pilots: start at **250 Hz** for freestyle or **150 Hz** for range, keep\ntelemetry at a sparse ratio, and only move to 500 Hz+ if you specifically need\nthe lowest latency and accept the reduced range."
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#0",
+      "title": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "text": "These are OmniLink's own field-tested notes for tuning an ExpressLRS link. They\nsummarise practical guidance and are not a substitute for the official\nExpressLRS documentation."
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#1",
+      "title": "TX power",
+      "text": "Transmit power is set in steps (for example 10 mW, 25 mW, 50 mW, 100 mW, 250 mW,\n500 mW, 1000 mW, 2000 mW), subject to what your hardware and regulatory domain\nallow.\n- More power extends range but increases heat and current draw, and can raise\nyour RF noise floor at the field.\n- **Dynamic power** raises output only when the link needs it (as link quality\nor RSSI drops) and backs off when the signal is strong — this is the\nrecommended default for most flying.\n- Do not fly at maximum power indoors or in a crowded pit; it can desensitise\nnearby receivers."
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#2",
+      "title": "Antennas and mounting",
+      "text": "- Keep the receiver antenna tip away from carbon frame, motors, and the battery,\nand avoid coiling the coax.\n- For a diversity receiver, mount the two antennas at roughly 90° to each other\nso at least one keeps a good angle in any orientation.\n- A damaged or pinched antenna is a common cause of unexpectedly short range."
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#3",
+      "title": "Diagnosing dropouts",
+      "text": "When a link drops out, check these in order:"
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#4",
+      "title": "Diagnosing dropouts",
+      "text": "1. **Link quality (LQ) and RSSI** — a falling LQ before the dropout points to a\nrange or antenna problem, not radio interference.\n2. **Packet rate vs range** — if dropouts start at distance, lower the packet\nrate (for example 500 Hz → 150 Hz) for more sensitivity.\n3. **Power and dynamic power** — confirm dynamic power is enabled and the\nmaximum step is allowed by your hardware.\n4. **Antenna condition and mounting** — inspect for damage and reposition away\nfrom noise sources.\n5. **Firmware match** — confirm the TX and RX run compatible firmware and the\nsame regulatory domain."
+    },
+    {
+      "sourceId": "omnilink-notes",
+      "sourceTitle": "OmniLink Curated Notes — Power, Antennas, and Dropouts",
+      "chunkId": "omnilink-notes#5",
+      "title": "Failsafe",
+      "text": "Always configure a sane failsafe on the receiver so the aircraft behaves safely\nif the link is lost. Failsafe behaviour is a safety-critical setting and is set\ndeliberately by the pilot — it is never changed automatically."
+    }
+  ]
+}

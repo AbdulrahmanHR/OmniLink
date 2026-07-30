@@ -1,0 +1,121 @@
+name: Feature request
+description: Suggest an idea or improvement for OmniLink
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea.
+
+        **Please read this first — it will save you time.** OmniLink is free,
+        offline-first, and permanently account-free. Some categories of feature are
+        out of scope by architecture, not by priority, and will be declined however
+        good the idea is:
+
+        - Anything requiring **a server, a backend service, or a hosted API**
+        - **User accounts, login, or identity** of any kind
+        - **Payments, subscriptions, entitlements, credits, or a paid tier**
+        - **Telemetry, analytics, or usage tracking**
+        - Anything that makes an existing **offline** workflow require a network
+        - Anything creating a **recurring cost** to operate the project
+
+        AI assistance is **bring-your-own-key only** — there is no OmniLink-operated
+        AI service and no plan for one.
+
+        Full reasoning: [CONTRIBUTING.md → Scope boundary](https://github.com/AbdulrahmanHR/OmniLink/blob/main/CONTRIBUTING.md#scope-boundary--what-will-not-be-accepted).
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: >
+            This does **not** require a server, an account, a payment, or telemetry,
+            and does not make an offline workflow depend on a network.
+          required: true
+        - label: I searched [existing issues](https://github.com/AbdulrahmanHR/OmniLink/issues?q=is%3Aissue) and this is not a duplicate.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: >
+        Describe the situation you are actually in, not the solution you have in
+        mind. "I fly at a field with no signal and cannot ..." is far more useful
+        than "add a button that ...".
+      placeholder: "When I ... I have to ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like OmniLink to do?
+      description: Your proposed solution. Sketches and mockups welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+      description: Other approaches, other tools you use for this today, or why the existing workflow does not fit.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this touch?
+      options:
+        - Device connection
+        - Telemetry dashboard / charts
+        - Firmware flashing wizard
+        - ExpressLRS Backpack
+        - WiFi discovery
+        - Config profiles (.elrsp)
+        - Flight-log / session analysis
+        - Offline maps
+        - Diagnostics and trends
+        - Controller bridge (Betaflight/iNav)
+        - BYOK AI assistant
+        - Device catalogue / presets (data/)
+        - Translations / i18n
+        - Accessibility
+        - Documentation
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hardware-needed
+    attributes:
+      label: Does this need specific hardware to build or verify?
+      description: >
+        The maintainer owns **no ELRS hardware**. Anything needing a real radio to
+        verify will move faster if you can test it, so please say what you have.
+      options:
+        - "No — it can be built and verified without hardware"
+        - "Yes — and I have the hardware and can test it"
+        - "Yes — and I do not have the hardware"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to work on this?
+      options:
+        - label: I am willing to open a pull request for this (guidance welcome — you do not need to know the codebase yet).
+          required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Links, references, how other tools solve it, relevant ExpressLRS documentation.
+    validations:
+      required: false
