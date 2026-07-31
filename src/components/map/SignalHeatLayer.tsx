@@ -3,6 +3,7 @@ import type {
   GeoJSONSource,
   LineLayerSpecification,
 } from "maplibre-gl";
+import { isMapAlive } from "./map-style";
 import { signalColor, type SignalMetric } from "./signal-color";
 import { useFlightMap, type FlightPathPoint } from "./flight-map-context";
 
@@ -94,6 +95,9 @@ export function SignalHeatLayer({ track, metric }: SignalHeatLayerProps) {
     }
 
     return () => {
+      // See PathLayer: `FlightMap` removes the map before clearing the context,
+      // so this cleanup is routinely handed an already-torn-down instance.
+      if (!isMapAlive(map)) return;
       if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
     };

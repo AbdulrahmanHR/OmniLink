@@ -27,6 +27,13 @@ import {
  * an *unhandled rejection* (Chromium does not deliver it to `pageerror`) whose
  * text never matches the broken-tile filter. The fresh-/telemetry empty-state
  * test keeps the mock so its stores resolve headlessly.
+ *
+ * It ALSO asserts that the map is not merely present but actually *working*:
+ * that the MapLibre style loaded, that the track layers were added, that the
+ * camera framed the track and that the drawing buffer is not one flat colour.
+ * Every earlier assertion in this file — attached, visible, non-zero box — is
+ * blind to a map whose style failed to parse, which is exactly how 3.0.3 shipped
+ * a permanently blank map with this spec green. See the block that adds them.
  */
 test.describe("Offline flight map", () => {
   test("renders with a GPS track, themed empty bg, no broken-tile error", async ({
@@ -34,10 +41,20 @@ test.describe("Offline flight map", () => {
   }) => {
     const pageErrors: string[] = [];
     const tileErrors: string[] = [];
+    const mapErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
     page.on("console", (msg: ConsoleMessage) => {
       if (msg.type() !== "error") return;
       const text = msg.text();
+      // Anything FlightMap's own `error` listener classified as NOT expected
+      // offline tile noise — i.e. a style/layer/configuration failure. In 3.0.3
+      // that listener was unconditional (`map.on("error", () => {})`), so the
+      // style-spec rejection of an `oklch()` paint colour produced literally no
+      // output anywhere and the map went blank in silence.
+      if (text.includes("[FlightMap]")) {
+        mapErrors.push(text);
+        return; // classified; never double-count it as broken-tile noise
+      }
       // Chromium logs `Failed to load resource: net::ERR_UNKNOWN_URL_SCHEME`
       // when the `omnitiles://` scheme is unreachable because the offline
       // fallback failed to install — the precise `err_unknown_url_scheme`
@@ -130,9 +147,164 @@ test.describe("Offline flight map", () => {
       page.getByTestId("flight-map").locator(".maplibregl-ctrl-zoom-in")
     ).toBeVisible();
 
+    // ---------------------------------------------------------------------
+    // The blank-map blind spot (3.0.3). EVERY assertion above passes while the
+    // map paints nothing at all: the host is visible, correctly sized, has a
+    // real canvas and real zoom buttons — and the MapLibre style never loaded,
+    // because a theme colour resolved to `oklch(...)`, which the style spec
+    // rejects. `load` therefore never fired, no source or layer was ever added,
+    // `fitBounds` never ran, and the canvas stayed empty over the DOM
+    // `bg-muted` backdrop. Layout assertions are structurally blind to that.
+    //
+    // So assert the map's own state, not its box.
+    // ---------------------------------------------------------------------
+
+    // 1. `data-map-ready` mirrors MapLibre's `load` event — false unless the
+    //    style parsed AND loaded.
+    await expect(page.getByTestId("flight-map")).toHaveAttribute(
+      "data-map-ready",
+      "true"
+    );
+
+    // 2. Interrogate the live map instance (FlightMap publishes it on its host
+    //    element for exactly this reason — MapLibre keeps no global registry).
+    const state = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="flight-map-empty"]') as
+        | (HTMLElement & { _omniMap?: Record<string, unknown> })
+        | null;
+      const map = host?._omniMap as
+        | {
+            isStyleLoaded(): boolean;
+            getStyle(): { layers?: { id: string }[] } | undefined;
+            getZoom(): number;
+          }
+        | undefined;
+      if (!map) return { found: false as const };
+      const style = map.getStyle();
+      return {
+        found: true as const,
+        styleLoaded: map.isStyleLoaded(),
+        layerIds: (style?.layers ?? []).map((l) => l.id),
+        zoom: map.getZoom(),
+      };
+    });
+
+    expect(state.found, "no live MapLibre instance on the map host").toBe(true);
+    expect(
+      state.found && state.styleLoaded,
+      "MapLibre style never loaded — the style is invalid (check the paint " +
+        "colours resolved from CSS tokens; see map-style.ts → toMapLibreColor)"
+    ).toBe(true);
+    expect(
+      state.found ? state.layerIds : [],
+      "map style has no layers — nothing can paint"
+    ).not.toEqual([]);
+    // The track layers are only added once `load` fires, so their presence
+    // proves the whole chain (style → load → ready → PathLayer/SignalHeatLayer).
+    expect(state.found ? state.layerIds : []).toEqual(
+      expect.arrayContaining([
+        "background",
+        "omnitiles",
+        "flight-path-line",
+        "signal-heat-line",
+      ])
+    );
+    // `fitBounds` only runs inside the `load` handler; the provisional camera is
+    // zoom 1 at (0,0), so a moved camera proves the track was actually framed.
+    expect(
+      state.found ? state.zoom : 1,
+      "camera never left its provisional zoom — fitBounds did not run"
+    ).toBeGreaterThan(1);
+
+    // 3. Sample the real drawing buffer. The read runs *inside* MapLibre's
+    //    `render` event — i.e. still inside the rAF that drew the frame — so the
+    //    buffer is valid without forcing `preserveDrawingBuffer` on in
+    //    production. A blank map reads back as one flat colour: the themed
+    //    `background` layer and nothing else. A working one has track pixels on
+    //    top of it, so the count of pixels differing from the dominant colour is
+    //    the direct measure of "is the track actually painted".
+    //
+    //    It is polled, not read once: this is a *live* replay, so the track
+    //    grows frame by frame and the first frames legitimately have nothing but
+    //    background yet. Only never becoming non-uniform is the failure.
+    const samplePaint = () =>
+      page.evaluate(
+        () =>
+          new Promise<{
+            ok: boolean;
+            reason?: string;
+            total?: number;
+            distinct?: number;
+            nonDominant?: number;
+          }>((resolve) => {
+            const host = document.querySelector(
+              '[data-testid="flight-map-empty"]'
+            ) as (HTMLElement & { _omniMap?: Record<string, unknown> }) | null;
+            const map = host?._omniMap as
+              | {
+                  getCanvas(): HTMLCanvasElement;
+                  once(ev: string, fn: () => void): void;
+                  triggerRepaint(): void;
+                }
+              | undefined;
+            if (!map) return resolve({ ok: false, reason: "no map handle" });
+            const canvas = map.getCanvas();
+            const gl = (canvas.getContext("webgl2") ??
+              canvas.getContext("webgl")) as WebGLRenderingContext | null;
+            if (!gl) return resolve({ ok: false, reason: "no WebGL context" });
+            const timer = setTimeout(
+              () => resolve({ ok: false, reason: "no render frame within 5s" }),
+              5_000
+            );
+            map.once("render", () => {
+              clearTimeout(timer);
+              const w = canvas.width;
+              const h = canvas.height;
+              const buf = new Uint8Array(w * h * 4);
+              gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+              const counts = new Map<number, number>();
+              for (let i = 0; i < buf.length; i += 4) {
+                const key = (buf[i] << 16) | (buf[i + 1] << 8) | buf[i + 2];
+                counts.set(key, (counts.get(key) ?? 0) + 1);
+              }
+              let dominant = 0;
+              for (const c of counts.values()) if (c > dominant) dominant = c;
+              resolve({
+                ok: true,
+                total: w * h,
+                distinct: counts.size,
+                nonDominant: w * h - dominant,
+              });
+            });
+            map.triggerRepaint();
+          })
+      );
+
+    let paint = await samplePaint();
+    await expect
+      .poll(
+        async () => {
+          paint = await samplePaint();
+          return paint.ok ? (paint.nonDominant ?? 0) : -1;
+        },
+        {
+          timeout: 20_000,
+          message:
+            "the map canvas never painted anything but its flat background " +
+            "colour — the GPS track is not being drawn (a value of -1 means " +
+            "the canvas could not be sampled at all)",
+        }
+      )
+      .toBeGreaterThan(0);
+    expect(paint.distinct ?? 0).toBeGreaterThan(1);
+
     // Give MapLibre a beat to attempt its (offline) tile loads.
     await page.waitForTimeout(800);
 
+    expect(
+      mapErrors,
+      `MapLibre style/config errors surfaced by FlightMap: ${mapErrors.join(" | ")}`
+    ).toEqual([]);
     expect(
       tileErrors,
       `broken-tile/map console errors: ${tileErrors.join(" | ")}`

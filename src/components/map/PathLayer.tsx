@@ -3,7 +3,7 @@ import type {
   GeoJSONSource,
   LineLayerSpecification,
 } from "maplibre-gl";
-import { resolveThemeColor } from "./map-style";
+import { isMapAlive, resolveThemeColor } from "./map-style";
 import { useFlightMap, type FlightPathPoint } from "./flight-map-context";
 
 const SOURCE_ID = "flight-path";
@@ -67,6 +67,10 @@ export function PathLayer({ track }: PathLayerProps) {
     }
 
     return () => {
+      // `FlightMap` calls `map.remove()` before clearing the context, so this
+      // cleanup routinely runs against a torn-down map whose every getter
+      // throws. Nothing to remove in that case — the style is already gone.
+      if (!isMapAlive(map)) return;
       if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
     };

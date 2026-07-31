@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import {
   buildOfflineStyle,
   installOfflineTileFallback,
+  isExpectedTileError,
   prefersReducedMotion,
   resolveSignalRamp,
 } from "./map-style";
@@ -40,6 +41,13 @@ interface FlightMapProps {
    */
   children?: React.ReactNode;
 }
+
+/**
+ * The map host element, carrying the live MapLibre instance so out-of-app
+ * observers (E2E, the browser console) can interrogate the map's real state.
+ * See where it is assigned in the init effect for why this exists.
+ */
+type MapHost = HTMLDivElement & { _omniMap?: MapLibreMap };
 
 /** Whether a single sample carries a usable GPS fix (finite, not null island). */
 function hasFix(p: FlightPathPoint): boolean {
@@ -154,14 +162,34 @@ export function FlightMap({
     });
     mapRef.current = map;
     setMap(map);
+    // Read-only handle for E2E/console observers. MapLibre keeps no global
+    // registry of its instances, so without this there is no way to ask the live
+    // map whether its style actually loaded — and "the style silently failed to
+    // load" is precisely the defect that shipped a blank map in 3.0.2
+    // (tests/e2e/map.spec.ts asserts on it). Nothing in the app reads this.
+    const mapHost: MapHost = containerRef.current;
+    mapHost._omniMap = map;
 
-    // Graceful degradation: MapLibre fires `error` (never throws) for failed
-    // tile/source loads. The offline fallback above already prevents the common
-    // omnitiles case; this listener swallows any residual error so nothing
-    // surfaces as an unhandled console error/rejection or a broken-tile state —
-    // the themed empty-coverage background simply stays visible.
-    map.on("error", () => {
-      /* intentionally ignored — see comment above */
+    // Graceful degradation, *selectively*: MapLibre fires `error` (never throws)
+    // for failed tile/source loads — expected with no network, already handled
+    // by the offline fallback above plus the themed empty-coverage backdrop, so
+    // those stay quiet.
+    //
+    // It fires on the SAME channel for style-validation and configuration
+    // errors, though, and blanket-ignoring the channel is exactly how 3.0.3
+    // shipped a permanently blank map: the style spec rejected an `oklch()`
+    // paint colour, the style never loaded, `load` never fired, no layer was
+    // ever added — and not one character of it reached the console. Never make
+    // this handler unconditional again.
+    map.on("error", (event) => {
+      if (isExpectedTileError(event)) return;
+      const err = (event as { error?: unknown })?.error;
+      console.error(
+        "[FlightMap] MapLibre style/configuration error — the map may not " +
+          "render at all:",
+        err instanceof Error ? err.message : err,
+        event
+      );
     });
 
     map.addControl(
@@ -207,6 +235,7 @@ export function FlightMap({
 
     return () => {
       map.remove();
+      delete mapHost._omniMap;
       mapRef.current = null;
       setMap(null);
       setReady(false);
@@ -265,6 +294,15 @@ export function FlightMap({
   return (
     <div
       data-testid="flight-map"
+      /*
+        Mirrors the MapLibre `load` event: `true` only once the style parsed and
+        loaded, which is the precondition for any layer, any camera fit and any
+        pixel being painted. Exposed in the DOM because "the style failed to
+        load" was invisible from the outside in 3.0.3 — the container was
+        correctly sized and visible while the map was completely blank, so every
+        visibility/box assertion passed. tests/e2e/map.spec.ts asserts on it.
+      */
+      data-map-ready={ready ? "true" : "false"}
       className={cn(
         "relative min-h-[18rem] overflow-hidden rounded-md border border-border",
         className
