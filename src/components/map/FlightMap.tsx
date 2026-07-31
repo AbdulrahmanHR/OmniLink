@@ -2,7 +2,12 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { MapPinOff } from "lucide-react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+// NOTE: `maplibre-gl/dist/maplibre-gl.css` is deliberately NOT imported here.
+// A JS-imported stylesheet is unlayered, and unlayered CSS outranks every
+// Tailwind v4 utility — `.maplibregl-map { position: relative }` then beat the
+// `absolute inset-0` on the host below and collapsed the map to height 0. It is
+// imported from `src/index.css` into `layer(base)` instead; see the comment
+// there. Do not re-add it here.
 import { cn } from "@/lib/utils";
 import {
   buildOfflineStyle,

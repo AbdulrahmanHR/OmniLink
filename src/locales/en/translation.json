@@ -1396,6 +1396,20 @@
       "description": "Raise an alert when the live telemetry link degrades. Each alarm trips and recovers at distinct thresholds — so a value hovering at the limit can't flap — and must stay bad for the debounce window before it fires.",
       "mute": "Mute all alarms",
       "muteHint": "Suppresses every in-app and OS notification while on. Alarms keep tracking the link but stay silent.",
+      "osNotify": "Desktop notifications",
+      "osNotifyEnable": "Enable",
+      "osNotifyEnableLabel": "Enable desktop notifications",
+      "osNotifyHint": {
+        "default": "Also show a tripped alarm as a desktop notification, so you see it while OmniLink is behind another window. Your system asks for permission when you enable this.",
+        "granted": "On — a tripped alarm also raises a desktop notification. Silenced by mute.",
+        "denied": "Blocked by your system, so desktop notifications stay silent. In-app alerts and the notification center still work; allow notifications for OmniLink in your system settings to turn them back on.",
+        "unsupported": "Desktop notifications aren't available here. In-app alerts and the notification center still work."
+      },
+      "osNotifyState": {
+        "granted": "Enabled",
+        "denied": "Blocked",
+        "unsupported": "Unavailable"
+      },
       "sound": "Play a sound on alert",
       "soundHint": "Also plays a short beep when an alarm trips, alongside the on-screen and OS notification. Off by default; silenced by mute.",
       "soundTest": "Test",

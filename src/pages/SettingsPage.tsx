@@ -48,6 +48,11 @@ import { useRetentionStore } from "@/stores/retention";
 import { useAlertsStore } from "@/stores/alerts";
 import { playAlertSound } from "@/lib/alertSound";
 import {
+  osNotifyPermission,
+  requestOsNotifyPermission,
+  type OsNotifyPermission,
+} from "@/lib/alertNotify";
+import {
   cancelTilePackDownload,
   deleteTilePack,
   downloadTilePack,
@@ -952,6 +957,13 @@ function ToggleSwitch({
  * window so a value hovering at the limit raises exactly one alarm; the pure
  * evaluator lives in `@/lib/liveAlerts` and the config is persisted here. Mute
  * suppresses both the in-app toast and the OS notification.
+ *
+ * This card is also the single opt-in point for **desktop (OS) notifications**
+ * (v3.0.3). The permission prompt must be raised from a real user gesture —
+ * WebKit, the engine the shipped Linux/macOS app runs in, refuses
+ * `Notification.requestPermission()` from anywhere else — so the "Enable"
+ * button below is that gesture, exactly as the sound row's "Test" button is the
+ * gesture that unlocks the AudioContext. Nothing prompts on launch.
  */
 function AlertsSettings() {
   const { t } = useTranslation();
@@ -959,6 +971,14 @@ function AlertsSettings() {
   const setMuted = useAlertsStore((s) => s.setMuted);
   const soundEnabled = useAlertsStore((s) => s.soundEnabled);
   const setSoundEnabled = useAlertsStore((s) => s.setSoundEnabled);
+
+  // The engine owns the permission, so this is state we MIRROR, not state we
+  // store: read it (never prompt) on first render, and refresh it from whatever
+  // the request resolves to. No persisted flag is added — a user who granted
+  // permission in an earlier version keeps working with no migration.
+  const [osPermission, setOsPermission] = React.useState<OsNotifyPermission>(
+    () => osNotifyPermission()
+  );
 
   const signalLoss = useAlertsStore((s) => s.signalLoss);
   const lqDrop = useAlertsStore((s) => s.lqDrop);
@@ -1007,6 +1027,45 @@ function AlertsSettings() {
             offLabel={t("alerts.settings.muted")}
             onChange={(v) => setMuted(!v)}
           />
+        </div>
+
+        {/* Desktop (OS) notifications — the opt-in AND the user gesture the
+            permission prompt requires (v3.0.3). `requestOsNotifyPermission()`
+            is called SYNCHRONOUSLY in the click handler: an `await` in front of
+            it would spend the gesture and WebKit would refuse the prompt. */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <Label>{t("alerts.settings.osNotify")}</Label>
+            <p className="text-xs text-muted-foreground" data-testid="os-notify-hint">
+              {t(`alerts.settings.osNotifyHint.${osPermission}`)}
+            </p>
+          </div>
+          {osPermission === "default" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              data-testid="os-notify-enable"
+              // The visible word is "Enable"; the accessible name adds what is
+              // being enabled and CONTAINS the visible text (WCAG 2.5.3).
+              aria-label={t("alerts.settings.osNotifyEnableLabel")}
+              onClick={() => {
+                void requestOsNotifyPermission().then(setOsPermission);
+              }}
+            >
+              <Bell className="h-4 w-4" />
+              {t("alerts.settings.osNotifyEnable")}
+            </Button>
+          ) : (
+            <Badge
+              data-testid="os-notify-state"
+              variant={osPermission === "granted" ? "good" : "outline"}
+              className="shrink-0"
+            >
+              {t(`alerts.settings.osNotifyState.${osPermission}`)}
+            </Badge>
+          )}
         </div>
 
         {/* Optional audio alert (FR-TELEM-03) — opt-in, off by default. */}

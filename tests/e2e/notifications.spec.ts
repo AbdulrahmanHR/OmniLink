@@ -1,7 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
-import { expectNoSeriousA11y, gotoApp, uploadFile } from "./_helpers";
+import { expect, test, type Page } from "@playwright/test";
+import {
+  expectNoSeriousA11y,
+  gotoApp,
+  installTauriMock,
+  uploadFile,
+} from "./_helpers";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -86,5 +91,127 @@ test.describe("Notification center", () => {
     await panel.getByTestId("notification-clear-all").click();
     await expect(panel.getByTestId("notification-item")).toHaveCount(0);
     await expect(panel.getByTestId("notification-empty")).toBeVisible();
+  });
+});
+
+/**
+ * OS-notification permission (v3.0.3).
+ *
+ * The shipped Linux/macOS app runs in **WebKit**, which refuses
+ * `Notification.requestPermission()` outside a user gesture — so the mount-time
+ * request this replaced could never be granted in production while passing
+ * silently under Chromium. Chromium cannot reproduce that refusal, so what
+ * these specs pin is the engine-independent shape of the fix: **nothing asks
+ * until a click asks**, the click is the only asker, and each already-decided
+ * state renders its own terminal branch instead of re-prompting.
+ *
+ * ## Why the permission is stubbed
+ * Headless Chromium reports `Notification.permission === "denied"`
+ * unconditionally — verified directly, and `context.grantPermissions()` does
+ * not move it — so the `default` and `granted` branches are simply unreachable
+ * in this runner. {@link installPermissionStub} therefore replaces the static
+ * `permission` accessor and `requestPermission()` before navigation (the same
+ * "mock the seam, run the real app code" approach as `installTauriMock`), and
+ * counts every request the document makes from any code path or route. The app
+ * under test is unmodified; only the engine's answer is scripted.
+ */
+test.describe("Desktop notification permission", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  type PermissionState = "default" | "granted" | "denied";
+
+  /**
+   * Install a scripted `Notification` permission: `initial` is what the page
+   * reads on load, `outcome` is what a request resolves to. Every call to
+   * `requestPermission()` is counted in `window.__permissionRequests`.
+   */
+  async function installPermissionStub(
+    page: Page,
+    initial: PermissionState,
+    outcome: PermissionState = "granted"
+  ): Promise<void> {
+    await page.addInitScript(
+      ([start, result]) => {
+        let state = start as PermissionState;
+        const w = window as unknown as { __permissionRequests: number };
+        w.__permissionRequests = 0;
+        Object.defineProperty(window.Notification, "permission", {
+          configurable: true,
+          get: () => state,
+        });
+        window.Notification.requestPermission = ((
+          cb?: (p: NotificationPermission) => void
+        ) => {
+          w.__permissionRequests += 1;
+          state = result as PermissionState;
+          cb?.(state as NotificationPermission);
+          return Promise.resolve(state as NotificationPermission);
+        }) as typeof Notification.requestPermission;
+      },
+      [initial, outcome] as const
+    );
+  }
+
+  /** How many permission requests this document has made so far. */
+  const requests = (page: Page) =>
+    page.evaluate(
+      () =>
+        (window as unknown as { __permissionRequests: number })
+          .__permissionRequests
+    );
+
+  test("never prompts on mount — the Settings opt-in click is the only asker", async ({
+    page,
+  }) => {
+    await installPermissionStub(page, "default", "granted");
+    await installTauriMock(page, {});
+    await gotoApp(page, "/settings");
+
+    // The always-mounted live-alert host (it owns the OS notification) is up and
+    // the alerts card has rendered — and NOTHING has asked. This is the
+    // regression guard for the defect: the old code asked from this mount.
+    await expect(page.getByTestId("live-alert-host")).toBeAttached();
+    const enable = page.getByTestId("os-notify-enable");
+    await expect(enable).toBeVisible();
+    expect(await requests(page)).toBe(0);
+
+    // One click → exactly one request, and the row settles into the granted
+    // state with no button left to click.
+    await enable.click();
+    await expect(page.getByTestId("os-notify-state")).toHaveText("Enabled");
+    await expect(enable).toHaveCount(0);
+    expect(await requests(page)).toBe(1);
+  });
+
+  test("a denied engine is terminal: no re-prompt, and the row says why it is silent", async ({
+    page,
+  }) => {
+    await installPermissionStub(page, "denied");
+    await installTauriMock(page, {});
+    await gotoApp(page, "/settings");
+
+    // Denied is final — the engine will not ask again, so the app offers no
+    // button that would nag, and explains the silence instead of dropping OS
+    // notifications quietly.
+    await expect(page.getByTestId("os-notify-state")).toHaveText("Blocked");
+    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
+    await expect(page.getByTestId("os-notify-hint")).toContainText(
+      "In-app alerts and the notification center still work"
+    );
+    expect(await requests(page)).toBe(0);
+
+    await expectNoSeriousA11y(page);
+  });
+
+  test("an already-granted permission is never re-requested", async ({ page }) => {
+    await installPermissionStub(page, "granted");
+    await installTauriMock(page, {});
+    await gotoApp(page, "/settings");
+
+    // The returning user whose permission predates this release: the row
+    // reflects it, offers no button, and asks for nothing.
+    await expect(page.getByTestId("os-notify-state")).toHaveText("Enabled");
+    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
+    expect(await requests(page)).toBe(0);
   });
 });

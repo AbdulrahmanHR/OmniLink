@@ -141,6 +141,9 @@ automatically, since the crate is consumed unmodified from crates.io.
 
 | Package | Version | Licence | GPL-3.0 verdict |
 |---------|---------|---------|-----------------|
+| `@fontsource/ibm-plex-mono` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
+| `@fontsource/inter` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
+| `@fontsource/space-grotesk` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
 | `@radix-ui/react-slot` | 1.3.0 | `MIT` | ✅ Compatible |
 | `@tauri-apps/api` | 2.11.1 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `@tauri-apps/plugin-dialog` | 2.7.1 | `MIT OR Apache-2.0` | ✅ Compatible |
@@ -162,6 +165,19 @@ automatically, since the crate is consumed unmodified from crates.io.
 | `tailwind-merge` | 3.6.0 | `MIT` | ✅ Compatible |
 | `tw-animate-css` | 1.4.0 | `MIT` | ✅ Compatible |
 | `zustand` | 5.0.14 | `MIT` | ✅ Compatible |
+
+**[B] `@fontsource/*` — SIL Open Font License 1.1 (added after the 2026-07-29 audit
+date, at `3.0.3`).** These three packages carry the Inter, IBM Plex Mono and Space
+Grotesk font files, which are bundled into the app so it renders correctly with no
+network — they replace the `fonts.googleapis.com` `<link>` that `3.0.2` shipped in
+`index.html`. OFL-1.1 is a free copyleft licence *for fonts*; its only unusual term
+is that the fonts may not be sold on their own, which is satisfied trivially here
+(they are redistributed as part of a program, at no charge). The fonts are **data
+consumed at runtime, not code linked into the program**, so OFL imposes nothing on
+OmniLink's own licence; the reserved font names are unchanged and the files are
+redistributed unmodified, so the OFL's rename obligation is not triggered either.
+The upstream licence text ships inside each package (`node_modules/@fontsource/*/
+LICENSE`). **Verdict: compatible; no obligation beyond retaining those notices.**
 
 ## Direct dependencies — npm `devDependencies` (build/test only, not distributed)
 

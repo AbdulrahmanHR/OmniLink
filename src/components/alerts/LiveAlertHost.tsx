@@ -12,7 +12,7 @@ import {
   type LiveAlertConfig,
   type LiveAlertState,
 } from "@/lib/liveAlerts";
-import { ensureOsNotifyPermission, osNotify } from "@/lib/alertNotify";
+import { osNotify } from "@/lib/alertNotify";
 import { maybePlayAlertSound } from "@/lib/alertSound";
 import { recordFiredAlerts } from "@/lib/notificationFeed";
 import { Button } from "@/components/ui/button";
@@ -203,7 +203,14 @@ export function LiveAlertHost() {
   const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
-    ensureOsNotifyPermission();
+    // NOTE (v3.0.3): this effect deliberately does NOT ask for OS-notification
+    // permission. WebKit — the engine the shipped Linux/macOS app runs in —
+    // rejects `Notification.requestPermission()` outside a user gesture
+    // ("Notification prompting can only be done from a user gesture"), so the
+    // mount-time request that used to live on this line could never be granted
+    // in production. The prompt is now raised from the explicit opt-in in
+    // Settings → Live alerts; see `@/lib/alertNotify`. `osNotify` below is
+    // unchanged and still fires whenever permission is already granted.
 
     // Subscribe to the live telemetry store; act ONLY when the shared history
     // changes (it also empties to `[]` on disconnect). Plain zustand subscribe —

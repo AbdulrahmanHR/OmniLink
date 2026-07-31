@@ -43,9 +43,8 @@ test.describe("Offline flight map", () => {
       // fallback failed to install — the precise `err_unknown_url_scheme`
       // token is the signature this test must catch if the fallback regresses.
       // The generic `failed to load resource` string is deliberately NOT
-      // matched here: index.html pulls Google Fonts from a CDN, so an offline
-      // CI / CDN blip would otherwise trip this filter spuriously (offline.spec
-      // classifies that same string as benign noise).
+      // matched here: it is too broad to attribute to the tile layer, and
+      // offline.spec classifies that same string as benign noise.
       if (
         /tile|omnitiles|broken|webgl|failed to fetch|err_unknown_url_scheme/i.test(
           text
@@ -84,19 +83,52 @@ test.describe("Offline flight map", () => {
     }
 
     // FlightMap root renders (normal branch); the themed empty-coverage host is
-    // present and carries the `bg-muted` backdrop (it is overlaid by MapLibre's
-    // canvas once GL paints, so we assert it is present rather than "visible").
+    // present and carries the `bg-muted` backdrop.
+    //
+    // These used to be `toBeAttached()` assertions, and that is precisely how a
+    // completely blank map shipped in 3.0.2 with this spec green: `maplibre-gl`
+    // was imported from JS, so its UNLAYERED `.maplibregl-map{position:relative}`
+    // beat the host's layered `absolute inset-0` utility, the host collapsed to
+    // height 0, and the wrapper's `overflow-hidden` clipped the canvas and the
+    // zoom controls out of sight. `toBeAttached()` passes on a zero-height,
+    // fully-clipped element — it only proves the node is in the DOM.
+    //
+    // So assert what a user can actually see: the host must be VISIBLE and must
+    // have a real, non-zero laid-out box. Height is the axis that regressed
+    // (width came from the panel either way), so it is asserted explicitly.
     await expect(page.getByTestId("flight-map")).toBeVisible();
     const host = page.getByTestId("flight-map-empty");
-    await expect(host).toBeAttached();
+    await expect(host).toBeVisible();
     await expect(host).toHaveClass(/bg-muted/);
+    const hostBox = await host.boundingBox();
+    expect(
+      hostBox?.height ?? 0,
+      `map host collapsed: ${JSON.stringify(hostBox)} — the map is in the DOM but has no height (see the maplibre-gl.css cascade-layer note in src/index.css)`
+    ).toBeGreaterThan(0);
 
     // MapLibre genuinely initialised — a real GL canvas mounts inside the host —
     // which means its `omnitiles://` tile requests were actually issued and
     // resolved by the transparent fallback rather than the unreachable browser
     // scheme. If the fallback regressed, those requests would fail with
     // `net::ERR_UNKNOWN_URL_SCHEME` broken-tile console errors caught above.
-    await expect(host.locator("canvas.maplibregl-canvas")).toBeAttached();
+    //
+    // Same visible + non-zero-box treatment as the host: a canvas that exists,
+    // has a backing drawing buffer and paints into a clipped 0px-tall parent is
+    // exactly the blank-map failure mode, and `toBeAttached()` cannot see it.
+    const canvas = host.locator("canvas.maplibregl-canvas");
+    await expect(canvas).toBeVisible();
+    const canvasBox = await canvas.boundingBox();
+    expect(
+      canvasBox?.height ?? 0,
+      `map canvas clipped away: ${JSON.stringify(canvasBox)}`
+    ).toBeGreaterThan(0);
+
+    // The MapLibre zoom controls are children of the same host and were clipped
+    // by the very same collapse, so pin one as an independent witness that the
+    // map's own chrome is on screen and hittable, not just laid out.
+    await expect(
+      page.getByTestId("flight-map").locator(".maplibregl-ctrl-zoom-in")
+    ).toBeVisible();
 
     // Give MapLibre a beat to attempt its (offline) tile loads.
     await page.waitForTimeout(800);

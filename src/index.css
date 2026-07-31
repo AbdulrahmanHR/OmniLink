@@ -1,5 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/*
+ * MapLibre's stylesheet MUST be pulled in from CSS, INSIDE a cascade layer —
+ * never as a bare `import "maplibre-gl/dist/maplibre-gl.css"` from a component.
+ *
+ * A JS-imported stylesheet is UNLAYERED, and in Tailwind v4 unlayered CSS beats
+ * every layered utility regardless of specificity. `maplibre-gl.css` opens with
+ * `.maplibregl-map { position: relative }`, so as an unlayered sheet it defeated
+ * the `absolute inset-0` on the map host in `FlightMap.tsx`. An absolutely
+ * positioned host stretches to its `relative` parent; a `position: relative` one
+ * collapses to its content height, which for a WebGL map is ZERO — and the
+ * wrapper's `overflow-hidden` then clipped the canvas and the zoom controls
+ * away. The map initialised perfectly and painted into a 460x0 box: a blank
+ * panel in every engine (this shipped in 3.0.2 and was NOT WebKit-specific).
+ *
+ * Importing it here into `layer(base)` puts it below `utilities` in the layer
+ * order Tailwind establishes on the line above, so the host's own utilities win
+ * the height back while every MapLibre control/canvas rule still applies. This
+ * must stay AFTER `@import "tailwindcss"` — the layer order is fixed by first
+ * appearance of the layer names, which that import declares.
+ */
+@import "maplibre-gl/dist/maplibre-gl.css" layer(base);
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant carbon (&:is(.carbon *));
@@ -10,8 +31,34 @@
  * Per SRS §4.1: shadcn/ui + Tailwind, Decision #13: Signal Lab style
  */
 
+/*
+ * `color-scheme` — the UA-widget half of the theme, and it MUST track the theme.
+ *
+ * Tailwind's preflight sets `color: inherit` on form controls, so a native
+ * `<select>` renders its text in `--foreground`. The widget's own chrome,
+ * however, is painted by the platform, and the platform picks light or dark
+ * from `color-scheme`. With the property undeclared (as it was through 3.0.2)
+ * WebKitGTK painted every `<select>` with the LIGHT GTK theme while the text
+ * stayed near-white `--foreground`: white-on-white, unreadable, at all 12
+ * `<select>` sites. Chromium happened to render the same markup legibly, which
+ * is exactly why the browser-driven e2e suite never saw it.
+ *
+ * It is declared on the theme blocks rather than once at the top precisely so
+ * "system" resolves correctly: `stores/theme.ts` collapses `system` to a
+ * concrete `light | dark | carbon` and toggles the class on <html>, so the
+ * class-scoped declarations below follow the RESOLVED theme automatically. A
+ * hardcoded `color-scheme: dark` would fix dark and break light.
+ *
+ * `.dark`/`.carbon` and `:root` have equal specificity, so source order decides
+ * and the class blocks (which come later) win when present — the same mechanism
+ * the colour tokens themselves already rely on.
+ *
+ * Being inherited, one declaration on the root element covers every `<select>`,
+ * `<input>`, scrollbar and UA control in the app; no per-component class needed.
+ */
 :root {
   /* Light theme — clean, high-contrast lab white */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(0.98 0.005 240);
   --foreground: oklch(0.15 0.015 240);
@@ -80,6 +127,7 @@
 
 .dark {
   /* Dark theme — primary, oscilloscope-inspired */
+  color-scheme: dark;
   --background: oklch(0.12 0.015 240);
   --foreground: oklch(0.90 0.01 160);
   --card: oklch(0.16 0.015 240);
@@ -135,6 +183,9 @@
 
 .carbon {
   /* Carbon & Copper theme — Space Grotesk / PCB inspired */
+  /* Carbon is a DARK theme (near-black surfaces, pale-copper text), so its UA
+     widgets take the dark scheme too — same reasoning as `.dark` above. */
+  color-scheme: dark;
   --background: oklch(0.14 0.00 0);
   --foreground: oklch(0.90 0.02 45); /* pale copper */
   --card: oklch(0.18 0.00 0);
