@@ -46,6 +46,15 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
+# Least privilege, workflow-wide (2026-07-31 CI hardening). This is the default every job inherits;
+# both jobs below deliberately override it with `contents: write` because the
+# release genuinely needs to create a draft and upload installers to it. Stating
+# read-only here means a NEW job added to this workflow — the one holding
+# TAURI_SIGNING_PRIVATE_KEY — starts with no write scope unless someone asks for
+# it explicitly in review.
+permissions:
+  contents: read
+
 jobs:
   # 1) Verify the tag matches the app version, then create ONE draft Release for
   #    the tag. Every platform job uploads its installers + updater artifacts to
@@ -147,7 +156,7 @@ jobs:
           cache: npm
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           # Empty on Linux/Windows; the two Apple targets on the mac leg.
           targets: ${{ matrix.rust-targets }}
@@ -200,16 +209,37 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # EVERY variable uses the heredoc/delimiter form, not `echo "K=$V"`
+          # (2026-07-31 CI hardening). `$GITHUB_ENV` is parsed line by line, so a single-line write
+          # of a value that contains a newline makes everything after that
+          # newline parse as ADDITIONAL environment variables — an attacker who
+          # can influence any one of these secrets could inject arbitrary env
+          # into every later step in the job, including the tauri-action step
+          # that holds TAURI_SIGNING_PRIVATE_KEY. The delimiter form terminates
+          # only on a line equal to the delimiter, so an embedded newline is
+          # carried as data instead of becoming syntax. APPLE_CERTIFICATE (a
+          # multi-line base64 blob) always needed this; the other five need it
+          # for the same reason even though they are normally single-line.
           if [ -n "$APPLE_CERTIFICATE" ]; then
             {
               echo "APPLE_CERTIFICATE<<__OMNILINK_EOF__"
               echo "$APPLE_CERTIFICATE"
               echo "__OMNILINK_EOF__"
-              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD"
-              echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY"
-              echo "APPLE_ID=$APPLE_ID"
-              echo "APPLE_PASSWORD=$APPLE_PASSWORD"
-              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+              echo "APPLE_CERTIFICATE_PASSWORD<<__OMNILINK_EOF__"
+              echo "$APPLE_CERTIFICATE_PASSWORD"
+              echo "__OMNILINK_EOF__"
+              echo "APPLE_SIGNING_IDENTITY<<__OMNILINK_EOF__"
+              echo "$APPLE_SIGNING_IDENTITY"
+              echo "__OMNILINK_EOF__"
+              echo "APPLE_ID<<__OMNILINK_EOF__"
+              echo "$APPLE_ID"
+              echo "__OMNILINK_EOF__"
+              echo "APPLE_PASSWORD<<__OMNILINK_EOF__"
+              echo "$APPLE_PASSWORD"
+              echo "__OMNILINK_EOF__"
+              echo "APPLE_TEAM_ID<<__OMNILINK_EOF__"
+              echo "$APPLE_TEAM_ID"
+              echo "__OMNILINK_EOF__"
             } >> "$GITHUB_ENV"
             echo "macOS code-signing configured (APPLE_CERTIFICATE present)."
           else
@@ -217,7 +247,7 @@ jobs:
           fi
 
       - name: Build & upload installers to the release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         with:
           # releaseId targets the single draft created above — tauri-action
           # builds the bundles + updater artifacts and uploads them to it.

@@ -17,6 +17,12 @@ name: Crowdin sync
 on:
   workflow_dispatch:
 
+# Least privilege, workflow-wide (2026-07-31 CI hardening). The single job below overrides this with
+# the write scopes it genuinely needs to open the translation PR; declaring
+# read-only here means any job added later inherits no write scope by default.
+permissions:
+  contents: read
+
 jobs:
   synchronize-with-crowdin:
     name: Upload sources + download translations
@@ -28,7 +34,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Crowdin push + pull
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@c7af9bc98b01694653031fef2a0dc6c7888ce9bc # v2
         with:
           upload_sources: true
           download_translations: true
