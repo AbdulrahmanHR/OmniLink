@@ -95,25 +95,38 @@ test.describe("Notification center", () => {
 });
 
 /**
- * OS-notification permission (v3.0.3).
+ * OS notifications, delivered natively (v3.0.3).
  *
- * The shipped Linux/macOS app runs in **WebKit**, which refuses
- * `Notification.requestPermission()` outside a user gesture — so the mount-time
- * request this replaced could never be granted in production while passing
- * silently under Chromium. Chromium cannot reproduce that refusal, so what
- * these specs pin is the engine-independent shape of the fix: **nothing asks
- * until a click asks**, the click is the only asker, and each already-decided
- * state renders its own terminal branch instead of re-prompting.
+ * The app no longer uses the webview's Notification API at all. It could never
+ * be granted in the shipped app: WebKit first refused
+ * `Notification.requestPermission()` outside a user gesture, and then — from a
+ * genuine click on the genuine Settings button, on WebKitGTK 2.52.3 — denied it
+ * outright with no prompt window ever shown, because wry installs no
+ * `permission-request` handler. `src/lib/alertNotify.ts` now calls
+ * `@tauri-apps/plugin-notification`, whose three commands reach the OS
+ * natively.
  *
- * ## Why the permission is stubbed
- * Headless Chromium reports `Notification.permission === "denied"`
- * unconditionally — verified directly, and `context.grantPermissions()` does
- * not move it — so the `default` and `granted` branches are simply unreachable
- * in this runner. {@link installPermissionStub} therefore replaces the static
- * `permission` accessor and `requestPermission()` before navigation (the same
- * "mock the seam, run the real app code" approach as `installTauriMock`), and
- * counts every request the document makes from any code path or route. The app
- * under test is unmodified; only the engine's answer is scripted.
+ * Chromium can reproduce none of that, so what these specs pin is the
+ * engine-independent shape of the design: **nothing asks until a click asks**,
+ * the click is the only asker, and each already-decided state renders its own
+ * terminal branch instead of re-prompting.
+ *
+ * ## Why the plugin is stubbed
+ * There is no Tauri runtime in this runner, so the plugin's `invoke` has
+ * nothing to call — and the headless Chromium `Notification` it would otherwise
+ * fall back on reports `permission === "denied"` unconditionally (verified
+ * directly; `context.grantPermissions()` does not move it), which would make
+ * the `default` and `granted` branches unreachable.
+ * {@link installNotificationPluginStub} therefore reproduces, before
+ * navigation, exactly what registering `tauri_plugin_notification` does in the
+ * real app: its `js_init_script` REPLACES `window.Notification` with a shim
+ * whose constructor, `permission` getter and `requestPermission()` are backed
+ * by the three `plugin:notification|*` IPC commands. Those commands are then
+ * answered from one scripted state layered over {@link installTauriMock} — the
+ * `installFolderSyncMock` idiom for a stateful seam.
+ *
+ * The app under test is unmodified, and the REAL plugin JS it imports runs
+ * against that seam; only the Rust side's answers are scripted.
  */
 test.describe("Desktop notification permission", () => {
   test.use({ reducedMotion: "reduce" });
@@ -121,11 +134,15 @@ test.describe("Desktop notification permission", () => {
   type PermissionState = "default" | "granted" | "denied";
 
   /**
-   * Install a scripted `Notification` permission: `initial` is what the page
-   * reads on load, `outcome` is what a request resolves to. Every call to
-   * `requestPermission()` is counted in `window.__permissionRequests`.
+   * Install the native notification seam. `initial` is the permission the OS
+   * reports on load, `outcome` is what a request resolves to. Every
+   * `request_permission` command is counted in `window.__permissionRequests`,
+   * and every `notify` is recorded in `window.__sentNotifications`.
+   *
+   * Call AFTER {@link installTauriMock} (it wraps that mock's `invoke`) and
+   * BEFORE navigation.
    */
-  async function installPermissionStub(
+  async function installNotificationPluginStub(
     page: Page,
     initial: PermissionState,
     outcome: PermissionState = "granted"
@@ -133,20 +150,59 @@ test.describe("Desktop notification permission", () => {
     await page.addInitScript(
       ([start, result]) => {
         let state = start as PermissionState;
-        const w = window as unknown as { __permissionRequests: number };
+        const w = window as unknown as {
+          __permissionRequests: number;
+          __sentNotifications: unknown[];
+        };
         w.__permissionRequests = 0;
-        Object.defineProperty(window.Notification, "permission", {
+        w.__sentNotifications = [];
+
+        const internals = (
+          window as unknown as {
+            __TAURI_INTERNALS__: {
+              invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>;
+            };
+          }
+        ).__TAURI_INTERNALS__;
+        const base = internals.invoke.bind(internals);
+
+        // The Rust side. `is_permission_granted` answers `Option<bool>`:
+        // true = granted, false = denied, null = still undecided.
+        internals.invoke = async (cmd, args = {}) => {
+          switch (cmd) {
+            case "plugin:notification|is_permission_granted":
+              return state === "default" ? null : state === "granted";
+            case "plugin:notification|request_permission":
+              w.__permissionRequests += 1;
+              state = result as PermissionState;
+              return state;
+            case "plugin:notification|notify":
+              w.__sentNotifications.push(args.options);
+              return undefined;
+            default:
+              return base(cmd, args);
+          }
+        };
+
+        // The injected `window.Notification` shim (src/init-iife.js in the
+        // crate). The plugin's JS reads `.permission`, calls
+        // `.requestPermission()` and constructs it — all three land on the IPC
+        // above, never on the webview's own implementation.
+        const shim = function (this: unknown, title: string, options?: object) {
+          void internals.invoke("plugin:notification|notify", {
+            options: Object.assign({}, options, { title }),
+          });
+        } as unknown as typeof Notification;
+        shim.requestPermission = (() =>
+          internals.invoke(
+            "plugin:notification|request_permission"
+          )) as typeof Notification.requestPermission;
+        Object.defineProperty(shim, "permission", {
           configurable: true,
+          enumerable: true,
           get: () => state,
         });
-        window.Notification.requestPermission = ((
-          cb?: (p: NotificationPermission) => void
-        ) => {
-          w.__permissionRequests += 1;
-          state = result as PermissionState;
-          cb?.(state as NotificationPermission);
-          return Promise.resolve(state as NotificationPermission);
-        }) as typeof Notification.requestPermission;
+        window.Notification = shim;
       },
       [initial, outcome] as const
     );
@@ -163,8 +219,8 @@ test.describe("Desktop notification permission", () => {
   test("never prompts on mount — the Settings opt-in click is the only asker", async ({
     page,
   }) => {
-    await installPermissionStub(page, "default", "granted");
     await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "default", "granted");
     await gotoApp(page, "/settings");
 
     // The always-mounted live-alert host (it owns the OS notification) is up and
@@ -183,14 +239,14 @@ test.describe("Desktop notification permission", () => {
     expect(await requests(page)).toBe(1);
   });
 
-  test("a denied engine is terminal: no re-prompt, and the row says why it is silent", async ({
+  test("a denied OS is terminal: no re-prompt, and the row says why it is silent", async ({
     page,
   }) => {
-    await installPermissionStub(page, "denied");
     await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "denied");
     await gotoApp(page, "/settings");
 
-    // Denied is final — the engine will not ask again, so the app offers no
+    // Denied is final — the OS will not be asked again, so the app offers no
     // button that would nag, and explains the silence instead of dropping OS
     // notifications quietly.
     await expect(page.getByTestId("os-notify-state")).toHaveText("Blocked");
@@ -204,8 +260,8 @@ test.describe("Desktop notification permission", () => {
   });
 
   test("an already-granted permission is never re-requested", async ({ page }) => {
-    await installPermissionStub(page, "granted");
     await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
     await gotoApp(page, "/settings");
 
     // The returning user whose permission predates this release: the row
@@ -213,5 +269,21 @@ test.describe("Desktop notification permission", () => {
     await expect(page.getByTestId("os-notify-state")).toHaveText("Enabled");
     await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
     expect(await requests(page)).toBe(0);
+  });
+
+  test("outside the desktop app there is no native path, and nothing is asked", async ({
+    page,
+  }) => {
+    // No Tauri mock at all — a plain browser, which is what `npm run dev` and
+    // every un-mocked spec in this suite are. The feature must degrade to the
+    // "unavailable here" branch rather than falling back to the webview API
+    // that cannot work in production anyway.
+    await gotoApp(page, "/settings");
+
+    await expect(page.getByTestId("os-notify-state")).toHaveText("Unavailable");
+    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
+    await expect(page.getByTestId("os-notify-hint")).toContainText(
+      "raised by the OmniLink desktop app"
+    );
   });
 });

@@ -49,6 +49,7 @@ import { useAlertsStore } from "@/stores/alerts";
 import { playAlertSound } from "@/lib/alertSound";
 import {
   osNotifyPermission,
+  osNotifySupported,
   requestOsNotifyPermission,
   type OsNotifyPermission,
 } from "@/lib/alertNotify";
@@ -959,11 +960,12 @@ function ToggleSwitch({
  * suppresses both the in-app toast and the OS notification.
  *
  * This card is also the single opt-in point for **desktop (OS) notifications**
- * (v3.0.3). The permission prompt must be raised from a real user gesture —
- * WebKit, the engine the shipped Linux/macOS app runs in, refuses
- * `Notification.requestPermission()` from anywhere else — so the "Enable"
- * button below is that gesture, exactly as the sound row's "Test" button is the
- * gesture that unlocks the AudioContext. Nothing prompts on launch.
+ * (v3.0.3). Those are raised natively through the Tauri notification plugin —
+ * the webview's own Notification API is unobtainable in the engines the app
+ * ships in (see `@/lib/alertNotify`) — and the "Enable" button below is the
+ * user gesture that asks for permission, exactly as the sound row's "Test"
+ * button is the gesture that unlocks the AudioContext. Nothing prompts on
+ * launch.
  */
 function AlertsSettings() {
   const { t } = useTranslation();
@@ -972,13 +974,28 @@ function AlertsSettings() {
   const soundEnabled = useAlertsStore((s) => s.soundEnabled);
   const setSoundEnabled = useAlertsStore((s) => s.setSoundEnabled);
 
-  // The engine owns the permission, so this is state we MIRROR, not state we
-  // store: read it (never prompt) on first render, and refresh it from whatever
-  // the request resolves to. No persisted flag is added — a user who granted
-  // permission in an earlier version keeps working with no migration.
+  // The OS owns the permission, so this is state we MIRROR, not state we store.
+  // No persisted flag is added — a user who granted permission in an earlier
+  // version keeps working with no migration.
+  //
+  // The read crosses the Tauri IPC (v3.0.3), so it cannot happen during render:
+  // the first paint uses the only thing knowable synchronously — whether the
+  // native path exists at all — and the effect below settles it. Reading is NOT
+  // prompting; nothing in `@/lib/alertNotify` asks the OS for anything unless
+  // `requestOsNotifyPermission` is called, which only the button does.
   const [osPermission, setOsPermission] = React.useState<OsNotifyPermission>(
-    () => osNotifyPermission()
+    () => (osNotifySupported() ? "default" : "unsupported")
   );
+
+  React.useEffect(() => {
+    let alive = true;
+    void osNotifyPermission().then((permission) => {
+      if (alive) setOsPermission(permission);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const signalLoss = useAlertsStore((s) => s.signalLoss);
   const lqDrop = useAlertsStore((s) => s.lqDrop);
@@ -1029,10 +1046,12 @@ function AlertsSettings() {
           />
         </div>
 
-        {/* Desktop (OS) notifications — the opt-in AND the user gesture the
-            permission prompt requires (v3.0.3). `requestOsNotifyPermission()`
-            is called SYNCHRONOUSLY in the click handler: an `await` in front of
-            it would spend the gesture and WebKit would refuse the prompt. */}
+        {/* Desktop (OS) notifications — the opt-in AND the user gesture that
+            raises the permission prompt (v3.0.3). `requestOsNotifyPermission()`
+            is called SYNCHRONOUSLY in the click handler, with nothing awaited
+            in front of it: the native plugin no longer requires that, but the
+            "never ask outside a deliberate opt-in" rule is the product
+            decision, not the engine's, and it is pinned by a structural test. */}
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <Label>{t("alerts.settings.osNotify")}</Label>

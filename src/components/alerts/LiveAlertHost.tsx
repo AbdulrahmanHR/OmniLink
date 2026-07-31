@@ -204,13 +204,14 @@ export function LiveAlertHost() {
 
   useEffect(() => {
     // NOTE (v3.0.3): this effect deliberately does NOT ask for OS-notification
-    // permission. WebKit — the engine the shipped Linux/macOS app runs in —
-    // rejects `Notification.requestPermission()` outside a user gesture
-    // ("Notification prompting can only be done from a user gesture"), so the
-    // mount-time request that used to live on this line could never be granted
-    // in production. The prompt is now raised from the explicit opt-in in
-    // Settings → Live alerts; see `@/lib/alertNotify`. `osNotify` below is
-    // unchanged and still fires whenever permission is already granted.
+    // permission. A mount-time request used to live on this line; it could
+    // never be granted in production, because the shipped app runs in WebKit /
+    // WebView2 and the webview's own Notification API is unobtainable there —
+    // first refused outside a user gesture, then denied outright even from one.
+    // OS notifications now go through the native Tauri notification plugin, and
+    // the opt-in lives in Settings → Live alerts; see `@/lib/alertNotify`.
+    // `osNotify` below is unchanged in behaviour and still fires whenever
+    // permission has already been granted.
 
     // Subscribe to the live telemetry store; act ONLY when the shared history
     // changes (it also empties to `[]` on disconnect). Plain zustand subscribe —

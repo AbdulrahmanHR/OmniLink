@@ -1,230 +1,305 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * OS-notification permission (v3.0.3 — the WebKit user-gesture defect).
+ * OS-notification delivery (v3.0.3 — the native-plugin migration).
  *
- * The first real Tauri/WebKitGTK run of the app printed, twice:
+ * Two defects were found on the engine the app actually ships in, in sequence:
  *
- * ```
- * Notification prompting can only be done from a user gesture.
- *     ensureOsNotifyPermission — alertNotify.ts:25
- * ```
+ *  1. `Notification.requestPermission()` was called from a mount effect, and
+ *     WebKit (WebKitGTK on Linux, WKWebView on macOS) enforces the spec's
+ *     user-gesture requirement that Chromium is lax about:
  *
- * WebKit (WebKitGTK on Linux, WKWebView on macOS — i.e. the engine the SHIPPED
- * app runs in) enforces the spec's user-gesture requirement that Chromium is lax
- * about, so the old mount-time `ensureOsNotifyPermission()` could never grant
- * permission in production while passing every Chromium-based test.
+ *     ```
+ *     Notification prompting can only be done from a user gesture.
+ *         ensureOsNotifyPermission — alertNotify.ts:25
+ *     ```
  *
- * These specs pin the fix from both ends:
+ *  2. Moving the request onto a genuine click did **not** fix it. On WebKitGTK
+ *     2.52.3, from a real click on the real Settings button, permission went
+ *     `default` -> `denied` in under 2.5 s with no prompt window ever shown —
+ *     wry installs no `permission-request` handler, so the webview's default
+ *     handler denies. The web Notification API is unobtainable in the shipped
+ *     app however correctly it is called.
+ *
+ * So `alertNotify.ts` now speaks to `@tauri-apps/plugin-notification`, whose
+ * three commands (`is_permission_granted`, `request_permission`, `notify`) go
+ * to the OS natively and never touch the webview permission model.
+ *
+ * These specs pin the result from both ends:
  *  - **behavioural** — the module never prompts by itself (import, read, fire),
  *    a `granted`/`denied`/unsupported state never reaches `requestPermission()`
- *    at all, and the request survives both the modern promise form and the
- *    legacy callback-only form of `Notification.requestPermission`; and
+ *    at all, an undecidable answer still settles the UI, and a non-Tauri host
+ *    degrades silently instead of throwing; and
  *  - **structural** — the ONE call site in `src/` is a click handler with no
- *    `await` in front of it, and the live-alert host (which mounts on every
- *    app launch) does not reference the permission API at all. A behavioural
- *    test cannot see that difference: the suite runs in Node with no DOM and no
- *    React renderer (see AGENTS.md § Testing), and "was it called from a
- *    gesture" is not observable from a mocked `Notification` either way.
+ *    `await` in front of it, the live-alert host (which mounts on every app
+ *    launch) does not reference the permission API at all, and NO source file —
+ *    this module included — touches the web `Notification` global any more. A
+ *    behavioural test cannot see those differences: the suite runs in Node with
+ *    no DOM and no React renderer (see AGENTS.md § Testing), and "was it called
+ *    from a gesture" is not observable from a mocked plugin either way.
  *
- * The module reads `window`/`Notification` through `globalThis` at call time, so
- * each spec installs its own pair and every spec re-imports the module fresh.
+ * The plugin is mocked at the module boundary (the `tests/unit/updater.test.ts`
+ * idiom) and the runtime probe — `"__TAURI_INTERNALS__" in window` — is driven
+ * by installing/removing a fake `window`, so every state is reachable headless.
  */
 
-/** Install a mock Notification API (and a `window`) for the current spec. */
-function installNotification(
-  permission: "default" | "granted" | "denied",
-  requestPermission: unknown = vi.fn(() => Promise.resolve(permission))
-): { ctor: ReturnType<typeof vi.fn>; instances: Array<[string, unknown]> } {
-  const instances: Array<[string, unknown]> = [];
-  const ctor = vi.fn(function (this: unknown, title: string, options: unknown) {
-    instances.push([title, options]);
+const plugin = vi.hoisted(() => ({
+  isPermissionGranted: vi.fn<() => Promise<unknown>>(),
+  requestPermission: vi.fn<() => Promise<string>>(),
+  sendNotification: vi.fn<(options: { title: string; body?: string }) => void>(),
+}));
+
+vi.mock("@tauri-apps/plugin-notification", () => ({
+  isPermissionGranted: plugin.isPermissionGranted,
+  requestPermission: plugin.requestPermission,
+  sendNotification: plugin.sendNotification,
+}));
+
+import {
+  osNotify,
+  osNotifyPermission,
+  osNotifySupported,
+  requestOsNotifyPermission,
+} from "@/lib/alertNotify";
+
+/**
+ * Put the module in a Tauri runtime and script the plugin's answers.
+ *
+ * `granted` is what `is_permission_granted` reports — `true`/`false`/`null` for
+ * granted/denied/undecided, exactly the `Option<bool>` the Rust command
+ * returns. `outcome` is what a `request_permission` resolves to; requesting
+ * also updates the reported state, as the real plugin's shim does.
+ */
+function installPlugin(
+  granted: boolean | null,
+  outcome: string = "granted"
+): { sent: Array<{ title: string; body?: string }> } {
+  const state = { granted };
+  const sent: Array<{ title: string; body?: string }> = [];
+  (globalThis as unknown as { window?: unknown }).window = {
+    __TAURI_INTERNALS__: {},
+  };
+  plugin.isPermissionGranted.mockImplementation(() =>
+    Promise.resolve(state.granted)
+  );
+  plugin.requestPermission.mockImplementation(() => {
+    if (outcome === "granted") state.granted = true;
+    else if (outcome === "denied") state.granted = false;
+    return Promise.resolve(outcome);
   });
-  Object.assign(ctor, { permission, requestPermission });
-  (globalThis as unknown as { window?: unknown }).window = {};
-  (globalThis as unknown as { Notification?: unknown }).Notification = ctor;
-  return { ctor: ctor as unknown as ReturnType<typeof vi.fn>, instances };
+  plugin.sendNotification.mockImplementation((options) => {
+    sent.push(options);
+  });
+  return { sent };
 }
+
+/** Let the fire-and-forget chain inside `osNotify` settle. */
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+beforeEach(() => {
+  plugin.isPermissionGranted.mockReset();
+  plugin.requestPermission.mockReset();
+  plugin.sendNotification.mockReset();
+});
 
 afterEach(() => {
   delete (globalThis as unknown as { window?: unknown }).window;
-  delete (globalThis as unknown as { Notification?: unknown }).Notification;
-  vi.restoreAllMocks();
-  vi.resetModules();
+});
+
+describe("osNotifySupported — the runtime probe", () => {
+  it("is false with no window at all (vitest/node)", () => {
+    expect(osNotifySupported()).toBe(false);
+  });
+
+  it("is false in a plain browser — a webview global is not enough", () => {
+    // The dev server and the Playwright runner both land here: `window` exists,
+    // even `Notification` exists, but there is no native path to reach.
+    (globalThis as unknown as { window?: unknown }).window = {
+      Notification: class {},
+    };
+    expect(osNotifySupported()).toBe(false);
+  });
+
+  it("is true once the Tauri runtime has injected its internals", () => {
+    installPlugin(true);
+    expect(osNotifySupported()).toBe(true);
+  });
 });
 
 describe("osNotifyPermission — read-only, never prompts", () => {
-  it("reports 'unsupported' with no window / no Notification API (headless)", async () => {
-    const { osNotifyPermission } = await import("@/lib/alertNotify");
-    expect(osNotifyPermission()).toBe("unsupported");
+  it("reports 'unsupported' outside a Tauri runtime, without calling the plugin", async () => {
+    await expect(osNotifyPermission()).resolves.toBe("unsupported");
+    expect(plugin.isPermissionGranted).not.toHaveBeenCalled();
   });
 
-  it("mirrors each engine state", async () => {
-    for (const state of ["default", "granted", "denied"] as const) {
-      installNotification(state);
-      vi.resetModules();
-      const { osNotifyPermission } = await import("@/lib/alertNotify");
-      expect(osNotifyPermission()).toBe(state);
+  it("mirrors each state the OS can report", async () => {
+    for (const [reported, expected] of [
+      [true, "granted"],
+      [false, "denied"],
+      [null, "default"],
+    ] as const) {
+      installPlugin(reported);
+      await expect(osNotifyPermission()).resolves.toBe(expected);
     }
   });
 
+  it("reports 'unsupported' when the IPC itself fails, without throwing", async () => {
+    installPlugin(null);
+    plugin.isPermissionGranted.mockRejectedValue(new Error("no such command"));
+    await expect(osNotifyPermission()).resolves.toBe("unsupported");
+  });
+
   it("never calls requestPermission just to read the state", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    installNotification("default", request);
-    const { osNotifyPermission } = await import("@/lib/alertNotify");
-    osNotifyPermission();
-    expect(request).not.toHaveBeenCalled();
+    installPlugin(null);
+    await osNotifyPermission();
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 });
 
 describe("the module never prompts on its own (the defect)", () => {
   it("importing it and firing a notification asks for NOTHING", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    const { instances } = installNotification("granted", request);
+    const { sent } = installPlugin(true);
 
-    const { osNotify, osNotifyPermission } = await import("@/lib/alertNotify");
-    osNotifyPermission();
+    await osNotifyPermission();
     osNotify("Low signal", "RSSI fell to -104 dBm");
+    await flush();
 
     // The toast fired (permission was already granted) and no prompt was raised:
-    // the whole point of the fix — nothing outside a gesture may request.
-    expect(instances).toEqual([["Low signal", { body: "RSSI fell to -104 dBm" }]]);
-    expect(request).not.toHaveBeenCalled();
+    // the whole point of the fix — nothing outside the opt-in may request.
+    expect(sent).toEqual([{ title: "Low signal", body: "RSSI fell to -104 dBm" }]);
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 
-  it("firing while permission is 'default' still asks for nothing (and shows nothing)", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    const { instances } = installNotification("default", request);
+  it("firing while permission is undecided still asks for nothing (and shows nothing)", async () => {
+    const { sent } = installPlugin(null);
 
-    const { osNotify } = await import("@/lib/alertNotify");
     osNotify("Low signal", "body");
+    await flush();
 
-    expect(instances).toEqual([]);
-    expect(request).not.toHaveBeenCalled();
+    expect(sent).toEqual([]);
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 });
 
 describe("requestOsNotifyPermission — the gesture path", () => {
-  it("requests exactly once from a 'default' state and resolves the outcome", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    const { ctor } = installNotification("default", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+  it("requests exactly once from an undecided state and resolves the outcome", async () => {
+    installPlugin(null, "granted");
 
-    const result = await requestOsNotifyPermission();
+    await expect(requestOsNotifyPermission()).resolves.toBe("granted");
 
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(result).toBe("granted");
-    // The prompt is a request, not a notification: nothing was constructed.
-    expect(ctor).not.toHaveBeenCalled();
+    expect(plugin.requestPermission).toHaveBeenCalledTimes(1);
+    // The prompt is a request, not a notification: nothing was sent.
+    expect(plugin.sendNotification).not.toHaveBeenCalled();
   });
 
   it("resolves 'denied' when the user says no", async () => {
-    const request = vi.fn(() => Promise.resolve("denied" as NotificationPermission));
-    installNotification("default", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+    installPlugin(null, "denied");
     await expect(requestOsNotifyPermission()).resolves.toBe("denied");
   });
 
   it("does NOT re-prompt once denied — the state is terminal", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    installNotification("denied", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+    installPlugin(false);
 
-    // Even repeated clicks must not reach the engine: it would refuse anyway,
-    // and the UI is expected to explain the block instead of nagging.
+    // Even repeated clicks must not reach the OS: it would refuse anyway, and
+    // the UI is expected to explain the block instead of nagging.
     await expect(requestOsNotifyPermission()).resolves.toBe("denied");
     await expect(requestOsNotifyPermission()).resolves.toBe("denied");
-    expect(request).not.toHaveBeenCalled();
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 
   it("does NOT re-prompt once granted", async () => {
-    const request = vi.fn(() => Promise.resolve("granted" as NotificationPermission));
-    installNotification("granted", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+    installPlugin(true);
 
     await expect(requestOsNotifyPermission()).resolves.toBe("granted");
-    expect(request).not.toHaveBeenCalled();
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 
-  it("resolves 'unsupported' with no Notification API, without throwing", async () => {
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+  it("resolves 'unsupported' outside a Tauri runtime, without throwing or asking", async () => {
     await expect(requestOsNotifyPermission()).resolves.toBe("unsupported");
+    expect(plugin.requestPermission).not.toHaveBeenCalled();
   });
 
-  it("supports the LEGACY callback-only form (older WebKit returns undefined)", async () => {
-    // Safari/WebKitGTK shipped `requestPermission(cb)` long before the promise
-    // form; a build that returns `undefined` must still settle the UI.
-    const ctorRef: { current?: { permission: string } } = {};
-    const request = vi.fn((cb?: (p: NotificationPermission) => void) => {
-      if (ctorRef.current) ctorRef.current.permission = "granted";
-      cb?.("granted");
-      return undefined;
-    });
-    const { ctor } = installNotification("default", request);
-    ctorRef.current = ctor as unknown as { permission: string };
-
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
-    await expect(requestOsNotifyPermission()).resolves.toBe("granted");
-    expect(request).toHaveBeenCalledTimes(1);
+  it("settles the UI on a PROMPT-shaped answer (the non-DOM PermissionState arms)", async () => {
+    // `request_permission` returns a Tauri `PermissionState`, whose `prompt` and
+    // `prompt-with-rationale` arms are outside the DOM `NotificationPermission`
+    // union the plugin's own types declare. Both mean "still undecided" — they
+    // must NOT be mistaken for a refusal, and must not hang the row either.
+    for (const answer of ["prompt", "prompt-with-rationale"]) {
+      installPlugin(null, answer);
+      await expect(requestOsNotifyPermission()).resolves.toBe("default");
+      expect(plugin.requestPermission).toHaveBeenCalledTimes(1);
+      plugin.requestPermission.mockReset();
+    }
   });
 
-  it("falls back to the engine's current state when the promise rejects", async () => {
-    const request = vi.fn(() => Promise.reject(new Error("dismissed")));
-    installNotification("default", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
+  it("falls back to the OS's current state when the request rejects", async () => {
+    installPlugin(null);
+    plugin.requestPermission.mockRejectedValue(new Error("dismissed"));
     // Nothing was granted, so the UI stays on the un-decided branch rather than
     // exploding into an unhandled rejection.
     await expect(requestOsNotifyPermission()).resolves.toBe("default");
   });
 
   it("swallows a THROWING requestPermission (never breaks the click handler)", async () => {
-    const request = vi.fn(() => {
+    installPlugin(null);
+    plugin.requestPermission.mockImplementation(() => {
       throw new Error("boom");
     });
-    installNotification("default", request);
-    const { requestOsNotifyPermission } = await import("@/lib/alertNotify");
     await expect(requestOsNotifyPermission()).resolves.toBe("default");
   });
 });
 
 describe("osNotify — unchanged gating (no regression)", () => {
   it("fires only when permission is already granted", async () => {
-    for (const state of ["default", "denied"] as const) {
-      const { instances } = installNotification(state);
-      vi.resetModules();
-      const { osNotify } = await import("@/lib/alertNotify");
+    for (const reported of [null, false] as const) {
+      const { sent } = installPlugin(reported);
       osNotify("t", "b");
-      expect(instances).toEqual([]);
+      await flush();
+      expect(sent).toEqual([]);
     }
-    const { instances } = installNotification("granted");
-    vi.resetModules();
-    const { osNotify } = await import("@/lib/alertNotify");
+    const { sent } = installPlugin(true);
     osNotify("t", "b");
-    expect(instances).toHaveLength(1);
+    await flush();
+    expect(sent).toHaveLength(1);
   });
 
-  it("never throws headless (no window at all)", async () => {
-    const { osNotify } = await import("@/lib/alertNotify");
+  it("sends the SAME payload shape the web API carried: title + body", async () => {
+    const { sent } = installPlugin(true);
+    osNotify("Failsafe", "Link lost for 3 frames");
+    await flush();
+    expect(sent).toEqual([{ title: "Failsafe", body: "Link lost for 3 frames" }]);
+  });
+
+  it("never throws — and sends nothing — outside a Tauri runtime", async () => {
     expect(() => osNotify("t", "b")).not.toThrow();
+    await flush();
+    expect(plugin.isPermissionGranted).not.toHaveBeenCalled();
+    expect(plugin.sendNotification).not.toHaveBeenCalled();
   });
 
-  it("swallows a constructor that throws", async () => {
-    const ctor = vi.fn(() => {
+  it("swallows a send that throws", async () => {
+    installPlugin(true);
+    plugin.sendNotification.mockImplementation(() => {
       throw new Error("blocked by the OS");
     });
-    Object.assign(ctor, { permission: "granted", requestPermission: vi.fn() });
-    (globalThis as unknown as { window?: unknown }).window = {};
-    (globalThis as unknown as { Notification?: unknown }).Notification = ctor;
-    const { osNotify } = await import("@/lib/alertNotify");
     expect(() => osNotify("t", "b")).not.toThrow();
+    await expect(flush()).resolves.toBeUndefined();
+  });
+
+  it("swallows a permission read that rejects", async () => {
+    installPlugin(true);
+    plugin.isPermissionGranted.mockRejectedValue(new Error("ipc down"));
+    expect(() => osNotify("t", "b")).not.toThrow();
+    await flush();
+    expect(plugin.sendNotification).not.toHaveBeenCalled();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Structural guard: WHERE the request is made
+// Structural guard: WHERE the request is made, and WHAT delivers it
 // ---------------------------------------------------------------------------
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -244,11 +319,12 @@ function sourceFiles(dir: string = SRC, out: string[] = []): string[] {
  * Read a source file with its comments removed.
  *
  * Same reasoning as `ciForkSafety.test.ts`'s YAML comment strip: the prose
- * *explaining* why the mount-time request was deleted necessarily quotes
- * `Notification.requestPermission()`, and a scanner that cannot tell an
- * explanation from a call would fail on the documentation of its own fix. Block
- * comments (including JSX `{/* … *\/}`) and whole-line `//` comments go; code —
- * and any trailing comment on a code line — stays.
+ * *explaining* why the mount-time request was deleted, and why the web API was
+ * abandoned, necessarily quotes `Notification.requestPermission()`, and a
+ * scanner that cannot tell an explanation from a call would fail on the
+ * documentation of its own fix. Block comments (including JSX `{/* … *\/}`) and
+ * whole-line `//` comments go; code — and any trailing comment on a code line —
+ * stays.
  */
 function read(file: string): string {
   return readFileSync(file, "utf8")
@@ -279,8 +355,9 @@ describe("permission is requested ONLY from a user gesture (structural)", () => 
     expect(handlerAt).toBeGreaterThan(-1);
     const handler = page.slice(handlerAt, at);
 
-    // Nothing may run between the user event and the request: an `await` (or an
-    // effect/timer hop) ends the task WebKit counts the gesture in.
+    // Nothing may run between the user event and the request. The native plugin
+    // no longer enforces this, but "never ask outside a deliberate opt-in" is
+    // the product rule, and an effect/timer hop is exactly how it gets lost.
     expect(handler).not.toMatch(/\bawait\b/);
     expect(handler).not.toMatch(/setTimeout|requestAnimationFrame|useEffect/);
     expect(at - handlerAt).toBeLessThan(200);
@@ -307,14 +384,36 @@ describe("permission is requested ONLY from a user gesture (structural)", () => 
       .map(rel);
     expect(offenders).toEqual([]);
   });
+});
 
-  it("routes every raw `Notification.requestPermission` through the helper", () => {
-    // A second, direct call site would be free to re-introduce the defect
-    // (mount-time prompt, awaited prompt) without tripping any test above.
+describe("OS notifications are delivered NATIVELY, not by the webview (structural)", () => {
+  it("the helper drives the Tauri plugin and nothing else", () => {
+    const helper = read(path.join(SRC, "lib/alertNotify.ts"));
+    expect(helper).toMatch(
+      /from\s+"@tauri-apps\/plugin-notification"/
+    );
+    // The three plugin entry points, and no fourth: the ACL grants exactly the
+    // commands behind these (see `src-tauri/capabilities/default.json`).
+    for (const api of ["isPermissionGranted", "requestPermission", "sendNotification"]) {
+      expect(helper).toContain(api);
+    }
+  });
+
+  it("NO source file — the helper included — uses the web Notification global", () => {
+    // The web API is not merely wrong to call from the wrong place: on the
+    // engines this app ships in, it can never be granted at all. A second,
+    // direct call site would silently re-introduce a channel that is dead in
+    // production while passing every Chromium-based test.
     const offenders = sourceFiles()
-      .filter((f) => rel(f) !== "lib/alertNotify.ts")
-      .filter((f) => /Notification\s*\.\s*requestPermission/.test(read(f)))
-      .map(rel);
+      .filter((f) => {
+        const text = read(f);
+        return (
+          /\bNotification\s*\.\s*(requestPermission|permission)\b/.test(text) ||
+          /\bnew\s+Notification\s*\(/.test(text)
+        );
+      })
+      .map(rel)
+      .sort();
     expect(offenders).toEqual([]);
   });
 });
