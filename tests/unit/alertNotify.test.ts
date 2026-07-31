@@ -65,6 +65,9 @@ import {
   osNotifySupported,
   requestOsNotifyPermission,
 } from "@/lib/alertNotify";
+// The live-vs-replay discriminator the OS gate reuses. Imported so the two
+// predicates can be asserted against each other rather than described in prose.
+import { liveStreamActive } from "@/hooks/useTelemetryStream";
 
 /**
  * Put the module in a Tauri runtime and script the plugin's answers.
@@ -304,22 +307,78 @@ describe("osNotifyAllowed — the product opt-in, since the OS is not one", () =
   // BOTH `permission_state()` and `request_permission()`
   // (tauri-plugin-notification-2.3.3/src/desktop.rs:65-67), so asking the
   // platform gates on nothing: every desktop user reads as granted, always.
-  // The persisted `osNotifyEnabled` flag is the real consent gate, and mute
-  // still overrides it exactly as it does the toast and the beep.
-  it("allows the notification ONLY when opted in and not muted", () => {
-    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: false })).toBe(true);
+  // The persisted `osNotifyEnabled` flag is the real consent gate, mute still
+  // overrides it exactly as it does the toast and the beep, and `isSimulating`
+  // keeps a REPLAYED frame from reaching the OS at all (see below).
+  it("allows the notification ONLY when opted in, not muted and not replaying", () => {
+    expect(
+      osNotifyAllowed({ osNotifyEnabled: true, muted: false, isSimulating: false })
+    ).toBe(true);
   });
 
-  it("blocks it in every other combination", () => {
-    expect(osNotifyAllowed({ osNotifyEnabled: false, muted: false })).toBe(false);
-    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: true })).toBe(false);
-    expect(osNotifyAllowed({ osNotifyEnabled: false, muted: true })).toBe(false);
+  it("blocks it in every other combination (the full truth table)", () => {
+    // Three independent boolean terms → eight rows. Exactly one is allowed, so
+    // enumerating all eight is what proves no term is redundant or inverted: a
+    // gate that dropped `isSimulating` would pass the four `false` rows and fail
+    // the four `true` ones, and vice-versa for either of the other two.
+    const rows: Array<[boolean, boolean, boolean, boolean]> = [
+      // osNotifyEnabled, muted, isSimulating, expected
+      [true, false, false, true],
+      [true, false, true, false],
+      [true, true, false, false],
+      [true, true, true, false],
+      [false, false, false, false],
+      [false, false, true, false],
+      [false, true, false, false],
+      [false, true, true, false],
+    ];
+    for (const [osNotifyEnabled, muted, isSimulating, expected] of rows) {
+      expect(
+        osNotifyAllowed({ osNotifyEnabled, muted, isSimulating }),
+        `osNotifyEnabled=${osNotifyEnabled} muted=${muted} isSimulating=${isSimulating}`
+      ).toBe(expected);
+    }
   });
 
   it("mirrors maybePlayAlertSound: mute beats an explicit opt-in", () => {
     // Same rule as the audio alert, so the two rows in the settings card behave
     // identically — turning the feature on does not survive the master mute.
-    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: true })).toBe(false);
+    expect(
+      osNotifyAllowed({ osNotifyEnabled: true, muted: true, isSimulating: false })
+    ).toBe(false);
+  });
+
+  it("a REPLAYED frame never reaches the OS, however loudly the operator opted in", () => {
+    // The defect this term fixes: the live-alert evaluator reads ONE shared
+    // buffer, and `useSessionStore`'s `pushRange`/`rebuildWindowTo` write a
+    // scrubbed or played-back log into that same buffer. So an operator who
+    // opted in and then scrubbed an old flight log — indoors, no hardware
+    // attached — got real system popups for alarms that happened days ago.
+    // Opted in, unmuted, everything the OS could want: still silent.
+    expect(
+      osNotifyAllowed({ osNotifyEnabled: true, muted: false, isSimulating: true })
+    ).toBe(false);
+  });
+
+  it("does NOT suppress live telemetry — the term is open exactly when live frames flow", () => {
+    // The safety half of the fix, and the far worse bug if it were wrong: this
+    // must not silently delete the feature for real hardware. `isSimulating` is
+    // the SAME discriminator `liveStreamActive` uses to decide whether live
+    // hardware may drive the store at all (`isConnected && !isSimulating`), so
+    // a live frame can only exist while the term is `false`. Pinning that
+    // relationship here means a change to either predicate that broke the
+    // correspondence fails a test rather than shipping.
+    expect(liveStreamActive(true, false)).toBe(true); // live frames flow …
+    expect(
+      osNotifyAllowed({ osNotifyEnabled: true, muted: false, isSimulating: false })
+    ).toBe(true); // … and the OS notification is allowed on them.
+
+    // The converse: whenever a replay owns the store, the live producer is
+    // already no-op'ing, so no frame the OS gate blocks could have been live.
+    expect(liveStreamActive(true, true)).toBe(false);
+    expect(
+      osNotifyAllowed({ osNotifyEnabled: true, muted: false, isSimulating: true })
+    ).toBe(false);
   });
 });
 
@@ -416,6 +475,69 @@ describe("permission is requested ONLY from a user gesture (structural)", () => 
       })
       .map(rel);
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("isSimulating is the app's existing live-vs-replay discriminator (structural)", () => {
+  // The OS gate is only as good as the invariant "`isSimulating` is true iff a
+  // replay owns the shared telemetry buffer". That invariant is cheap to hold
+  // and easy to break from a distance, so pin both halves of it here.
+
+  it("is written ONLY by the session store", () => {
+    // A second writer elsewhere could raise it while live frames are flowing,
+    // which would silently suppress REAL notifications — much the worse bug of
+    // the two, and invisible to any behavioural test of this module. A write is
+    // a boolean LITERAL assignment (`set({ isSimulating: true })`), which is
+    // what all four of the session store's are; reads, type annotations and the
+    // OS gate's pass-through carry an identifier instead.
+    const writers = sourceFiles()
+      .filter((f) => /isSimulating\s*:\s*(true|false)\b/.test(read(f)))
+      .map(rel)
+      .sort();
+    expect(writers).toEqual(["stores/session.ts"]);
+  });
+
+  it("is mentioned in src/ only by the files that own or consume it", () => {
+    // The companion tripwire, since a write need not be a literal: any NEW file
+    // touching the discriminator has to come past this list, where "is it about
+    // to set it while a device is connected?" gets asked deliberately.
+    const mentions = sourceFiles()
+      .filter((f) => /\bisSimulating\b/.test(read(f)))
+      .map(rel)
+      .sort();
+    expect(mentions).toEqual([
+      "components/alerts/LiveAlertHost.tsx", // the OS gate (reads)
+      "components/telemetry/TelemetryDashboard.tsx", // SIMULATED badge (reads)
+      "hooks/useTelemetryStream.ts", // suppresses the live producer (reads)
+      "lib/alertNotify.ts", // the gate's input (type only)
+      "pages/TelemetryPage.tsx", // routes to the dashboard (reads)
+      "stores/session.ts", // the ONLY writer
+    ]);
+  });
+
+  it("gates the live producer, so a live frame proves the term is false", () => {
+    // `useTelemetryStream`'s effect returns early unless `liveStreamActive`,
+    // whose second term is `!isSimulating`. THAT is what makes the OS gate
+    // unable to suppress live telemetry: a frame it could block would never
+    // have been pushed to the shared buffer in the first place.
+    const stream = read(path.join(SRC, "hooks/useTelemetryStream.ts"));
+    expect(stream).toMatch(/return\s+isConnected\s*&&\s*!isSimulating\s*;/);
+    expect(stream).toMatch(
+      /if\s*\(!liveStreamActive\(isConnected,\s*isSimulating\)\)\s*return;/
+    );
+  });
+
+  it("reaches the OS gate — the host passes it, and passes nothing else for it", () => {
+    // Behaviourally invisible from here (no DOM, no React renderer — see this
+    // file's header), but the gate is inert unless the one call site actually
+    // supplies the term.
+    const host = read(path.join(SRC, "components/alerts/LiveAlertHost.tsx"));
+    expect(host).toMatch(/isSimulating:\s*useSessionStore\.getState\(\)\.isSimulating/);
+    // …and ONLY for the OS channel. The toast, the beep and the notification
+    // centre must keep firing while a log is scrubbed: they describe the
+    // recording you are looking at. Guard the two centralised rules by name.
+    expect(host).not.toMatch(/maybePlayAlertSound\([^)]*isSimulating/);
+    expect(host).not.toMatch(/recordFiredAlerts\([^)]*isSimulating/);
   });
 });
 

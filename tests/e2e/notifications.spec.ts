@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  emitTauri,
   expectNoSeriousA11y,
   gotoApp,
   installTauriMock,
@@ -268,47 +269,175 @@ test.describe("Desktop notification opt-in", () => {
     await expect(page.getByTestId("notification-badge")).toHaveText("2");
   }
 
+  // -------------------------------------------------------------------------
+  // The LIVE path
+  //
+  // The scrub above and the drive below reach the SAME evaluator through the
+  // SAME shared telemetry buffer — that identity is the whole defect, and it is
+  // why the OS-notification assertions have to be made on both. Everything the
+  // operator can configure is held equal between them; the only difference is
+  // where the frames came from, which is exactly the variable under test.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Spacing between emitted live frames, in ms.
+   *
+   * `useTelemetryStream` throttles store pushes to `STORE_PUSH_MIN_MS` (66) with
+   * a leading + trailing edge, so a burst of N frames emitted back-to-back
+   * reaches the store as TWO frames (the first and the last) — not enough for
+   * `signalLoss`'s 3-frame debounce. Spacing them past the throttle is what
+   * makes every frame land, and the wait happens **inside the page** so it is
+   * measured against the same clock the throttle reads.
+   */
+  const LIVE_FRAME_SPACING_MS = 90;
+
+  /**
+   * CRSF uplink RSSI magnitudes, in the order the reader would deliver them:
+   * two healthy frames, then four at/below the default −100 dBm trip.
+   * `crsfRssiToDbm` negates the magnitude, so 105 is −105 dBm; four bad frames
+   * clear the 3-frame debounce with one to spare and never recover, so exactly
+   * one `signalLoss` trips — the same single alarm the scrub fixture produces.
+   */
+  const LIVE_RSSI_SEQUENCE = [55, 57, 105, 110, 107, 104];
+
+  /**
+   * Bring a mocked device up on the live dashboard.
+   *
+   * The `device://connected` event is what the Rust reader emits after a
+   * successful CRSF handshake, and the device store's own handler is what
+   * receives it — so `isConnected` becomes true through the production path,
+   * `useTelemetryStream` un-gates, and `isSimulating` is left where it belongs:
+   * false, because no session was ever loaded.
+   */
+  async function connectMockDevice(page: Page): Promise<void> {
+    await gotoApp(page, "/telemetry");
+    await emitTauri(page, "device://connected", {
+      targetName: "MockTX",
+      firmwareVersion: "3.4.0",
+      deviceType: "TX",
+      port: "/dev/ttyUSB0",
+      baud: 420_000,
+      paramCount: 0,
+      serialNumber: 1,
+      hardwareVersion: 1,
+      generation: 1,
+    });
+
+    // `useTelemetryStream` awaits `openTelemetryPersistence` BEFORE it registers
+    // the `device://link-stats` listener, so frames emitted straight after
+    // "connected" would be dropped on the floor and the spec would assert
+    // silence it had itself caused. Wait for the listener to exist in the mock's
+    // own registry — the precise condition, not a sleep.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () =>
+              (
+                window as unknown as {
+                  __TAURI_INTERNALS__: {
+                    _listeners: Map<string, Set<number>>;
+                  };
+                }
+              ).__TAURI_INTERNALS__._listeners.get("device://link-stats")?.size ??
+              0
+          ),
+        { message: "the live telemetry stream subscribed to device://link-stats" }
+      )
+      .toBeGreaterThan(0);
+  }
+
+  /**
+   * Feed {@link LIVE_RSSI_SEQUENCE} through `device://link-stats` as genuine
+   * live telemetry, tripping the default `signalLoss` alarm. Call after
+   * {@link connectMockDevice}.
+   */
+  async function driveLiveDropout(page: Page): Promise<void> {
+    await page.evaluate(
+      async ([sequence, spacing]) => {
+        const emit = (
+          window as unknown as {
+            __omnilinkEmit: (event: string, payload: unknown) => void;
+          }
+        ).__omnilinkEmit;
+        for (const magnitude of sequence as number[]) {
+          emit("device://link-stats", {
+            uplinkRssi1: magnitude,
+            uplinkRssi2: magnitude,
+            uplinkLinkQuality: 100,
+            uplinkSnr: 9,
+            activeAntenna: 0,
+            rfMode: 0,
+            uplinkTxPower: 0,
+            downlinkRssi: 60,
+            downlinkLinkQuality: 100,
+            downlinkSnr: 9,
+          });
+          await new Promise((resolve) => setTimeout(resolve, spacing as number));
+        }
+      },
+      [LIVE_RSSI_SEQUENCE, LIVE_FRAME_SPACING_MS] as const
+    );
+  }
+
+  /**
+   * The in-app half of a LIVE trip. The badge reads 1, not 2: there is no
+   * imported session, so the M37 import diagnostic that the scrub path also
+   * raises does not exist here.
+   */
+  async function expectLiveInAppAlertFired(page: Page): Promise<void> {
+    await expect(page.getByTestId("live-alert-signalLoss")).toBeVisible();
+    await expect(page.getByTestId("notification-badge")).toHaveText("1");
+  }
+
   test("default OFF: a granted OS still sends NOTHING until the operator opts in", async ({
     page,
   }) => {
     // The regression guard for the v3.0.3 plugin migration. The OS reports
     // `granted` — which on a real desktop it ALWAYS does, unconditionally — and
-    // a real alarm trips from a scrubbed log. Nothing may reach the OS.
+    // a real alarm trips from LIVE frames, so the replay gate is wide open and
+    // the opt-in is the only thing left holding the channel shut. (Driving this
+    // live is the point: a scrub would satisfy it for the wrong reason, and the
+    // opt-in gate would keep passing even if it were deleted.)
     await installTauriMock(page, {});
     await installNotificationPluginStub(page, "granted");
-    await gotoApp(page, "/analysis");
 
-    await scrubIntoDropout(page);
+    await connectMockDevice(page);
+    await driveLiveDropout(page);
     // In-app alerting is untouched — the toast is up and the center counted it.
-    await expectInAppAlertFired(page);
+    await expectLiveInAppAlertFired(page);
 
-    // The desktop popup is the one channel that stayed shut. Scrubbing an old
-    // log on a laptop with no hardware attached must not raise system
-    // notifications, and on desktop the OS will never say no on the app's behalf.
+    // The desktop popup is the one channel that stayed shut, on a fresh install
+    // that has consented to nothing — and on desktop the OS will never say no
+    // on the app's behalf.
     expect(await sent(page)).toEqual([]);
     expect(await requests(page)).toBe(0);
   });
 
-  test("opting in makes the same alarm fire a desktop notification", async ({
+  test("opting in makes a LIVE alarm fire a desktop notification", async ({
     page,
   }) => {
     await installTauriMock(page, {});
     await installNotificationPluginStub(page, "granted");
     await gotoApp(page, "/settings");
 
-    // Flip the persisted opt-in, then run the identical scenario.
+    // Flip the persisted opt-in, then trip the same alarm from real frames.
     await page.getByTestId("os-notify-toggle").click();
     await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
       "aria-checked",
       "true"
     );
 
-    await gotoApp(page, "/analysis");
-    await scrubIntoDropout(page);
-    await expectInAppAlertFired(page);
+    await connectMockDevice(page);
+    await driveLiveDropout(page);
+    await expectLiveInAppAlertFired(page);
 
     // Exactly one send, carrying the same i18n title/body the toast and the
     // notification center render — one alarm, one popup, not one per frame.
+    //
+    // This is the positive control for the replay gate two tests down, and the
+    // reason it has to be driven live: with everything else held equal, the OS
+    // notification fires. So the silence there is the gate, not a dead test.
     await expect
       .poll(async () => (await sent(page)).length, {
         message: "one desktop notification for the one tripped alarm",
@@ -317,6 +446,54 @@ test.describe("Desktop notification opt-in", () => {
     const [notification] = await sent(page);
     expect(notification.title).toBe("Low signal");
     expect(notification.body).toMatch(/RSSI fell to/);
+  });
+
+  test("opted in, a REPLAYED log alerts in-app but sends NOTHING to the OS", async ({
+    page,
+  }) => {
+    // The regression guard for the replay defect.
+    //
+    // Live alerts are evaluated over ONE shared telemetry buffer, and a scrub
+    // writes into it exactly as the live reader does (`pushRange` /
+    // `rebuildWindowTo` in `@/stores/session`). So an operator who opted into
+    // desktop notifications and then scrubbed an old flight log — indoors, on a
+    // laptop with no hardware attached — got REAL system popups for alarms that
+    // happened days ago. Three of the four alarms are on by default, so it
+    // needed no configuration at all to happen.
+    //
+    // Everything here is set up to make that popup fire: the OS reports
+    // `granted`, the opt-in is ON, mute is off, and a real alarm demonstrably
+    // trips. The ONLY difference from the live test above is where the frames
+    // came from.
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/settings");
+
+    await page.getByTestId("os-notify-toggle").click();
+    await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+
+    await gotoApp(page, "/analysis");
+    await scrubIntoDropout(page);
+
+    // The in-app channels are UNCHANGED and must stay that way: the toast is up
+    // and the notification center counted it. Scrubbing a log is the app telling
+    // you what is in the recording, in the window you are reading it in — that
+    // is informative, and gating it too would be the wrong fix.
+    await expectInAppAlertFired(page);
+
+    // The OS, however, hears nothing. A system popup paints over whatever other
+    // app the operator is in and carries no hint that the alarm is days old.
+    expect(await sent(page)).toEqual([]);
+
+    // Scrub on to the end so every remaining frame of the fixture is evaluated
+    // (recovery included) — still nothing, so this is not a race the assertion
+    // above merely won.
+    await page.keyboard.press("End");
+    await expect(page.getByTestId("live-alert-signalLoss")).toHaveCount(0);
+    expect(await sent(page)).toEqual([]);
   });
 
   test("mute beats the opt-in — an opted-in operator who mutes gets silence", async ({
@@ -348,12 +525,14 @@ test.describe("Desktop notification opt-in", () => {
 
     // Positive control, so the silence above cannot be a test that did nothing:
     // unmute — changing ONLY that flag, with the opt-in still on from before —
-    // and the identical import + scrub sends exactly one.
+    // and one tripped alarm sends exactly one. Driven from LIVE frames, because
+    // a scrub is now held by the replay gate as well and would prove nothing
+    // about mute.
     await gotoApp(page, "/settings");
     await page.getByRole("switch", { name: "Alerts active" }).click();
-    await gotoApp(page, "/analysis");
-    await scrubIntoDropout(page);
-    await expectInAppAlertFired(page);
+    await connectMockDevice(page);
+    await driveLiveDropout(page);
+    await expectLiveInAppAlertFired(page);
     await expect
       .poll(async () => (await sent(page)).length)
       .toBe(1);

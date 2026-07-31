@@ -166,21 +166,62 @@ export async function requestOsNotifyPermission(): Promise<OsNotifyPermission> {
  * Whether a tripped alarm may raise an OS notification right now.
  *
  * The single source of truth for the OS-notification gating
- * (`osNotifyEnabled && !muted`), mirroring `maybePlayAlertSound` in
- * `@/lib/alertSound`: the live-alert host calls it at the same point it raises
- * the toast and the beep, so the rule lives in one testable place rather than
- * being re-derived at the call site.
+ * (`osNotifyEnabled && !muted && !isSimulating`), mirroring `maybePlayAlertSound`
+ * in `@/lib/alertSound`: the live-alert host calls it at the same point it
+ * raises the toast and the beep, so the rule lives in one testable place rather
+ * than being re-derived at the call site.
  *
  * `osNotifyEnabled` is the persisted opt-in, NOT an OS permission — see this
  * module's header: on desktop the plugin reports `Granted` unconditionally, so
  * asking the platform would gate on nothing. `muted` still wins over an
  * explicit opt-in, exactly as it does for the toast and the beep.
+ *
+ * ## Why `isSimulating` — and why ONLY this channel carries it
+ *
+ * The live-alert evaluator is fed from ONE shared buffer
+ * ({@link import("@/stores/telemetry").useTelemetryStore}`.history`), and a
+ * replayed session writes into that same buffer: `pushRange` /
+ * `rebuildWindowTo` in `@/stores/session` append the newly-passed samples of a
+ * scrub or a `play()` exactly as the live producer appends decoded CRSF frames.
+ * Nothing downstream of that buffer can tell the two apart, so without this
+ * input an operator who opted in and then scrubbed an old flight log — indoors,
+ * on a laptop with no hardware attached — got REAL system popups for alarms that
+ * happened days ago. Three of the four alarms are enabled with zero
+ * configuration (`DEFAULT_LIVE_ALERT_CONFIG`), so it needed no setup to happen.
+ *
+ * `useSessionStore.isSimulating` is the discriminator the app already has for
+ * exactly this question, and it is the SAME one `liveStreamActive` in
+ * `@/hooks/useTelemetryStream` uses to decide whether live hardware may drive
+ * the store at all. That shared use is what makes the gate safe for real
+ * telemetry rather than merely likely to be: the live producer's effect body is
+ * `if (!liveStreamActive(isConnected, isSimulating)) return;`, so a live frame
+ * can only ever reach the buffer while `isSimulating === false`. The existence
+ * of a live frame is therefore itself the proof that this term is open — the
+ * gate cannot suppress live telemetry without the frame never having been
+ * pushed in the first place. (`isSimulating` is likewise `false` when no session
+ * is active at all; nothing writes to the buffer in that state, so the open gate
+ * is inert there.)
+ *
+ * **This is deliberately the ONLY channel that takes this input.** The in-app
+ * toast, the notification-centre entry and the beep all still fire while
+ * scrubbing, and that is correct: they are the app telling you what happened
+ * inside the recording you are looking at, in the window you are looking at it
+ * in. An OS notification is not that — it paints over whatever other app the
+ * operator is actually using, and it says nothing about *when* the event
+ * happened, so a days-old replayed alarm is indistinguishable from a live one.
+ * Do NOT "simplify" this by folding the replay term into the toast/beep/centre
+ * paths; the asymmetry is the point.
  */
 export function osNotifyAllowed(opts: {
   osNotifyEnabled: boolean;
   muted: boolean;
+  /**
+   * `useSessionStore.isSimulating` — true while a loaded session owns the shared
+   * telemetry buffer, i.e. the frames being evaluated are REPLAYED, not live.
+   */
+  isSimulating: boolean;
 }): boolean {
-  return opts.osNotifyEnabled && !opts.muted;
+  return opts.osNotifyEnabled && !opts.muted && !opts.isSimulating;
 }
 
 /**
