@@ -1397,16 +1397,13 @@
       "mute": "Silenciar todas las alarmas",
       "muteHint": "Suprime todas las notificaciones de la aplicación y del sistema operativo mientras está activado. Las alarmas siguen vigilando el enlace, pero permanecen en silencio.",
       "osNotify": "Notificaciones de escritorio",
-      "osNotifyEnable": "Activar",
-      "osNotifyEnableLabel": "Activar notificaciones de escritorio",
       "osNotifyHint": {
-        "default": "Muestra también una alarma disparada como notificación de escritorio, para verla mientras OmniLink está detrás de otra ventana. El sistema pedirá permiso cuando lo actives.",
-        "granted": "Activadas — una alarma disparada también genera una notificación de escritorio. Se silencian al silenciar.",
+        "off": "Muestra también una alarma disparada como notificación de escritorio, para verla mientras OmniLink está detrás de otra ventana. Desactivado de forma predeterminada; se silencia al silenciar.",
+        "on": "Activadas — una alarma disparada también genera una notificación de escritorio. Se silencian al silenciar.",
         "denied": "Bloqueadas por el sistema, así que las notificaciones de escritorio permanecen en silencio. Las alertas en la aplicación y el centro de notificaciones siguen funcionando; permite las notificaciones de OmniLink en la configuración del sistema para reactivarlas.",
         "unsupported": "Las notificaciones de escritorio las genera la aplicación de escritorio OmniLink, así que no están disponibles aquí. Las alertas en la aplicación y el centro de notificaciones siguen funcionando."
       },
       "osNotifyState": {
-        "granted": "Activadas",
         "denied": "Bloqueadas",
         "unsupported": "No disponible"
       },

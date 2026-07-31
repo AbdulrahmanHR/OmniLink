@@ -60,6 +60,7 @@ vi.mock("@tauri-apps/plugin-notification", () => ({
 
 import {
   osNotify,
+  osNotifyAllowed,
   osNotifyPermission,
   osNotifySupported,
   requestOsNotifyPermission,
@@ -298,6 +299,30 @@ describe("osNotify — unchanged gating (no regression)", () => {
   });
 });
 
+describe("osNotifyAllowed — the product opt-in, since the OS is not one", () => {
+  // The plugin's desktop backend returns `Ok(PermissionState::Granted)` from
+  // BOTH `permission_state()` and `request_permission()`
+  // (tauri-plugin-notification-2.3.3/src/desktop.rs:65-67), so asking the
+  // platform gates on nothing: every desktop user reads as granted, always.
+  // The persisted `osNotifyEnabled` flag is the real consent gate, and mute
+  // still overrides it exactly as it does the toast and the beep.
+  it("allows the notification ONLY when opted in and not muted", () => {
+    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: false })).toBe(true);
+  });
+
+  it("blocks it in every other combination", () => {
+    expect(osNotifyAllowed({ osNotifyEnabled: false, muted: false })).toBe(false);
+    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: true })).toBe(false);
+    expect(osNotifyAllowed({ osNotifyEnabled: false, muted: true })).toBe(false);
+  });
+
+  it("mirrors maybePlayAlertSound: mute beats an explicit opt-in", () => {
+    // Same rule as the audio alert, so the two rows in the settings card behave
+    // identically — turning the feature on does not survive the master mute.
+    expect(osNotifyAllowed({ osNotifyEnabled: true, muted: true })).toBe(false);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Structural guard: WHERE the request is made, and WHAT delivers it
 // ---------------------------------------------------------------------------
@@ -351,7 +376,15 @@ describe("permission is requested ONLY from a user gesture (structural)", () => 
     const at = page.indexOf("requestOsNotifyPermission(");
     expect(at).toBeGreaterThan(-1);
 
-    const handlerAt = page.lastIndexOf("onClick={", at);
+    // The opt-in is a toggle rather than an "Enable" button since v3.0.3 (the
+    // OS grants unconditionally, so the app owns the consent), which means the
+    // gesture arrives as the switch's `onChange` instead of a raw `onClick`.
+    // Either is a real user event; what this pins is that the request is the
+    // first thing it does.
+    const handlerAt = Math.max(
+      page.lastIndexOf("onClick={", at),
+      page.lastIndexOf("onChange={", at)
+    );
     expect(handlerAt).toBeGreaterThan(-1);
     const handler = page.slice(handlerAt, at);
 

@@ -95,7 +95,7 @@ test.describe("Notification center", () => {
 });
 
 /**
- * OS notifications, delivered natively (v3.0.3).
+ * OS notifications, delivered natively — and gated by the app (v3.0.3).
  *
  * The app no longer uses the webview's Notification API at all. It could never
  * be granted in the shipped app: WebKit first refused
@@ -106,10 +106,21 @@ test.describe("Notification center", () => {
  * `@tauri-apps/plugin-notification`, whose three commands reach the OS
  * natively.
  *
- * Chromium can reproduce none of that, so what these specs pin is the
- * engine-independent shape of the design: **nothing asks until a click asks**,
- * the click is the only asker, and each already-decided state renders its own
- * terminal branch instead of re-prompting.
+ * **That migration also deleted the opt-in, and this suite is where that is
+ * caught.** The plugin's desktop backend answers `permission_state()` with
+ * `Ok(PermissionState::Granted)` unconditionally
+ * (`tauri-plugin-notification-2.3.3/src/desktop.rs:65-67`), so a
+ * permission-driven UI is a gate that is always open: for one commit every
+ * tripped alarm raised a real system popup on a fresh install, with nothing but
+ * the master mute able to stop it — including alarms tripped by *scrubbing an
+ * old log*, which reaches the same evaluation path as live telemetry. The
+ * consent gate is now the app's own persisted `osNotifyEnabled`, defaulting
+ * OFF like the audio alert beside it.
+ *
+ * Chromium can reproduce none of the engine defects, so what these specs pin is
+ * the engine-independent shape of the design: **nothing asks until the operator
+ * asks, and nothing fires until the operator opts in** — end to end, through a
+ * real import and a real scrub, counting what actually reached the OS seam.
  *
  * ## Why the plugin is stubbed
  * There is no Tauri runtime in this runner, so the plugin's `invoke` has
@@ -128,7 +139,7 @@ test.describe("Notification center", () => {
  * The app under test is unmodified, and the REAL plugin JS it imports runs
  * against that seam; only the Rust side's answers are scripted.
  */
-test.describe("Desktop notification permission", () => {
+test.describe("Desktop notification opt-in", () => {
   test.use({ reducedMotion: "reduce" });
 
   type PermissionState = "default" | "granted" | "denied";
@@ -216,7 +227,164 @@ test.describe("Desktop notification permission", () => {
           .__permissionRequests
     );
 
-  test("never prompts on mount — the Settings opt-in click is the only asker", async ({
+  /**
+   * Everything that actually reached the OS seam in THIS document. The init
+   * script re-runs on every navigation, so this always counts one page load.
+   */
+  const sent = (page: Page) =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __sentNotifications: Array<{ title?: string; body?: string }>;
+          }
+        ).__sentNotifications
+    );
+
+  /**
+   * Import {@link DROPOUT_CSV} on Session Analysis and scrub the cursor into the
+   * dropout, which trips the default `signalLoss` alarm through the SAME
+   * evaluation path the connected stream uses. The scrubber only exists once a
+   * session has loaded, so reaching frame 6 is itself the proof that the import
+   * worked and frames were evaluated.
+   */
+  async function scrubIntoDropout(page: Page): Promise<void> {
+    await uploadFile(page, "logs-import-input", DROPOUT_CSV);
+    const scrubber = page.getByTestId("logs-scrubber-input");
+    await expect(scrubber).toBeVisible();
+    await scrubber.focus();
+    for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+    await expect(scrubber).toHaveValue("6");
+  }
+
+  /**
+   * The two in-app channels an unmuted trip drives: the transient toast and the
+   * persisted center entry (2 = the import diagnostic + this alarm). Asserting
+   * them is what makes a `sent` assertion meaningful — the alarm demonstrably
+   * fired, so an empty send list is a gate holding, not a test that did nothing.
+   */
+  async function expectInAppAlertFired(page: Page): Promise<void> {
+    await expect(page.getByTestId("live-alert-signalLoss")).toBeVisible();
+    await expect(page.getByTestId("notification-badge")).toHaveText("2");
+  }
+
+  test("default OFF: a granted OS still sends NOTHING until the operator opts in", async ({
+    page,
+  }) => {
+    // The regression guard for the v3.0.3 plugin migration. The OS reports
+    // `granted` — which on a real desktop it ALWAYS does, unconditionally — and
+    // a real alarm trips from a scrubbed log. Nothing may reach the OS.
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/analysis");
+
+    await scrubIntoDropout(page);
+    // In-app alerting is untouched — the toast is up and the center counted it.
+    await expectInAppAlertFired(page);
+
+    // The desktop popup is the one channel that stayed shut. Scrubbing an old
+    // log on a laptop with no hardware attached must not raise system
+    // notifications, and on desktop the OS will never say no on the app's behalf.
+    expect(await sent(page)).toEqual([]);
+    expect(await requests(page)).toBe(0);
+  });
+
+  test("opting in makes the same alarm fire a desktop notification", async ({
+    page,
+  }) => {
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/settings");
+
+    // Flip the persisted opt-in, then run the identical scenario.
+    await page.getByTestId("os-notify-toggle").click();
+    await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+
+    await gotoApp(page, "/analysis");
+    await scrubIntoDropout(page);
+    await expectInAppAlertFired(page);
+
+    // Exactly one send, carrying the same i18n title/body the toast and the
+    // notification center render — one alarm, one popup, not one per frame.
+    await expect
+      .poll(async () => (await sent(page)).length, {
+        message: "one desktop notification for the one tripped alarm",
+      })
+      .toBe(1);
+    const [notification] = await sent(page);
+    expect(notification.title).toBe("Low signal");
+    expect(notification.body).toMatch(/RSSI fell to/);
+  });
+
+  test("mute beats the opt-in — an opted-in operator who mutes gets silence", async ({
+    page,
+  }) => {
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/settings");
+
+    await page.getByTestId("os-notify-toggle").click();
+    await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    // The master mute suppresses every channel, exactly as it does for the beep.
+    const mute = page.getByRole("switch", { name: "Alerts active" });
+    await mute.click();
+    await expect(mute).toHaveAttribute("aria-checked", "false");
+
+    await gotoApp(page, "/analysis");
+    await scrubIntoDropout(page);
+
+    // Muted, so EVERY channel is silent: no toast, and `recordFiredAlerts`
+    // suppresses the center entry too (as it does the import diagnostic, which
+    // is why the badge is absent rather than 1). Nothing reached the OS either.
+    await expect(page.getByTestId("live-alert-signalLoss")).toHaveCount(0);
+    await expect(page.getByTestId("notification-badge")).toHaveCount(0);
+    expect(await sent(page)).toEqual([]);
+
+    // Positive control, so the silence above cannot be a test that did nothing:
+    // unmute — changing ONLY that flag, with the opt-in still on from before —
+    // and the identical import + scrub sends exactly one.
+    await gotoApp(page, "/settings");
+    await page.getByRole("switch", { name: "Alerts active" }).click();
+    await gotoApp(page, "/analysis");
+    await scrubIntoDropout(page);
+    await expectInAppAlertFired(page);
+    await expect
+      .poll(async () => (await sent(page)).length)
+      .toBe(1);
+  });
+
+  test("the opt-in persists across a reload", async ({ page }) => {
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/settings");
+
+    const toggle = page.getByTestId("os-notify-toggle");
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+
+    await page.reload();
+    await expect(page.locator("main")).toBeVisible();
+
+    // It is a persisted preference, not per-session UI state: the operator
+    // consents once. And it does not re-ask on the way back up.
+    await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    await expect(page.getByTestId("os-notify-hint")).toContainText(
+      "also raises a desktop notification"
+    );
+    expect(await requests(page)).toBe(0);
+  });
+
+  test("never prompts on mount — the Settings opt-in is the only asker", async ({
     page,
   }) => {
     await installTauriMock(page, {});
@@ -227,16 +395,37 @@ test.describe("Desktop notification permission", () => {
     // the alerts card has rendered — and NOTHING has asked. This is the
     // regression guard for the defect: the old code asked from this mount.
     await expect(page.getByTestId("live-alert-host")).toBeAttached();
-    const enable = page.getByTestId("os-notify-enable");
-    await expect(enable).toBeVisible();
+    const toggle = page.getByTestId("os-notify-toggle");
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(await requests(page)).toBe(0);
 
-    // One click → exactly one request, and the row settles into the granted
-    // state with no button left to click.
-    await enable.click();
-    await expect(page.getByTestId("os-notify-state")).toHaveText("Enabled");
-    await expect(enable).toHaveCount(0);
+    // Turning it on → exactly one request, from that gesture, and the row
+    // settles into the on state.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
     expect(await requests(page)).toBe(1);
+  });
+
+  test("a platform that reports granted does not opt the operator in for them", async ({
+    page,
+  }) => {
+    await installTauriMock(page, {});
+    await installNotificationPluginStub(page, "granted");
+    await gotoApp(page, "/settings");
+
+    // Every real desktop lands here, because the plugin's desktop backend
+    // returns `Granted` unconditionally. The row must therefore show the app's
+    // own OFF state — not "Enabled" — and ask for nothing on the way there.
+    await expect(page.getByTestId("os-notify-toggle")).toHaveAttribute(
+      "aria-checked",
+      "false"
+    );
+    await expect(page.getByTestId("os-notify-state")).toHaveCount(0);
+    await expect(page.getByTestId("os-notify-hint")).toContainText(
+      "Off by default"
+    );
+    expect(await requests(page)).toBe(0);
   });
 
   test("a denied OS is terminal: no re-prompt, and the row says why it is silent", async ({
@@ -247,28 +436,18 @@ test.describe("Desktop notification permission", () => {
     await gotoApp(page, "/settings");
 
     // Denied is final — the OS will not be asked again, so the app offers no
-    // button that would nag, and explains the silence instead of dropping OS
-    // notifications quietly.
+    // control that would nag, and explains the silence instead of dropping OS
+    // notifications quietly. (No desktop platform answers this today; the
+    // branch is kept for the mobile backend and any platform that gains a real
+    // permission model.)
     await expect(page.getByTestId("os-notify-state")).toHaveText("Blocked");
-    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
+    await expect(page.getByTestId("os-notify-toggle")).toHaveCount(0);
     await expect(page.getByTestId("os-notify-hint")).toContainText(
       "In-app alerts and the notification center still work"
     );
     expect(await requests(page)).toBe(0);
 
     await expectNoSeriousA11y(page);
-  });
-
-  test("an already-granted permission is never re-requested", async ({ page }) => {
-    await installTauriMock(page, {});
-    await installNotificationPluginStub(page, "granted");
-    await gotoApp(page, "/settings");
-
-    // The returning user whose permission predates this release: the row
-    // reflects it, offers no button, and asks for nothing.
-    await expect(page.getByTestId("os-notify-state")).toHaveText("Enabled");
-    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
-    expect(await requests(page)).toBe(0);
   });
 
   test("outside the desktop app there is no native path, and nothing is asked", async ({
@@ -281,7 +460,7 @@ test.describe("Desktop notification permission", () => {
     await gotoApp(page, "/settings");
 
     await expect(page.getByTestId("os-notify-state")).toHaveText("Unavailable");
-    await expect(page.getByTestId("os-notify-enable")).toHaveCount(0);
+    await expect(page.getByTestId("os-notify-toggle")).toHaveCount(0);
     await expect(page.getByTestId("os-notify-hint")).toContainText(
       "raised by the OmniLink desktop app"
     );

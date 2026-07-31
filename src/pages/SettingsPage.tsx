@@ -926,6 +926,7 @@ function ToggleSwitch({
   offLabel,
   onChange,
   disabled,
+  testId,
 }: {
   checked: boolean;
   label: string;
@@ -933,6 +934,8 @@ function ToggleSwitch({
   offLabel: string;
   onChange: (value: boolean) => void;
   disabled?: boolean;
+  /** Optional `data-testid`, for the switches an e2e spec has to drive. */
+  testId?: string;
 }) {
   return (
     <Button
@@ -943,6 +946,7 @@ function ToggleSwitch({
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
+      data-testid={testId}
       onClick={() => onChange(!checked)}
     >
       {checked ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
@@ -962,10 +966,19 @@ function ToggleSwitch({
  * This card is also the single opt-in point for **desktop (OS) notifications**
  * (v3.0.3). Those are raised natively through the Tauri notification plugin —
  * the webview's own Notification API is unobtainable in the engines the app
- * ships in (see `@/lib/alertNotify`) — and the "Enable" button below is the
- * user gesture that asks for permission, exactly as the sound row's "Test"
- * button is the gesture that unlocks the AudioContext. Nothing prompts on
- * launch.
+ * ships in (see `@/lib/alertNotify`).
+ *
+ * The opt-in is a **persisted app preference, defaulting OFF**, shaped exactly
+ * like the audio-alert row below it, and NOT an OS permission grant: the
+ * plugin's desktop backend returns `Granted` unconditionally on every desktop
+ * platform, so a permission-driven UI would be a gate that is always open. The
+ * platform state is still mirrored, because it is the only thing that can
+ * report `unsupported` (no Tauri runtime — a browser/dev build) or, on a future
+ * platform, a real `denied`; those two render the terminal badge instead of the
+ * toggle. Turning the toggle ON still calls `requestOsNotifyPermission()`
+ * un-awaited from the change handler — the platforms that will one day answer
+ * honestly need the user gesture, exactly as the sound row's "Test" button is
+ * the gesture that unlocks the AudioContext. Nothing prompts on launch.
  */
 function AlertsSettings() {
   const { t } = useTranslation();
@@ -973,10 +986,14 @@ function AlertsSettings() {
   const setMuted = useAlertsStore((s) => s.setMuted);
   const soundEnabled = useAlertsStore((s) => s.soundEnabled);
   const setSoundEnabled = useAlertsStore((s) => s.setSoundEnabled);
+  const osNotifyEnabled = useAlertsStore((s) => s.osNotifyEnabled);
+  const setOsNotifyEnabled = useAlertsStore((s) => s.setOsNotifyEnabled);
 
-  // The OS owns the permission, so this is state we MIRROR, not state we store.
-  // No persisted flag is added — a user who granted permission in an earlier
-  // version keeps working with no migration.
+  // The platform's own answer, which we MIRROR rather than store. It is NOT the
+  // consent gate — `osNotifyEnabled` above is (the desktop plugin grants
+  // unconditionally) — but it is the only source for the two states the app
+  // cannot decide for itself: `unsupported` (no native path at all) and a real
+  // `denied` from a platform that can refuse.
   //
   // The read crosses the Tauri IPC (v3.0.3), so it cannot happen during render:
   // the first paint uses the only thing knowable synchronously — whether the
@@ -1046,44 +1063,51 @@ function AlertsSettings() {
           />
         </div>
 
-        {/* Desktop (OS) notifications — the opt-in AND the user gesture that
-            raises the permission prompt (v3.0.3). `requestOsNotifyPermission()`
-            is called SYNCHRONOUSLY in the click handler, with nothing awaited
-            in front of it: the native plugin no longer requires that, but the
-            "never ask outside a deliberate opt-in" rule is the product
-            decision, not the engine's, and it is pinned by a structural test. */}
+        {/* Desktop (OS) notifications — a persisted opt-in, OFF by default,
+            shaped like the sound row below (v3.0.3). The plugin's desktop
+            backend answers `Granted` unconditionally, so the OS cannot be the
+            gate and this toggle is; `denied`/`unsupported` are the only states
+            the app cannot decide for itself and keep their terminal badge.
+            Turning it ON calls `requestOsNotifyPermission()` as the FIRST
+            statement of the change handler, with nothing awaited in front of
+            it: the desktop plugin no longer requires the gesture, but "never
+            ask outside a deliberate opt-in" is the product decision, not the
+            engine's, and it is pinned by a structural test. */}
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <Label>{t("alerts.settings.osNotify")}</Label>
             <p className="text-xs text-muted-foreground" data-testid="os-notify-hint">
-              {t(`alerts.settings.osNotifyHint.${osPermission}`)}
+              {t(
+                `alerts.settings.osNotifyHint.${
+                  osPermission === "denied" || osPermission === "unsupported"
+                    ? osPermission
+                    : osNotifyEnabled
+                      ? "on"
+                      : "off"
+                }`
+              )}
             </p>
           </div>
-          {osPermission === "default" ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              data-testid="os-notify-enable"
-              // The visible word is "Enable"; the accessible name adds what is
-              // being enabled and CONTAINS the visible text (WCAG 2.5.3).
-              aria-label={t("alerts.settings.osNotifyEnableLabel")}
-              onClick={() => {
-                void requestOsNotifyPermission().then(setOsPermission);
-              }}
-            >
-              <Bell className="h-4 w-4" />
-              {t("alerts.settings.osNotifyEnable")}
-            </Button>
-          ) : (
+          {osPermission === "denied" || osPermission === "unsupported" ? (
             <Badge
               data-testid="os-notify-state"
-              variant={osPermission === "granted" ? "good" : "outline"}
+              variant="outline"
               className="shrink-0"
             >
               {t(`alerts.settings.osNotifyState.${osPermission}`)}
             </Badge>
+          ) : (
+            <ToggleSwitch
+              checked={osNotifyEnabled}
+              label={t("alerts.settings.osNotify")}
+              onLabel={t("alerts.settings.on")}
+              offLabel={t("alerts.settings.off")}
+              testId="os-notify-toggle"
+              onChange={(v) => {
+                if (v) void requestOsNotifyPermission().then(setOsPermission);
+                setOsNotifyEnabled(v);
+              }}
+            />
           )}
         </div>
 

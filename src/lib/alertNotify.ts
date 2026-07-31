@@ -30,18 +30,40 @@
  * script that REPLACES `window.Notification` with a shim backed by three Rust
  * commands — `notify`, `request_permission`, `is_permission_granted`, the only
  * three the ACL grants — so nothing here is subject to the webview permission
- * model at all. On desktop the Rust side answers `Granted` unconditionally.
+ * model at all.
+ *
+ * ## Why the APP owns the opt-in, not the OS
+ *
+ * The plugin's desktop backend does not ask anyone anything. Both
+ * `permission_state()` and `request_permission()` are
+ * `Ok(PermissionState::Granted)`, hard-coded
+ * (`tauri-plugin-notification-2.3.3/src/desktop.rs:65-67`) — on Linux, macOS
+ * and Windows alike. So {@link osNotifyPermission} answers `granted` on every
+ * desktop build, no prompt window is ever shown, and there is nothing for a
+ * user to refuse.
+ *
+ * That means the migration, taken alone, deleted the opt-in: for one commit
+ * OS notifications fired for every tripped alarm with no consent step at all,
+ * and only the master mute could stop them. **The consent gate is therefore
+ * `osNotifyEnabled` in `@/stores/alerts` — a persisted flag defaulting to
+ * OFF**, exactly like the `soundEnabled` audio alert in the same settings
+ * card, because a system popup is at least as intrusive as a beep. This module
+ * still reports what the platform says (a future platform, or the mobile
+ * backend, genuinely can answer `denied`), but the product decision is the
+ * flag, and {@link osNotifyAllowed} is where it is applied.
  *
  * ## What survived the migration, and why
  *
  * - **Nothing in this module prompts on its own.** Importing it, reading
  *   {@link osNotifyPermission} and firing {@link osNotify} are all silent.
- * - **The request stays behind a user gesture** — the "Enable" button in
- *   Settings -> Live alerts, whose click handler calls
+ * - **The request stays behind a user gesture** — turning the toggle ON in
+ *   Settings -> Live alerts, whose `onChange` calls
  *   {@link requestOsNotifyPermission} with no `await` in front of it. The
- *   plugin no longer *requires* a gesture, but asking for a system permission
- *   the instant an app launches is bad UX independently of what the engine
- *   enforces, and the guard costs nothing. Structural tests pin it.
+ *   plugin no longer *requires* a gesture (and on desktop no longer asks at
+ *   all), but asking for a system permission the instant an app launches is
+ *   bad UX independently of what the engine enforces, and the guard costs
+ *   nothing on the platforms that will one day answer honestly. Structural
+ *   tests pin it.
  * - **`denied` is terminal.** An already-decided state never reaches
  *   `requestPermission()`, so a user who said no is not nagged; the UI shows
  *   the "Blocked" badge and explains that in-app alerts and the notification
@@ -141,13 +163,35 @@ export async function requestOsNotifyPermission(): Promise<OsNotifyPermission> {
 }
 
 /**
+ * Whether a tripped alarm may raise an OS notification right now.
+ *
+ * The single source of truth for the OS-notification gating
+ * (`osNotifyEnabled && !muted`), mirroring `maybePlayAlertSound` in
+ * `@/lib/alertSound`: the live-alert host calls it at the same point it raises
+ * the toast and the beep, so the rule lives in one testable place rather than
+ * being re-derived at the call site.
+ *
+ * `osNotifyEnabled` is the persisted opt-in, NOT an OS permission — see this
+ * module's header: on desktop the plugin reports `Granted` unconditionally, so
+ * asking the platform would gate on nothing. `muted` still wins over an
+ * explicit opt-in, exactly as it does for the toast and the beep.
+ */
+export function osNotifyAllowed(opts: {
+  osNotifyEnabled: boolean;
+  muted: boolean;
+}): boolean {
+  return opts.osNotifyEnabled && !opts.muted;
+}
+
+/**
  * Fire an OS notification if permission has been granted. Returns silently on
  * any failure so a missing/blocked notification never disrupts the live stream.
  *
  * Stays `void` — the live-alert host calls it from a Zustand subscription and
  * has nothing to await — so the permission check and the send run
  * fire-and-forget on the microtask queue. Gating is unchanged: the toast is
- * raised only when the OS has already granted permission.
+ * raised only when the OS has already granted permission. The product opt-in is
+ * a separate, earlier gate — {@link osNotifyAllowed}, applied by the caller.
  */
 export function osNotify(title: string, body: string): void {
   if (!osNotifySupported()) return;

@@ -15,6 +15,76 @@ All notable changes to OmniLink are documented here. This project adheres to
 > has been edited away below. A changelog quietly rewritten after the event is worth
 > less than one that says what it said and is corrected in the open.
 
+## [3.0.3] — unreleased
+
+**Desktop notifications ask first again.** This release's own notification work
+took the OS opt-in away without anyone noticing, and this entry is mostly about
+that.
+
+### The plugin migration silently removed the opt-in
+
+Moving OS notifications onto `tauri-plugin-notification` was correct — the
+webview's own Notification API is unobtainable in the engines this app ships in,
+so the previous "Enable" button asked a question that could never be answered
+yes. But the button, and the whole permission-driven UI around it, rested on an
+assumption that turned out to be false: that the platform decides.
+
+**It does not. On desktop, the plugin grants unconditionally.** Both
+`permission_state()` and `request_permission()` are literally
+`Ok(PermissionState::Granted)` in the crate's desktop backend
+(`tauri-plugin-notification-2.3.3/src/desktop.rs:65-67`) — Linux, macOS and
+Windows alike. No prompt window is ever shown, and there is nothing for a user
+to refuse. So the "Enable" button never rendered (the app already read as
+granted on first launch), and for one commit **every tripped alarm raised a real
+system notification on a fresh install, with no opt-in anywhere and only the
+master mute able to stop it.**
+
+That is worse than it sounds, because the alarms do not need a radio. Three of
+the four are enabled with zero configuration, and a replayed or *scrubbed* log
+frame reaches the same evaluation path as live telemetry — so importing an old
+flight log on a laptop with nothing plugged in was enough to raise system popups
+over whatever the operator was actually doing.
+
+### The app owns the consent gate now
+
+`osNotifyEnabled` is a persisted preference in the alerts store, **defaulting
+OFF**, and it — not the OS — is what a tripped alarm is gated on
+(`osNotifyAllowed(…)` in `src/lib/alertNotify.ts`, the single source of truth,
+mirroring `maybePlayAlertSound`). Settings → Live alerts now shows an on/off
+toggle shaped exactly like the audio-alert row directly beneath it, whose
+comment has said since FR-TELEM-03 that it is *"opt-in — defaults OFF, because
+an unexpected beep is intrusive."* A system popup is at least as intrusive as a
+beep, so it gets the same answer. Mute still overrides both.
+
+What is kept from the permission model is what is still real: the platform state
+is mirrored so the row can render `unsupported` (a browser/dev build with no
+native path) and a genuine `denied` from any platform that ever answers one, and
+turning the toggle ON still calls `requestOsNotifyPermission()` un-awaited from
+the user's gesture — the desktop backend ignores it, but the mobile backend and
+any future desktop permission model will not, and asking on launch would be
+wrong regardless of what the engine enforces.
+
+Copy that the code had made false is gone rather than left standing: the hint no
+longer promises "Your system asks for permission when you enable this", because
+it never does.
+
+**No Rust change and no dependency change.** The defect was entirely in what the
+frontend assumed about the crate, and the fix is entirely in the frontend.
+`osNotifyEnabled` is a new defaulted-`false` field, which zustand's shallow
+merge fills from the initializer for anyone's existing persisted state, so there
+is no `persist` version bump and no migration — an operator upgrading into this
+release starts OFF, which is the intended answer for a consent they were never
+asked for.
+
+Four end-to-end tests now hold the line where it actually matters: with the OS
+reporting granted, importing the dropout fixture and scrubbing into it raises
+the in-app alert and **sends nothing**; flipping the toggle makes the identical
+scrub send exactly one, with the matching title and body; mute beats the opt-in;
+and the opt-in survives a reload. Each was watched failing against a `true`
+initializer before being kept.
+
+**Version numbers are not bumped here** — that is the release commit's job.
+
 ## [3.0.2] — 2026-07-30
 
 **"Public."** The release that publishes OmniLink. **Text and metadata only — no

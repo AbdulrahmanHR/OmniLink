@@ -12,7 +12,7 @@ import {
   type LiveAlertConfig,
   type LiveAlertState,
 } from "@/lib/liveAlerts";
-import { osNotify } from "@/lib/alertNotify";
+import { osNotify, osNotifyAllowed } from "@/lib/alertNotify";
 import { maybePlayAlertSound } from "@/lib/alertSound";
 import { recordFiredAlerts } from "@/lib/notificationFeed";
 import { Button } from "@/components/ui/button";
@@ -181,8 +181,11 @@ function usePrefersReducedMotion(): boolean {
  * loop, no duplicate/leaked subscriptions. It threads the pure
  * {@link evaluateFrames} state machine across frames (kept in a ref so it never
  * triggers a re-render), raises an in-app toast per fired alarm, dismisses it on
- * recovery, and fires a best-effort OS notification — all suppressed while the
- * store is muted. Toasts respect `prefers-reduced-motion`.
+ * recovery, and — only when the operator has opted in — fires a best-effort OS
+ * notification. Mute suppresses all of it; the OS notification carries the
+ * extra `osNotifyEnabled` opt-in on top (see {@link osNotifyAllowed}), because
+ * the plugin's desktop backend grants permission unconditionally and so cannot
+ * be the consent gate. Toasts respect `prefers-reduced-motion`.
  *
  * ## Why it watches `history`, not `latest`
  * The shared telemetry buffer does not only grow one frame at a time. A forward
@@ -210,8 +213,9 @@ export function LiveAlertHost() {
     // first refused outside a user gesture, then denied outright even from one.
     // OS notifications now go through the native Tauri notification plugin, and
     // the opt-in lives in Settings → Live alerts; see `@/lib/alertNotify`.
-    // `osNotify` below is unchanged in behaviour and still fires whenever
-    // permission has already been granted.
+    // That opt-in is a PERSISTED APP FLAG (`osNotifyEnabled`), not an OS grant:
+    // the plugin's desktop backend answers `Granted` unconditionally, so asking
+    // the OS gates on nothing and the app has to own the consent itself.
 
     // Subscribe to the live telemetry store; act ONLY when the shared history
     // changes (it also empties to `[]` on disconnect). Plain zustand subscribe —
@@ -230,8 +234,12 @@ export function LiveAlertHost() {
       const { firedAlerts, clearedKinds, didReset } = advance;
       if (!didReset && firedAlerts.length === 0 && clearedKinds.length === 0) return;
 
-      // Mute suppresses BOTH the OS notification and the in-app toast.
-      if (!alerts.muted) {
+      // Desktop (OS) notification: opt-in AND not muted. Mute suppresses every
+      // channel; this one additionally requires the persisted `osNotifyEnabled`
+      // preference, which defaults OFF — a system popup paints over whatever
+      // app the operator is actually in, and a scrubbed log reaches this same
+      // path. `osNotifyAllowed` is the single source of truth for that rule.
+      if (osNotifyAllowed({ osNotifyEnabled: alerts.osNotifyEnabled, muted: alerts.muted })) {
         for (const alert of firedAlerts) {
           osNotify(t(`alerts.type.${alert.kind}`), t(alert.messageKey, alert.detail));
         }
