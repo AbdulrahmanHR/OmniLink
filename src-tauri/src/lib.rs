@@ -44,6 +44,25 @@ pub fn run() {
         // is served by this plugin (gated by the `dialog:default` capability).
         // M71 reuses the same plugin for the folder picker (`directory: true`).
         .plugin(tauri_plugin_dialog::init())
+        // v3.0.3: OS notifications for tripped live alerts.
+        //
+        // The webview's OWN Notification API can never be granted in the
+        // shipped app: WebKitGTK routes `Notification.requestPermission()`
+        // through the webview's `permission-request` signal, wry 0.55 installs
+        // no handler for it, and the default handler DENIES — observed live on
+        // WebKitGTK 2.52.3, from a genuine user gesture, permission flipping
+        // `default` -> `denied` with no prompt window ever shown. WKWebView and
+        // WebView2 have the same class of problem.
+        //
+        // Registering this plugin injects a `js_init_script` that REPLACES
+        // `window.Notification` with a shim whose constructor, `permission`
+        // getter and `requestPermission()` are backed by the three commands
+        // below — so `@tauri-apps/plugin-notification` (used by
+        // `src/lib/alertNotify.ts`) reaches the OS natively and never touches
+        // the webview permission model. Gated by the three explicit
+        // `notification:allow-*` permissions in `capabilities/default.json`;
+        // the broad `notification:default` set is deliberately NOT used.
+        .plugin(tauri_plugin_notification::init())
         // M71 (folder sync, decision D37): the `.elrsp` file IO against the ONE
         // directory the user picked. Registered as an INLINED plugin (declared
         // in `build.rs`) rather than as app commands, because Tauri's ACL only

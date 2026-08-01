@@ -161,6 +161,7 @@ beforeEach(() => {
     ...DEFAULT_LIVE_ALERT_CONFIG,
     muted: false,
     soundEnabled: false,
+    osNotifyEnabled: false,
   });
 });
 

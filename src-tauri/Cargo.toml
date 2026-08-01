@@ -1,6 +1,6 @@
 [package]
 name = "omnilink"
-version = "3.0.2"
+version = "3.0.3"
 description = "Cross-platform desktop app for configuring, flashing, and monitoring ExpressLRS drone-radio hardware. Offline-first, no account, BYOK AI."
 authors = ["AbdulrahmanHR"]
 edition = "2021"
@@ -33,6 +33,16 @@ tauri-plugin-process = "2"
 # flash (FR-FLASH local-file path). The JS `@tauri-apps/plugin-dialog` `open()`
 # drives this command; gated by the `dialog:default` capability.
 tauri-plugin-dialog = "2"
+# v3.0.3: OS notifications for live alerts. The webview's OWN Notification API
+# can never be granted in the shipped app — WebKitGTK (wry 0.55 installs no
+# `permission-request` handler) denies the request outright, and WKWebView /
+# WebView2 have the same class of problem — so the notification goes through the
+# OS natively instead. Registering this plugin injects an init script that
+# REPLACES `window.Notification` with a shim backed by the Rust commands, which
+# is what makes the JS `@tauri-apps/plugin-notification` calls bypass the
+# webview permission model. Gated by the three explicit `notification:allow-*`
+# permissions in `capabilities/default.json`.
+tauri-plugin-notification = "2"
 # M7-API: SQLite persistence for telemetry frames. `sqlite` feature pulls a
 # bundled libsqlite3 (via sqlx) so no system sqlite is required.
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }

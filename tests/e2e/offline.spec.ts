@@ -87,6 +87,29 @@ const BENIGN: RegExp[] = [
  */
 const BARE_BENIGN: RegExp[] = [/transformCallback/i];
 
+/**
+ * Additional benign noise for tests that install the Tauri IPC mock **and**
+ * happen to mount the flight map.
+ *
+ * `installTauriMock` sets `__TAURI_INTERNALS__`, so `isTauriRuntime()` is true
+ * and `installOfflineTileFallback()` deliberately declines to register its
+ * transparent-tile handler — shadowing what it believes is the real, natively
+ * served `omnitiles://` scheme would break live tile loading in the shipped app.
+ * The IPC mock cannot implement a custom URI scheme, so Chromium logs its own
+ * scheme-unsupported error for each tile request. Both real environments are
+ * covered: the Tauri webview resolves `omnitiles://` via `commands/tiles.rs`,
+ * and a bare browser gets the fallback protocol. This message is reachable ONLY
+ * under the mock, which is exactly why the dedicated tiles-offline test below
+ * runs WITHOUT the mock and does not use this filter — that test remains the
+ * real guard, and `map.spec.ts` independently fails on `err_unknown_url_scheme`.
+ *
+ * It only became reachable at all once the 3.0.3 blank-map defect was fixed:
+ * before that the style never loaded, so not one tile was ever requested.
+ */
+const MOCKED_TAURI_BENIGN: RegExp[] = [
+  /URL scheme "omnitiles" is not supported/i,
+];
+
 /** App-level failure signatures that must NEVER appear, even after filtering. */
 const FORBIDDEN_CONSOLE = /unhandled|broken tile|uncaught/i;
 
@@ -133,16 +156,24 @@ async function setupOffline(page: Page): Promise<Collectors> {
 
 /**
  * Assert zero crashes for the surface under test: no uncaught exception, no
- * unhandled rejection, no meaningful console error. `bare` adds the documented
- * non-Tauri background-init filter (used by the map + wifi tests that run
- * without the IPC mock).
+ * unhandled rejection, no meaningful console error.
+ *
+ * `bare` adds the documented non-Tauri background-init filter (used by the map +
+ * wifi tests that run without the IPC mock); `mockedTauri` adds the filter for
+ * noise that only the IPC mock can produce (see {@link MOCKED_TAURI_BENIGN}).
+ * They are mutually exclusive by construction — a test either installs the mock
+ * or it does not.
  */
 async function expectNoCrash(
   page: Page,
   c: Collectors,
-  bare = false
+  opts: { bare?: boolean; mockedTauri?: boolean } = {}
 ): Promise<void> {
-  const benign = bare ? [...BENIGN, ...BARE_BENIGN] : BENIGN;
+  const benign = [
+    ...BENIGN,
+    ...(opts.bare ? BARE_BENIGN : []),
+    ...(opts.mockedTauri ? MOCKED_TAURI_BENIGN : []),
+  ];
   const keep = (text: string) => !benign.some((re) => re.test(text));
 
   const unhandled = (
@@ -176,7 +207,7 @@ test.describe("offline graceful degradation", () => {
     await expect(page.locator('[data-testid="logs-timeline-charts"]')).toBeVisible();
     await expect(page.locator('[data-testid="logs-anomaly-panel"]')).toBeVisible();
 
-    await expectNoCrash(page, c, /* bare */ true);
+    await expectNoCrash(page, c, { bare: true });
   });
 
   test("local diagnostics engine renders panels + patterns offline (M41)", async ({
@@ -233,7 +264,7 @@ test.describe("offline graceful degradation", () => {
     await expect(playpause).not.toHaveAttribute("aria-label", idleLabel ?? "");
     await expect(page.locator('[data-testid="simulator-dashboard"]')).toBeVisible();
 
-    await expectNoCrash(page, c);
+    await expectNoCrash(page, c, { mockedTauri: true });
   });
 
   test("flight map + omnitiles tiles degrade to a themed empty backdrop offline", async ({
@@ -286,7 +317,7 @@ test.describe("offline graceful degradation", () => {
     // Let MapLibre settle a tick so any (swallowed) tile error would surface.
     await page.waitForTimeout(500);
 
-    await expectNoCrash(page, c, /* bare */ true);
+    await expectNoCrash(page, c, { bare: true });
   });
 
   test("wifi discovery stays gracefully empty offline (no Tauri)", async ({
@@ -315,7 +346,7 @@ test.describe("offline graceful degradation", () => {
     // unhandled rejection would be captured before we assert.
     await page.waitForTimeout(300);
 
-    await expectNoCrash(page, c, /* bare */ true);
+    await expectNoCrash(page, c, { bare: true });
   });
 
   test("backpack config form opens offline (bundled schema)", async ({ page }) => {

@@ -113,6 +113,7 @@ found at any depth is given a verdict.
 | `tauri-plugin-updater` | 2.10.1 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `tauri-plugin-process` | 2.3.1 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `tauri-plugin-dialog` | 2.7.1 | `Apache-2.0 OR MIT` | ✅ Compatible |
+| `tauri-plugin-notification` | 2.3.3 | `Apache-2.0 OR MIT` | ✅ Compatible — see **[C]** |
 | `tauri-plugin-sql` | 2.4.0 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `serde` | 1.0.228 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `serde_json` | 1.0.150 | `Apache-2.0 OR MIT` | ✅ Compatible |
@@ -141,9 +142,13 @@ automatically, since the crate is consumed unmodified from crates.io.
 
 | Package | Version | Licence | GPL-3.0 verdict |
 |---------|---------|---------|-----------------|
+| `@fontsource/ibm-plex-mono` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
+| `@fontsource/inter` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
+| `@fontsource/space-grotesk` | 5.3.0 | `OFL-1.1` | ✅ Compatible — see **[B]** |
 | `@radix-ui/react-slot` | 1.3.0 | `MIT` | ✅ Compatible |
 | `@tauri-apps/api` | 2.11.1 | `Apache-2.0 OR MIT` | ✅ Compatible |
 | `@tauri-apps/plugin-dialog` | 2.7.1 | `MIT OR Apache-2.0` | ✅ Compatible |
+| `@tauri-apps/plugin-notification` | 2.3.3 | `MIT OR Apache-2.0` | ✅ Compatible — see **[C]** |
 | `@tauri-apps/plugin-opener` | 2.5.4 | `MIT OR Apache-2.0` | ✅ Compatible |
 | `@tauri-apps/plugin-process` | 2.3.1 | `MIT OR Apache-2.0` | ✅ Compatible |
 | `@tauri-apps/plugin-sql` | 2.4.0 | `MIT OR Apache-2.0` | ✅ Compatible |
@@ -162,6 +167,47 @@ automatically, since the crate is consumed unmodified from crates.io.
 | `tailwind-merge` | 3.6.0 | `MIT` | ✅ Compatible |
 | `tw-animate-css` | 1.4.0 | `MIT` | ✅ Compatible |
 | `zustand` | 5.0.14 | `MIT` | ✅ Compatible |
+
+**[B] `@fontsource/*` — SIL Open Font License 1.1 (added after the 2026-07-29 audit
+date, at `3.0.3`).** These three packages carry the Inter, IBM Plex Mono and Space
+Grotesk font files, which are bundled into the app so it renders correctly with no
+network — they replace the `fonts.googleapis.com` `<link>` that `3.0.2` shipped in
+`index.html`. OFL-1.1 is a free copyleft licence *for fonts*; its only unusual term
+is that the fonts may not be sold on their own, which is satisfied trivially here
+(they are redistributed as part of a program, at no charge). The fonts are **data
+consumed at runtime, not code linked into the program**, so OFL imposes nothing on
+OmniLink's own licence; the reserved font names are unchanged and the files are
+redistributed unmodified, so the OFL's rename obligation is not triggered either.
+The upstream licence text ships inside each package (`node_modules/@fontsource/*/
+LICENSE`). **Verdict: compatible; no obligation beyond retaining those notices.**
+
+**[C] `tauri-plugin-notification` / `@tauri-apps/plugin-notification` — the two
+halves of one dependency (added after the 2026-07-29 audit date, at `3.0.3`).**
+The crate is registered in `src-tauri/src/lib.rs` and statically linked into the
+shipped binary; the npm package is imported by `src/lib/alertNotify.ts` and bundled.
+They replace the Web Notifications API for OS alert toasts, which cannot be granted
+in any webview the app ships in. Both are published by the Tauri project under the
+same permissive dual grant as every other Tauri dependency already listed
+(`Apache-2.0 OR MIT`; the npm tarball writes the same expression as `MIT OR
+Apache-2.0`), so the MIT arm is available and each arm is one-way compatible into
+GPL-3.0.
+
+Adding them locks **three** new transitive crates, all target-gated notification
+backends and all permissively dual-licensed — verified from each vendored
+`Cargo.toml`:
+
+| Crate | Version | Licence | Reaches the build on | Verdict |
+|-------|---------|---------|----------------------|---------|
+| `notify-rust` | 4.18.0 | `MIT OR Apache-2.0` | Linux (D-Bus / XDG notifications) | ✅ |
+| `mac-notification-sys` | 0.6.15 | `MIT/Apache-2.0` | macOS | ✅ |
+| `tauri-winrt-notification` | 0.7.3 | `MIT OR Apache-2.0` | Windows | ✅ |
+
+`mac-notification-sys` declares the deprecated slash form `MIT/Apache-2.0` rather
+than a valid SPDX expression; it is the same dual `MIT OR Apache-2.0` grant, and the
+crate ships both licence texts. **Verdict: compatible on every platform; no new
+licence expression enters either tree that is not already resolved above, and the
+appendix counts below (taken at the audit date) are correspondingly four crates and
+one npm package short.**
 
 ## Direct dependencies — npm `devDependencies` (build/test only, not distributed)
 

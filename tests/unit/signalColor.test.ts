@@ -46,6 +46,41 @@ describe("interpolateHex", () => {
     expect(interpolateHex("#000000", "#ffffff", -1)).toBe("#000000");
     expect(interpolateHex("#000000", "#ffffff", 2)).toBe("#ffffff");
   });
+
+  /**
+   * The theme-resolved ramp `FlightMap` passes in does NOT arrive as hex: it is
+   * whatever `map-style.ts → resolveThemeColor` normalised the CSS token into
+   * for MapLibre, i.e. `rgb()`/`rgba()`. A hex-only parser here threw on every
+   * such stop — a crash that only stayed hidden while the 3.0.3 blank-map bug
+   * kept `ready` false so the heat layer never ran.
+   */
+  it("accepts the rgb()/rgba() stops a theme-resolved ramp supplies", () => {
+    expect(interpolateHex("rgb(0, 0, 0)", "rgb(255, 255, 255)", 0.5)).toBe(
+      "#808080"
+    );
+    expect(interpolateHex("rgb(0 0 0)", "rgb(255 255 255 / 0.5)", 1)).toBe(
+      "#ffffff"
+    );
+    expect(interpolateHex("rgba(255, 0, 0, 0.3)", "#0000ff", 0.5)).toBe(
+      "#800080"
+    );
+    // Real resolved --status-critical → --status-good stops.
+    expect(interpolateHex("rgb(212, 9, 36)", "rgb(17, 173, 50)", 0)).toBe(
+      "#d40924"
+    );
+  });
+
+  it("accepts short and alpha-bearing hex", () => {
+    expect(interpolateHex("#000", "#fff", 0.5)).toBe("#808080");
+    expect(interpolateHex("#000000ff", "#ffffff00", 1)).toBe("#ffffff");
+  });
+
+  it("still rejects genuinely unparseable stops loudly", () => {
+    expect(() => interpolateHex("oklch(0.5 0.1 240)", "#ffffff", 0.5)).toThrow(
+      /expected a hex or rgb\(\) colour/
+    );
+    expect(() => interpolateHex("nonsense", "#ffffff", 0.5)).toThrow();
+  });
 });
 
 describe("rampColor", () => {

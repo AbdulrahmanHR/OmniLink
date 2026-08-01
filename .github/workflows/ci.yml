@@ -54,7 +54,7 @@ jobs:
           cache: npm
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           components: clippy, rustfmt
 
@@ -67,8 +67,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          # `ci-` prefix (2026-07-31 CI hardening). This is the ONLY workflow a fork's pull request
+          # can start, and the cached paths include `~/.cargo/bin/` — a directory
+          # on PATH. Sharing a cache namespace with the four workflows that hold
+          # the release signing key would let a poisoned entry written here be
+          # restored into a job that signs releases. The namespace is disjoint by
+          # construction; those workflows keep the unprefixed key and share it
+          # only with each other, which is sharing between equals.
+          key: ci-${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ci-${{ runner.os }}-cargo-
 
       - name: Install npm dependencies
         run: npm ci

@@ -15,6 +15,328 @@ All notable changes to OmniLink are documented here. This project adheres to
 > has been edited away below. A changelog quietly rewritten after the event is worth
 > less than one that says what it said and is corrected in the open.
 
+## [3.0.3] — 2026-08-01
+
+**"The map paints."** The first release cut after this app was run under the
+engine it actually ships in. Four defects surfaced that the chromium-only test
+suite could not see — two of them present in Chromium as well, including a
+headline feature that has been visibly broken in `3.0.2` and in every release
+before it — and the notification work among them shipped a regression of its own
+for exactly one commit. Both facts are written down below rather than folded
+away.
+
+### The flight map has painted nothing since the theme moved to OKLCH
+
+**This shipped in `3.0.2` and every release before it, in every browser — not
+just WebKit.** Load a session with GPS and the flight map drew a themed
+rectangle and no track.
+
+`resolveThemeColor` returned `getComputedStyle().backgroundColor` verbatim, and
+its own comment asserted that the value "is always serialised as `rgb()` in
+every engine even when the source token is OKLCH". That is false in every
+current engine — WebKitGTK 2.52.3 and Chromium 149 both return `oklch(...)` —
+and the MapLibre style spec rejects it:
+
+```
+layers[0].paint.background-color: color expected, "oklch(0.2 0.012 240)" found
+```
+
+So the style never loaded, so `load` never fired, so no source and no layer was
+ever added, and `fitBounds` never ran. The map sat at zoom 1 over null island
+with an empty style, drawing a themed backdrop and nothing else. **Nobody saw
+the error, because `map.on("error", () => {})` discarded every one of them
+unconditionally.**
+
+`toMapLibreColor` (`src/components/map/map-style.ts`) now converts
+`oklch()`/`oklab()` to `rgb()` through the CSS Color 4 matrices — pure and
+DOM-free, therefore testable in this repo's node vitest environment. Values
+already in a form the spec accepts pass through untouched, and anything
+unrecognised falls back to the caller's hex rather than to a wrong colour. The
+23 conversion cases were validated against ground truth — each string painted
+into a canvas in Chromium and the pixel read back — not against the
+implementation that produces them. A computed `rgba(0, 0, 0, 0)` from an
+undefined `var()` is now treated as unresolved rather than painted transparent,
+which is the same class of silent blanking. Error handling is selective now:
+expected offline tile and source failures stay quiet, style and configuration
+errors are reported.
+
+Two latent crashes surfaced the moment the map could initialise at all. Map
+cleanup runs `setStyle(null)`, so the layer children's cleanups called
+`getLayer()` on a dead instance — guaranteed under StrictMode, which unmounts
+the dashboard. And `resolveSignalRamp` feeds `hexToRgb`, which was
+`#rrggbb`-only and threw on anything else. Both are guarded.
+
+**The test suite could not see any of it, and that is the part worth
+recording.** `tests/e2e/map.spec.ts` asserted `toBeAttached()` on the host and
+the canvas — which passes on a zero-height clipped element — and one commit
+later asserted visibility and a non-zero bounding box, which passes on a
+completely blank canvas. It now asserts that the style loaded, that the four
+expected layers exist, that the camera left its provisional zoom, and that the
+canvas is not a single flat colour. Every assertion was confirmed failing
+against the pre-fix code before it was accepted.
+
+### Three more defects the chromium-only suite could not see
+
+Every e2e test this project has ever run is headless Chromium. The first real
+run under Tauri/WebKitGTK surfaced three further defects, one of which had been
+shipping since `3.0.2`.
+
+- **Native `<select>` was unreadable at all 12 sites.** WebKitGTK paints form
+  controls with the GTK theme background while Tailwind preflight sets
+  `color: inherit`, and `color-scheme` was declared nowhere in the codebase — so
+  near-white text landed on a near-white widget. It is now declared per theme
+  block, light on `:root` and dark on `.dark` and `.carbon`, so it tracks the
+  resolved theme rather than hardcoding dark, which would have fixed one theme
+  by breaking another. Verified against computed styles in all five theme
+  states, including system-resolves-light while the OS prefers dark.
+- **The map container was collapsed to height 0** whenever a GPS session
+  loaded, in Chromium too. `maplibre-gl.css` was imported from JS and therefore
+  unlayered, and in Tailwind v4 unlayered CSS beats layered utilities — so
+  `.maplibregl-map { position: relative }` overrode the host's `absolute
+  inset-0` and clipped a fully-initialised 460×300 canvas. It is imported into
+  `layer(base)` from `index.css` now. Fixing it did not make the map render: it
+  made the OKLCH defect above observable. The map was broken twice over, and
+  only the outer break had a symptom anyone had looked at.
+- **`Notification.requestPermission()` was called from a mount effect.** WebKit
+  enforces the user-gesture requirement Chromium is lax about, so OS
+  notification permission was ungrantable in production. The request now fires
+  from an explicit opt-in button in Settings → Live alerts, synchronously in the
+  click handler; already-decided states never re-prompt.
+
+### The Google Fonts CDN is gone — and this release adds dependencies
+
+An app that promises no account, no server and no telemetry was sending every
+user's IP address to Google on launch, from a `<link>` in `index.html`, and the
+fonts failed outright offline — which at a flying site is the normal case, not
+the edge one. Inter, IBM Plex Mono and Space Grotesk are self-hosted now via
+`@fontsource` at the same weights, OFL-1.1.
+
+**So this release cannot claim "zero new dependencies", and earlier entries in
+this file did.** Three runtime npm packages are added — `@fontsource/inter`,
+`@fontsource/ibm-plex-mono`, `@fontsource/space-grotesk` — plus the notification
+plugin pair described below: `@tauri-apps/plugin-notification` and the
+`tauri-plugin-notification` crate, which locks three target-gated transitive
+crates (`notify-rust` on Linux, `mac-notification-sys` on macOS,
+`tauri-winrt-notification` on Windows). Every one is recorded with its licence
+and its GPL-3.0 compatibility verdict in `docs/THIRD_PARTY_LICENSES.md`. None of
+them calls the network: the font files are bundled into the build, and the
+notification path is local IPC.
+
+### Desktop notifications: unobtainable, then always on, then opt-in
+
+Three commits, and **the middle state was a regression this release introduced
+itself**. Recording it is cheaper than pretending the line went straight.
+
+#### The web Notification API can never be granted in the app as it ships
+
+The gesture fix above was correct and still insufficient. Verified live under
+WebKitGTK 2.52.3: a real user gesture on the Settings opt-in button drives
+`Notification.permission` from `"default"` to `"denied"` within 2.5 s with no
+prompt window ever appearing, because wry 0.55.1 installs no handler for the
+webview's permission-request signal and the default handler denies. WKWebView
+and WebView2 have the same class of problem.
+
+Both halves of `tauri-plugin-notification` are required, which is worth stating
+because the JS half alone looks like a fix and is not:
+`@tauri-apps/plugin-notification` is a thin shell over `window.Notification`, so
+without the Rust half it walks straight back into the dead path.
+`tauri_plugin_notification::init()` ships a `js_init_script` that **replaces**
+`window.Notification` with a shim routing the constructor, the permission getter
+and `requestPermission()` through `__TAURI_INTERNALS__.invoke`. The pair is the
+fix. The capability grants three named permissions rather than
+`notification:default`, which bundles sixteen — the plugin's `invoke_handler`
+registers exactly `notify`, `request_permission` and `is_permission_granted`,
+and the other thirteen are mobile-only scheduling, channel and listener commands
+that do not exist on desktop. Outside Tauri the seam probes
+`__TAURI_INTERNALS__` rather than `isTauri()`, because that is the exact object
+the plugin's invoke dereferences; everything reports unsupported there, nothing
+is called and nothing throws.
+
+#### The plugin migration silently removed the opt-in
+
+Moving OS notifications onto `tauri-plugin-notification` was correct. But the
+"Enable" button, and the whole permission-driven UI around it, rested on an
+assumption that turned out to be false: that the platform decides.
+
+**It does not. On desktop, the plugin grants unconditionally.** Both
+`permission_state()` and `request_permission()` are literally
+`Ok(PermissionState::Granted)` in the crate's desktop backend
+(`tauri-plugin-notification-2.3.3/src/desktop.rs:65-67`) — Linux, macOS and
+Windows alike. No prompt window is ever shown, and there is nothing for a user
+to refuse. So the "Enable" button never rendered (the app already read as
+granted on first launch), and **for one commit every tripped alarm raised a real
+system notification on a fresh install, with no opt-in anywhere and only the
+master mute able to stop it.**
+
+That is worse than it sounds, because the alarms do not need a radio. Three of
+the four are enabled with zero configuration, and a replayed or *scrubbed* log
+frame reaches the same evaluation path as live telemetry — so importing an old
+flight log on a laptop with nothing plugged in was enough to raise system popups
+over whatever the operator was actually doing.
+
+#### The app owns the consent gate now
+
+`osNotifyEnabled` is a persisted preference in the alerts store, **defaulting
+OFF**, and it — not the OS — is what a tripped alarm is gated on
+(`osNotifyAllowed(…)` in `src/lib/alertNotify.ts`, the single source of truth,
+mirroring `maybePlayAlertSound`). The app owns this gate because the OS owns it
+on no platform this ships to: freedesktop notifications have no permission model
+at all, the macOS backend uses the legacy `NSUserNotification` path and never
+touches `UNUserNotificationCenter`, and the Windows shim short-circuits before
+the command is even called.
+
+Settings → Live alerts now shows an on/off toggle shaped exactly like the
+audio-alert row directly beneath it, whose comment has said since FR-TELEM-03
+that it is *"opt-in — defaults OFF, because an unexpected beep is intrusive."* A
+system popup paints over other applications and persists in the OS notification
+centre after dismissal, so it cannot coherently default on where a 150 ms chirp
+does not. Mute still overrides both — and always-on had in fact *removed* a
+capability rather than adding one, since mute suppresses the toast, the
+notification-centre entry and the beep together, so "in-app alerts but no
+desktop popups" had become inexpressible. It is expressible again.
+
+What is kept from the permission model is what is still real: the platform state
+is mirrored so the row can render `unsupported` (a browser/dev build with no
+native path) and a genuine `denied` from any platform that ever answers one, and
+turning the toggle ON still calls `requestOsNotifyPermission()` un-awaited from
+the user's gesture — the desktop backend ignores it, but the mobile backend and
+any future desktop permission model will not, and asking on launch would be
+wrong regardless of what the engine enforces.
+
+Copy that the code had made false is gone rather than left standing: the hint no
+longer promises "Your system asks for permission when you enable this", because
+it never does. The dead Enable-button keys are removed symmetrically in both
+locales.
+
+`osNotifyEnabled` is a new defaulted-`false` field, which zustand's shallow merge
+fills from the initializer for anyone's existing persisted state, so there is no
+`persist` version bump and no migration — an operator upgrading into this release
+starts OFF, which is the intended answer for a consent they were never asked for.
+
+Four end-to-end tests hold the line where it actually matters: with the OS
+reporting granted, importing the dropout fixture and scrubbing into it raises the
+in-app alert and **sends nothing**; flipping the toggle makes the identical scrub
+send exactly one, with the matching title and body; mute beats the opt-in; and
+the opt-in survives a reload. Each was watched failing against a `true`
+initializer before being kept.
+
+#### Replayed telemetry raises no system notification at all
+
+Replayed log frames are pushed into the same `useTelemetryStore.history` that
+`LiveAlertHost` evaluates, and nothing on the OS-notification path told the two
+apart — so a user who opted in and then scrubbed an old log got real system
+popups, indoors, on a laptop, with no hardware attached, for alarms that happened
+days ago. `osNotifyAllowed` gains an `isSimulating` term, keeping the whole rule
+in one testable predicate rather than scattering a second condition through the
+host.
+
+The gate cannot suppress live telemetry, and the reason is structural rather than
+incidental: `useTelemetryStream` registers its producer behind
+`liveStreamActive(isConnected, isSimulating)`, so a live frame can only enter the
+buffer while `isSimulating` is false. The existence of a live frame is itself
+proof the term is open. There is no sampling window either — zustand notifies
+synchronously, so the host reads the flag inside the same push that produced the
+frames.
+
+Only the OS channel carries the term. The toast, the notification-centre entry,
+the beep and `recordFiredAlerts` stay mute-only: a toast while scrubbing is the
+app telling you what happened in the recording, which is useful. A system popup
+for a days-old event is not.
+
+Three existing e2e tests turned out to be asserting the buggy behaviour — they
+opted in, scrubbed, and expected a send. They are re-based onto a real live path
+driven through the device store rather than weakened, which is why the live-path
+test was mandatory rather than optional: one of them would otherwise have passed
+after the fix for the wrong reason, and kept passing even if the opt-in gate were
+deleted.
+
+### CI: the signing key's job was running unpinned third-party code
+
+An audit of the fork-PR path found the CI hardening itself sound — no
+`pull_request_target`, no `workflow_run`, no artifact-consumption chain, no
+script-injection surface — and two problems that reasoning had missed.
+
+**Third-party actions were unpinned in the jobs that hold the signing key.**
+`dtolnay/rust-toolchain@stable` is a mutable **branch** head, not a tag, and it
+runs in the same job that later hands `TAURI_SIGNING_PRIVATE_KEY` to
+`tauri-apps/tauri-action@v0`, itself a mutable major tag. A compromise upstream
+would need no access to the secret at all: it runs earlier in the same job on the
+same filesystem, so it can plant a shim on `PATH` or append to `$GITHUB_ENV`. With
+`createUpdaterArtifacts` and a `releases/latest` endpoint, the result auto-installs
+on every user. All three third-party actions — those two plus
+`crowdin/github-action` — are pinned to full commit SHAs now.
+
+**`tests/unit/ciForkSafety.test.ts` could not detect the single most dangerous
+edit available here.** Its `PR_WORKFLOWS` regex matched `pull_request(_target)?`,
+so switching `ci.yml` to `pull_request_target` — which would grant full secrets
+and a write token to code from any fork — kept all 14 tests green. The string
+`AbdulrahmanHR` appeared nowhere in the suite, so the three installer fork guards
+could have been deleted just as silently. The suite is **14 → 31 tests**, and each
+of the 17 new ones was verified non-vacuous by mutation.
+
+Also: workflow-level `permissions:` on `release.yml` and `crowdin-sync.yml`, so a
+future job inherits a reviewed default rather than a web-UI toggle; the
+fork-reachable CI cache namespaced away from the four signing workflows, since
+`~/.cargo/bin` is a `PATH` directory inside the cached paths; and the five
+remaining `APPLE_*` secrets written to `$GITHUB_ENV` via the delimiter form,
+closing an env-injection path into the step that holds the signing key.
+
+### Verified on the real engine, not just Chromium
+
+The defects above are what a chromium-only gate costs, so the fixes were checked
+by hand in a real window under **WebKitGTK 2.52.3**:
+
+- **The flight map paints a track.** `isStyleLoaded: true`, **4** layers in the
+  loaded style (`background`, `omnitiles`, `flight-path-line`,
+  `signal-heat-line`), and the camera framed on the data rather than parked at
+  its provisional zoom over null island.
+- **A live alert produces an actual desktop notification**, captured on the
+  D-Bus session bus — observed at the OS, not inferred from a JS return value.
+- **A replayed log scrubbed with the same opt-in enabled produces nothing on
+  that bus.**
+
+**Still not verified on hardware, and still no radio.** Every protocol in
+`docs/HARDWARE_VALIDATION.md` remains a protocol for someone else to run.
+
+### Gates
+
+Re-run in full on this tree at the version bump:
+
+- Unit **1653 passed, 129 files** (1570 at `3.0.2`).
+- `tsc --noEmit` clean, `eslint` clean, production build green.
+- `cargo check` green — run because this release edits `Cargo.toml` and
+  `Cargo.lock`, and it is what regenerated the latter.
+- **E2E was deliberately not re-run for the version bump.** The suite moved
+  **70 → 79** across the seven commits in this release and every count is
+  recorded in the commit that produced it; a version-string change cannot move
+  it. Rust tests are **367**, unchanged, last run in full at the
+  notification-plugin commit — the only one here that touches Rust.
+
+### Version
+
+Bumped `3.0.2` → `3.0.3` in all five version-carrying files — `package.json`,
+`package-lock.json` (both the top-level `version` and the root entry under
+`packages`), `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` and
+`src-tauri/tauri.conf.json` — and in this file (project policy §5). The two
+lockfiles were regenerated by their own tools (`npm install --package-lock-only`,
+`cargo check`) rather than hand-edited; npm additionally normalised 66 lines of
+bundled `@tailwindcss/oxide-wasm32-wasi` sub-dependency metadata into
+`package-lock.json`, which it does on any install and which moves no resolved
+version.
+
+`tauri.conf.json` is the one a user can see. Settings → App Update reads the
+running version through `getVersion()`, which resolves to that file, and until
+this bump it reported `3.0.2` for a build that is not `3.0.2`.
+
+A patch bump, but not a cosmetic one: a headline feature that never painted now
+paints, and a notification channel that had no consent gate has one.
+`release.yml`'s `create-release` guard fails fast unless the pushed tag equals
+the version in **both** `package.json` and `tauri.conf.json` at the tagged
+commit, which is why all five files move in one commit. The updater endpoint and
+the minisign pubkey are untouched; `release.yml` itself changed only in the ways
+described under CI above. Release feed = this CHANGELOG entry (project policy §5;
+no dedicated announcements subsystem exists, and none was fabricated).
+
 ## [3.0.2] — 2026-07-30
 
 **"Public."** The release that publishes OmniLink. **Text and metadata only — no

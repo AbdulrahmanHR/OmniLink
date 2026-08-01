@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window. The six folder-sync permissions (M71, decision D37) are the ONLY filesystem grant this application has: they allow reading, writing, listing and deleting `.elrsp` profile files inside the ONE directory the user picks in the native folder dialog, and nothing else. The directory itself is granted at runtime by `folder-sync:allow-grant`, which canonicalises the picked path and REPLACES any previous grant; every other folder-sync command resolves a bare file name inside that single root and refuses separators, `..`, drive prefixes, absolute paths, reserved device names, symlinks and non-`.elrsp` names (see `folder_sync::resolve_in_root` in src/commands/config.rs). `tauri-plugin-fs` is deliberately not a dependency, so no other filesystem reach exists in the ACL.",
+  "description": "Capability for the main window. The six folder-sync permissions (M71, decision D37) are the ONLY filesystem grant this application has: they allow reading, writing, listing and deleting `.elrsp` profile files inside the ONE directory the user picks in the native folder dialog, and nothing else. The directory itself is granted at runtime by `folder-sync:allow-grant`, which canonicalises the picked path and REPLACES any previous grant; every other folder-sync command resolves a bare file name inside that single root and refuses separators, `..`, drive prefixes, absolute paths, reserved device names, symlinks and non-`.elrsp` names (see `folder_sync::resolve_in_root` in src/commands/config.rs). `tauri-plugin-fs` is deliberately not a dependency, so no other filesystem reach exists in the ACL. The three notification permissions (v3.0.3) follow the same named-not-default rule: `notification:default` would additionally grant thirteen scheduling, channel, listener and pending/active-query commands, NONE of which this app uses and none of which even exist on desktop — the plugin's `invoke_handler` registers exactly `notify`, `request_permission` and `is_permission_granted`, so the three named permissions below are the complete reach the live-alert feature needs.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -14,6 +14,9 @@
     "sql:allow-close",
     "updater:default",
     "process:default",
+    "notification:allow-notify",
+    "notification:allow-request-permission",
+    "notification:allow-is-permission-granted",
     "folder-sync:allow-grant",
     "folder-sync:allow-revoke",
     "folder-sync:allow-list",

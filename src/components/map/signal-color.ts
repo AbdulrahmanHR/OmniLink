@@ -62,14 +62,52 @@ export function signalQualityFraction(
   return clamp01((value - domain.worst) / (domain.best - domain.worst));
 }
 
-/** Parse a `#rrggbb` hex colour into `[r, g, b]` (0–255). */
-function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-  if (!m) {
-    throw new Error(`signal-color: expected a #rrggbb colour, got "${hex}"`);
+/**
+ * Parse a ramp stop into `[r, g, b]` (0–255).
+ *
+ * Accepts `#rgb` / `#rrggbb` (± an alpha nibble/byte, which is dropped) **and**
+ * `rgb()`/`rgba()`, because ramp stops do not only come from
+ * {@link DEFAULT_SIGNAL_RAMP}: `FlightMap` passes a theme-resolved ramp built by
+ * `map-style.ts → resolveThemeColor`, whose output is whatever that helper had
+ * to normalise the CSS token into for MapLibre. Being hex-only here made this a
+ * latent crash on every engine whose computed colour is not a bare hex string.
+ */
+function parseRgb(color: string): [number, number, number] {
+  const s = color.trim();
+  const hex = /^#?([0-9a-fA-F]{3,8})$/.exec(s);
+  if (hex) {
+    const d = hex[1];
+    if (d.length === 3 || d.length === 4) {
+      return [
+        parseInt(d[0] + d[0], 16),
+        parseInt(d[1] + d[1], 16),
+        parseInt(d[2] + d[2], 16),
+      ];
+    }
+    if (d.length === 6 || d.length === 8) {
+      const n = parseInt(d.slice(0, 6), 16);
+      return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+    }
   }
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+  const fn = /^rgba?\(([^)]*)\)$/i.exec(s);
+  if (fn) {
+    // Legacy comma syntax and CSS Color 4 space syntax (`r g b / a`) both.
+    const parts = fn[1].split("/")[0].trim().split(/[\s,]+/).filter(Boolean);
+    if (parts.length >= 3) {
+      const channels = parts.slice(0, 3).map((p) => {
+        const n = p.endsWith("%")
+          ? (Number(p.slice(0, -1)) / 100) * 255
+          : Number(p);
+        return Number.isFinite(n) ? Math.min(255, Math.max(0, n)) : NaN;
+      });
+      if (channels.every((n) => !Number.isNaN(n))) {
+        return channels as [number, number, number];
+      }
+    }
+  }
+  throw new Error(
+    `signal-color: expected a hex or rgb() colour, got "${color}"`
+  );
 }
 
 /** Format `[r, g, b]` (0–255, rounded) back to `#rrggbb`. */
@@ -82,10 +120,13 @@ function rgbToHex(rgb: [number, number, number]): string {
   );
 }
 
-/** Linear interpolation between two `#rrggbb` colours (`t` in `[0, 1]`). */
+/**
+ * Linear interpolation between two colours (`t` in `[0, 1]`), returning
+ * `#rrggbb`. Inputs may be hex or `rgb()`/`rgba()` — see {@link parseRgb}.
+ */
 export function interpolateHex(a: string, b: string, t: number): string {
-  const ca = hexToRgb(a);
-  const cb = hexToRgb(b);
+  const ca = parseRgb(a);
+  const cb = parseRgb(b);
   const k = clamp01(t);
   return rgbToHex([
     ca[0] + (cb[0] - ca[0]) * k,

@@ -6,9 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OmniLink — ExpressLRS Configuration & Telemetry</title>
     <meta name="description" content="OmniLink: ExpressLRS configuration, flashing, and telemetry dashboard." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!--
+      No webfont <link> here, and none may be added. Inter / IBM Plex Mono /
+      Space Grotesk are SELF-HOSTED and bundled with the app — see the
+      @fontsource imports at the top of `src/main.tsx`. Pulling them from a font
+      CDN (as 3.0.2 did) sent every user's IP to a third party on every launch,
+      which contradicts the app's own no-telemetry claim, and left the type
+      system broken wherever there is no network — i.e. at exactly the flying
+      sites this tool is for. Offline-first is policy: AGENTS.md §4/§8.
+    -->
   </head>
 
   <body>

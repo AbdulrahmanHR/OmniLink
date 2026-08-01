@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bell, X } from "lucide-react";
 import { useTelemetryStore, type TelemetryFrame } from "@/stores/telemetry";
 import { selectLiveAlertConfig, useAlertsStore } from "@/stores/alerts";
+import { useSessionStore } from "@/stores/session";
 import {
   evaluateFrames,
   initialAlertState,
@@ -12,7 +13,7 @@ import {
   type LiveAlertConfig,
   type LiveAlertState,
 } from "@/lib/liveAlerts";
-import { ensureOsNotifyPermission, osNotify } from "@/lib/alertNotify";
+import { osNotify, osNotifyAllowed } from "@/lib/alertNotify";
 import { maybePlayAlertSound } from "@/lib/alertSound";
 import { recordFiredAlerts } from "@/lib/notificationFeed";
 import { Button } from "@/components/ui/button";
@@ -181,8 +182,15 @@ function usePrefersReducedMotion(): boolean {
  * loop, no duplicate/leaked subscriptions. It threads the pure
  * {@link evaluateFrames} state machine across frames (kept in a ref so it never
  * triggers a re-render), raises an in-app toast per fired alarm, dismisses it on
- * recovery, and fires a best-effort OS notification — all suppressed while the
- * store is muted. Toasts respect `prefers-reduced-motion`.
+ * recovery, and — only when the operator has opted in, and only for LIVE frames
+ * — fires a best-effort OS notification. Mute suppresses all of it; the OS
+ * notification carries two further gates on top (see {@link osNotifyAllowed}):
+ * the `osNotifyEnabled` opt-in, because the plugin's desktop backend grants
+ * permission unconditionally and so cannot be the consent gate, and
+ * `!isSimulating`, because a replayed log reaches this same evaluation path and
+ * a system popup for a days-old alarm is not something the in-app channels'
+ * "here is what is in the recording" contract extends to. Toasts respect
+ * `prefers-reduced-motion`.
  *
  * ## Why it watches `history`, not `latest`
  * The shared telemetry buffer does not only grow one frame at a time. A forward
@@ -203,7 +211,16 @@ export function LiveAlertHost() {
   const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
-    ensureOsNotifyPermission();
+    // NOTE (v3.0.3): this effect deliberately does NOT ask for OS-notification
+    // permission. A mount-time request used to live on this line; it could
+    // never be granted in production, because the shipped app runs in WebKit /
+    // WebView2 and the webview's own Notification API is unobtainable there —
+    // first refused outside a user gesture, then denied outright even from one.
+    // OS notifications now go through the native Tauri notification plugin, and
+    // the opt-in lives in Settings → Live alerts; see `@/lib/alertNotify`.
+    // That opt-in is a PERSISTED APP FLAG (`osNotifyEnabled`), not an OS grant:
+    // the plugin's desktop backend answers `Granted` unconditionally, so asking
+    // the OS gates on nothing and the app has to own the consent itself.
 
     // Subscribe to the live telemetry store; act ONLY when the shared history
     // changes (it also empties to `[]` on disconnect). Plain zustand subscribe —
@@ -222,8 +239,31 @@ export function LiveAlertHost() {
       const { firedAlerts, clearedKinds, didReset } = advance;
       if (!didReset && firedAlerts.length === 0 && clearedKinds.length === 0) return;
 
-      // Mute suppresses BOTH the OS notification and the in-app toast.
-      if (!alerts.muted) {
+      // Desktop (OS) notification: opt-in, not muted, AND driven by LIVE frames.
+      // Mute suppresses every channel; this one additionally requires the
+      // persisted `osNotifyEnabled` preference (which defaults OFF) and that no
+      // replay owns the shared buffer. `osNotifyAllowed` is the single source of
+      // truth for all three terms.
+      //
+      // `isSimulating` is read here, imperatively, from the same subscription
+      // callback as the alerts state — NOT subscribed to as a hook — so the
+      // discriminator is sampled at the instant the frames were evaluated and
+      // the host still re-renders only for toasts.
+      //
+      // Note what is NOT gated below: the toast, the notification-centre entry
+      // and the beep all still fire while a log is scrubbed. That asymmetry is
+      // deliberate — see `osNotifyAllowed`'s doc comment. In-app channels are
+      // the app describing the recording you are looking at, in the window you
+      // are looking at it in; an OS popup paints over whatever other app the
+      // operator is in and carries no hint that the alarm is days old. Do not
+      // collapse the two paths back together.
+      if (
+        osNotifyAllowed({
+          osNotifyEnabled: alerts.osNotifyEnabled,
+          muted: alerts.muted,
+          isSimulating: useSessionStore.getState().isSimulating,
+        })
+      ) {
         for (const alert of firedAlerts) {
           osNotify(t(`alerts.type.${alert.kind}`), t(alert.messageKey, alert.detail));
         }

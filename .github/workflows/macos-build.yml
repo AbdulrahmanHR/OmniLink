@@ -48,7 +48,7 @@ jobs:
           cache: npm
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         # Universal binary: build for both Apple Silicon and Intel.
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
@@ -76,7 +76,7 @@ jobs:
         run: rm -rf src-tauri/target/release/bundle src-tauri/target/universal-apple-darwin/release/bundle
 
       - name: Build Tauri app (macOS universal)
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         # No tagName/releaseId -> tauri-action only builds the bundles,
         # it does not create a GitHub Release.
         # Signing key required because createUpdaterArtifacts is enabled.

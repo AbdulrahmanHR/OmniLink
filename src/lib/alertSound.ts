@@ -3,10 +3,11 @@
  *
  * The optional counterpart to the in-app toast + OS notification (see
  * `@/lib/alertNotify`): when the operator opts in, a tripped alarm also plays a
- * short beep. It follows the SAME philosophy as `alertNotify.ts` — zero
- * dependency, no bundled audio asset, fully guarded — but uses the **Web Audio
- * API** (a synthesised `OscillatorNode` chirp) rather than the Web Notifications
- * API, so it needs no permission grant and works fully offline.
+ * short beep. It follows the SAME philosophy as `alertNotify.ts` — no bundled
+ * audio asset, fully guarded — but uses the **Web Audio API** (a synthesised
+ * `OscillatorNode` chirp), which needs no permission grant, works fully offline
+ * and, unlike the Web Notifications API that `alertNotify.ts` had to abandon at
+ * v3.0.3, is honoured by every engine the app ships in.
  *
  * Every entry point is wrapped so it NEVER throws into the telemetry
  * subscription: in a headless/test env (no `window`/`AudioContext`) it returns
