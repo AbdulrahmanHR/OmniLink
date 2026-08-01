@@ -3066,7 +3066,7 @@ dependencies = [
 
 [[package]]
 name = "omnilink"
-version = "3.0.2"
+version = "3.0.3"
 dependencies = [
  "blackbox-log",
  "keyring",
