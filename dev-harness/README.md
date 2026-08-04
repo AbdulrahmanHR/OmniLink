@@ -14,7 +14,7 @@ realistic Link Statistics at ~25 Hz. You point OmniLink at the other end.
 **OmniLink's single structural blocker is that its maintainer has no ELRS
 hardware.** On-hardware acceptance is deferred for M6, M7, M8, M11, M13, M18,
 M29 and M67 for exactly that reason, and it is the most honest thing in the
-project's status blocks (`../docs/deferred_features_backlog.md` §2.1).
+project's status blocks (`../docs/plans/deferred_features_backlog.md` §2.1).
 
 This harness does not solve that. **What it does is make the hardware gap much
 narrower than it looks**, because a surprising amount of the serial path can be
@@ -159,7 +159,7 @@ python3 serial_runner.py --port /dev/pts/3
   mid-stream disconnect, truncated frames, CRC corruption. The app's error and
   reconnect handling is far easier to test against a device that misbehaves on
   purpose. Degradation ramps touch a genuinely blocked item — see
-  `../docs/deferred_features_backlog.md` §2.5.
+  `../docs/plans/deferred_features_backlog.md` §2.5.
 - **Port the PTY setup to native Windows**, if that turns out to be sensible.
 
 ## Wire-format reference (copied from the app, not invented)
