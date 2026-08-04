@@ -327,6 +327,24 @@ rule that could have been silently falling back to a system face. Checked on
 `/profiles`, which uses all three: display headings, sans body, 46 mono elements.
 Rendering is unchanged and offline-first is unchanged; that was the entire point.
 
+### Two documentation debts from this release's own verification
+
+- **The stale-`src-tauri` trap is written down.** `npm run dev` reloads the
+  frontend and nothing reloads the Rust half, so a `target/debug` predating the
+  commits under test presents as a *product* defect — a command answering
+  "Unavailable", a control that never renders — rather than as a build problem.
+  That is precisely how it cost a verification pass in this release its entire
+  run, against a binary eleven hours stale. Now a section under *Building
+  OmniLink* in `CONTRIBUTING.md` with the rebuild command, and stated as a rule in
+  `AGENTS.md` → *Development Commands*, which is the file an assistant is told to
+  treat as binding and may be the only one it reads.
+- **`docs/SIGNING.md` no longer names a version.** Its `signtool verify` example
+  hardcoded `OmniLink_3.0.2_x64-setup.exe` — stale one release later, and never a
+  real artifact in the first place, since no shipped build is Authenticode-signed,
+  as that file's own status banner says. It reads `OmniLink_X.Y.Z_x64-setup.exe`
+  now, matching the placeholder convention already used in `docs/RELEASING.md`, so
+  it cannot rot again. It was the only versioned example filename in `docs/`.
+
 ### Gates
 
 Re-run in full on this tree at the version bump:
@@ -340,6 +358,14 @@ Re-run in full on this tree at the version bump:
   recorded in the commit that produced it; a version-string change cannot move
   it. Rust tests are **367**, unchanged, last run in full at the
   notification-plugin commit — the only one here that touches Rust.
+
+Re-run again after the font pruning and the documentation work above, which
+landed after the version bump and inside this release: unit **1653 passed, 129
+files** (unmoved — nothing here is unit-testable), `tsc --noEmit` clean, `eslint`
+clean, production build green, and **E2E 79 passed, 0 failed** at the pinned two
+workers. E2E *was* re-run this time, unlike at the version bump, because this
+change is to the shipped bundle and Playwright drives the same Vite pipeline the
+plugin hooks. No Rust source changed, so the Rust counts stand.
 
 ### Version
 

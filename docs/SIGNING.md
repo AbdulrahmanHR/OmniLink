@@ -152,7 +152,9 @@ is absent — so adding this step does not break existing runs.
 ## Verify a signed build
 
 ```powershell
-signtool verify /pa /v .\OmniLink_3.0.2_x64-setup.exe
+# X.Y.Z is whatever you just built — the NSIS bundle is named from
+# `tauri.conf.json` → `version`, so don't paste a fixed number in here.
+signtool verify /pa /v .\OmniLink_X.Y.Z_x64-setup.exe
 ```
 
 Or right-click the `.exe` → **Properties → Digital Signatures** — your identity

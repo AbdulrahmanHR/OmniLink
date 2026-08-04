@@ -228,6 +228,17 @@ npm test              # Vitest unit tests
 npm run build         # Full production build (tsc && vite build)
 ```
 
+**Rebuild `src-tauri` before verifying any Rust-side change.** `npm run dev`
+reloads the frontend; nothing reloads the Rust half. Running a prebuilt
+`src-tauri/target/debug/omnilink` against a `npm run dev` server puts current JS
+over whatever Rust last compiled — and a stale backend presents as a *product*
+defect (a command answering "Unavailable", a control that never renders), not as a
+build error, so it gets written up as a bug. This cost a `3.0.3` verification pass
+its entire run against a `target/debug` eleven hours older than the commits under
+test. `npm run tauri dev` compiles Rust first; `cargo build --manifest-path
+src-tauri/Cargo.toml` does it without opening a window. Full note:
+[`CONTRIBUTING.md`](CONTRIBUTING.md#the-rust-half-does-not-rebuild-itself).
+
 ## Testing
 
 - **Test runner:** Vitest 3 (unit), configured in `vitest.config.ts`; Playwright (E2E, M20) in `playwright.config.ts`

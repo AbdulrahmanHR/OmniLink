@@ -376,6 +376,35 @@ npm run dev
 npm run tauri dev
 ```
 
+### The Rust half does not rebuild itself
+
+`npm run dev` serves the frontend live, so a JS change is on screen the moment you
+save it. **Nothing does that for Rust.** Start the native app any way other than
+`npm run tauri dev` — most easily by launching an already-built
+`src-tauri/target/debug/omnilink` alongside a `npm run dev` server — and you are
+driving a current frontend against whatever the Rust half was the last time it
+compiled.
+
+**What makes this expensive is that it does not look like a build problem.** A
+stale backend presents as a *product* defect: a command that answers
+"Unavailable", a toggle that never appears, a capability the UI reports as
+unsupported. During `3.0.3` verification a `target/debug` eleven hours older than
+the commits under test — predating the notification work entirely — was read as a
+shipped bug for the length of a session.
+
+`npm run tauri dev` compiles Rust first, every time, and is the right answer in
+almost every case. When you want the compile without the window — before
+re-verifying, or after switching branches:
+
+```bash
+cargo build --manifest-path src-tauri/Cargo.toml
+```
+
+**Rebuild `src-tauri` before verifying any Rust-side change.** A
+`#[tauri::command]`, an emitted event name, an entry in `src-tauri/capabilities/`,
+anything under `src-tauri/src/` — none of it is in the binary you are running
+until you do.
+
 ### Linux serial permissions
 
 Opening `/dev/ttyUSB*` or `/dev/ttyACM*` needs permission, and "Permission denied"
