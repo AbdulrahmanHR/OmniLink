@@ -50,6 +50,7 @@ import {
 } from "@/lib/elrsp";
 import { loadCommunityPresetForImport } from "@/lib/communityPresets";
 import { exportErrorDetail, saveExportedFile } from "@/lib/fileExport";
+import type { ConfigProfile } from "@/lib/mockProfiles";
 import type { ProfileSettings } from "@/lib/profileSettings";
 
 type DialogMode = "save" | "rename" | null;
@@ -257,6 +258,8 @@ export function ProfilesPage() {
   const [tab, setTab] = useState<ProfilesTab>("saved");
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  /** The profile a delete has been requested for, awaiting confirmation. */
+  const [pendingDelete, setPendingDelete] = useState<ConfigProfile | null>(null);
   const [exportStatus, setExportStatus] = useState<ExportStatus>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -335,6 +338,13 @@ export function ProfilesPage() {
     } catch (e) {
       setExportStatus({ kind: "failed", detail: exportErrorDetail(e) });
     }
+  };
+
+  /** Confirmed profile delete: remove it, then close the confirm dialog. */
+  const handleConfirmDelete = () => {
+    if (!pendingDelete) return;
+    deleteProfile(pendingDelete.id);
+    setPendingDelete(null);
   };
 
   return (
@@ -582,7 +592,8 @@ export function ProfilesPage() {
                       variant="destructive"
                       size="sm"
                       disabled={selected.builtin}
-                      onClick={() => deleteProfile(selected.id)}
+                      onClick={() => setPendingDelete(selected)}
+                      data-testid="profiles-delete-btn"
                     >
                       <Trash2 />
                       {t("profiles.actions.delete")}
@@ -654,6 +665,48 @@ export function ProfilesPage() {
         onClose={() => setImportPreview(null)}
       />
 
+      {/* Delete confirmation (v3.0.3 defect 3). A saved profile can be the only
+          copy of a tuned setup and there is no undo anywhere in this app, so the
+          destructive click asks first — the same shape a recorded session's
+          delete already uses. The erase-all-data flow's typed confirm is
+          deliberately NOT copied: this removes one profile, not everything. */}
+      <Dialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)}>
+        <DialogHeader>
+          <DialogTitle>
+            <span className="flex items-center gap-2">
+              <AlertTriangle
+                className="h-5 w-5 text-destructive"
+                aria-hidden="true"
+              />
+              {t("profiles.deleteConfirm.title")}
+            </span>
+          </DialogTitle>
+          <DialogDescription>
+            {t("profiles.deleteConfirm.body", {
+              name: pendingDelete ? profileName(pendingDelete, t) : "",
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPendingDelete(null)}
+            data-testid="profiles-delete-cancel-btn"
+          >
+            {t("profiles.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirmDelete}
+            data-testid="profiles-delete-confirm-btn"
+          >
+            <Trash2 aria-hidden="true" />
+            {t("profiles.deleteConfirm.confirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

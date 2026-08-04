@@ -424,6 +424,19 @@ all three offenders —
 — which is also the evidence that the other two exports had the defect, rather
 than an assumption that they did.
 
+#### Deleting a saved profile asked nothing
+
+`ProfilesPage` wired `onClick={() => deleteProfile(selected.id)}` straight to a
+destructive button whose only guard was `disabled` for built-in presets. One
+stray click removed a user profile permanently. There is no undo anywhere in this
+app, and a saved profile can be the only copy of a tuned setup — the `.elrsp`
+export exists precisely because that is worth protecting.
+
+It now opens a confirmation dialog naming the profile. The erase-all-data flow's
+typed-`DELETE` gate is deliberately **not** copied: this removes one profile, not
+everything, and the shape it follows is the one a recorded session's delete
+already uses. Cancel closes cleanly and changes nothing.
+
 #### Verified on the real engine, again
 
 Both export surfaces were driven in a live window under **WebKitGTK 2.52.3**,
