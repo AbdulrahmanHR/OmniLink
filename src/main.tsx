@@ -21,7 +21,10 @@ import App from "./App";
  * `unicode-range`s the CDN was serving (latin, latin-ext, cyrillic, cyrillic-ext,
  * greek, greek-ext, vietnamese) with `font-display: swap`, so rendering is
  * unchanged — the bytes now ship inside the app instead of being fetched. Vite
- * emits the referenced woff2/woff as build assets.
+ * emits the referenced font files as build assets, `.woff2` only: each rule
+ * also carries a legacy `.woff` fallback that no webview OmniLink ships to has
+ * needed since 2016, and the `omnilink:fontsource-woff2-only` plugin in
+ * `vite.config.ts` strips it before Vite can resolve it.
  *
  * DO NOT re-add a font `<link>` to `index.html`; keep this list and the weights
  * declared in `index.css` (`--font-sans` / `--font-mono` / `--font-display`) in

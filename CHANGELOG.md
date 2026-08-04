@@ -298,6 +298,35 @@ by hand in a real window under **WebKitGTK 2.52.3**:
 **Still not verified on hardware, and still no radio.** Every protocol in
 `docs/HARDWARE_VALIDATION.md` remains a protocol for someone else to run.
 
+### The self-hosted fonts ship `woff2` only — 866 KiB of dead weight removed
+
+Every `@fontsource` `@font-face` rule declares each face twice: a `.woff2` and a
+`.woff` fallback for browsers that predate 2016. Vite resolved both URLs and
+emitted both files, so the fonts added above landed in `dist` as **130 files,
+1,612 KiB — of which 65 files and 866 KiB were `.woff` that nothing this app runs
+in can ever request.** OmniLink only ever runs inside a Tauri webview — WebKitGTK
+on Linux, WKWebView on macOS, WebView2 on Windows — all three have supported
+`woff2` for a decade, and there is no browser build to serve.
+
+`omnilink:fontsource-woff2-only` in `vite.config.ts` strips the fallback `src`
+entry from the third-party CSS **before** Vite rewrites its URLs. That seam is the
+point: it is the only one where the file never enters the graph at all, whereas
+deleting the emitted assets afterwards would leave the shipped CSS pointing at
+404s. `node_modules` is not edited. The plugin runs in `vite dev` and `vite build`
+alike, and if `@fontsource` ever reformats those rules the pattern stops matching
+and the build **fails** rather than silently letting the weight back in.
+
+`dist` now carries **65 font files, 746 KiB, all `woff2`** — total build output
+4,289 KiB → 3,418 KiB, 167 files → 102. Verified against the production build in
+**both** engines, Chromium and WebKitGTK 2.52.3: 65 `@font-face` rules declaring
+65 URLs, every one fetched `200`, **zero `.woff` requested**, zero external
+origins requested, zero `FontFace` left in `error` state, and each of Inter, IBM
+Plex Mono and Space Grotesk measured as *actually applied* — rendered width
+against a deliberately absent family — rather than assumed from a `@font-face`
+rule that could have been silently falling back to a system face. Checked on
+`/profiles`, which uses all three: display headings, sans body, 46 mono elements.
+Rendering is unchanged and offline-first is unchanged; that was the entire point.
+
 ### Gates
 
 Re-run in full on this tree at the version bump:
