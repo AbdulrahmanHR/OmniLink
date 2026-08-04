@@ -160,61 +160,129 @@ test.describe("Offline flight map", () => {
     // ---------------------------------------------------------------------
 
     // 1. `data-map-ready` mirrors MapLibre's `load` event — false unless the
-    //    style parsed AND loaded.
-    await expect(page.getByTestId("flight-map")).toHaveAttribute(
-      "data-map-ready",
-      "true"
-    );
+    //    style parsed AND loaded. Under the 3.0.3 defect this is the first
+    //    thing to trip, so it carries the pointer to the likely cause too.
+    await expect(
+      page.getByTestId("flight-map"),
+      "the map never fired MapLibre's `load` event — the style is most likely " +
+        "invalid (check the paint colours resolved from CSS tokens; see " +
+        "map-style.ts → toMapLibreColor)"
+    ).toHaveAttribute("data-map-ready", "true");
 
     // 2. Interrogate the live map instance (FlightMap publishes it on its host
     //    element for exactly this reason — MapLibre keeps no global registry).
-    const state = await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="flight-map-empty"]') as
-        | (HTMLElement & { _omniMap?: Record<string, unknown> })
-        | null;
-      const map = host?._omniMap as
-        | {
-            isStyleLoaded(): boolean;
-            getStyle(): { layers?: { id: string }[] } | undefined;
-            getZoom(): number;
-          }
-        | undefined;
-      if (!map) return { found: false as const };
-      const style = map.getStyle();
-      return {
-        found: true as const,
-        styleLoaded: map.isStyleLoaded(),
-        layerIds: (style?.layers ?? []).map((l) => l.id),
-        zoom: map.getZoom(),
-      };
-    });
+    //
+    //    POLLED, never sampled once. `isStyleLoaded()` is `Style.loaded()`,
+    //    which is NOT a latch: it returns false again whenever any source has
+    //    work in flight (`maplibre-gl` 5.24 — a tile whose state is not yet
+    //    `loaded`/`errored` makes the whole style read as unloaded). This map
+    //    guarantees exactly that immediately after `load`, because the `load`
+    //    handler calls `fitBounds`, easing the camera from the provisional
+    //    zoom 1 out to the track's zoom (~12) over several seconds and pulling
+    //    a fresh set of `omnitiles` tiles at every step along the way.
+    //
+    //    Measured on a HEALTHY map, sampling every 100ms from the instant
+    //    `data-map-ready` flips true: styleLoaded went false, true, true,
+    //    FALSE, true … FALSE … FALSE … true, still flapping ~2.3s in, while
+    //    zoom climbed 1.01 → 11.89. So the old single `page.evaluate` snapshot
+    //    was reading a coin flip: it landed in a `true` window locally and in
+    //    a `false` window on the CI runner, failing run 30677368881 twice over
+    //    on a map that was working perfectly. Note the difference is NOT the
+    //    GL backend — headless Chromium renders through SwiftShader in both
+    //    places (verified: identical `WEBGL_debug_renderer_info` string). It
+    //    is simply how far into the fitBounds ease a slower, more contended
+    //    machine happens to be when the snapshot is taken. The zoom read had
+    //    the same blind spot for the same reason: it is 1.01 in the first
+    //    frame after `load`, a hair above the `> 1` threshold it is checked
+    //    against, and it is exactly 1 the frame before.
+    //
+    //    Polling every condition together keeps each one's MEANING and makes
+    //    the whole check settle-tolerant. A timeout now reports which
+    //    invariants never held rather than declaring the colour conversion
+    //    broken — "never settled" and "style is invalid" are different
+    //    findings and the messages below say which is which.
+    const REQUIRED_LAYERS = [
+      "background",
+      "omnitiles",
+      "flight-path-line",
+      "signal-heat-line",
+    ];
 
-    expect(state.found, "no live MapLibre instance on the map host").toBe(true);
-    expect(
-      state.found && state.styleLoaded,
-      "MapLibre style never loaded — the style is invalid (check the paint " +
-        "colours resolved from CSS tokens; see map-style.ts → toMapLibreColor)"
-    ).toBe(true);
-    expect(
-      state.found ? state.layerIds : [],
-      "map style has no layers — nothing can paint"
-    ).not.toEqual([]);
-    // The track layers are only added once `load` fires, so their presence
-    // proves the whole chain (style → load → ready → PathLayer/SignalHeatLayer).
-    expect(state.found ? state.layerIds : []).toEqual(
-      expect.arrayContaining([
-        "background",
-        "omnitiles",
-        "flight-path-line",
-        "signal-heat-line",
-      ])
-    );
-    // `fitBounds` only runs inside the `load` handler; the provisional camera is
-    // zoom 1 at (0,0), so a moved camera proves the track was actually framed.
-    expect(
-      state.found ? state.zoom : 1,
-      "camera never left its provisional zoom — fitBounds did not run"
-    ).toBeGreaterThan(1);
+    type MapState =
+      | { found: false }
+      | { found: true; styleLoaded: boolean; layerIds: string[]; zoom: number };
+
+    const readMapState = () =>
+      page.evaluate((): MapState => {
+        const host = document.querySelector(
+          '[data-testid="flight-map-empty"]'
+        ) as (HTMLElement & { _omniMap?: Record<string, unknown> }) | null;
+        const map = host?._omniMap as
+          | {
+              isStyleLoaded(): boolean;
+              getStyle(): { layers?: { id: string }[] } | undefined;
+              getZoom(): number;
+            }
+          | undefined;
+        if (!map) return { found: false };
+        const style = map.getStyle();
+        return {
+          found: true,
+          styleLoaded: map.isStyleLoaded(),
+          layerIds: (style?.layers ?? []).map((l) => l.id),
+          zoom: map.getZoom(),
+        };
+      });
+
+    /**
+     * Every invariant the live map must satisfy at one and the same moment.
+     * Returns the ones that do NOT hold, so an empty array means "working" and
+     * a timeout prints exactly what never came true.
+     */
+    const unmetMapInvariants = (s: MapState): string[] => {
+      if (!s.found) return ["no live MapLibre instance on the map host"];
+      const unmet: string[] = [];
+      if (!s.styleLoaded) {
+        unmet.push(
+          "style never loaded: isStyleLoaded() did not read true once in the " +
+            "whole poll window. Most likely the style is invalid — a paint " +
+            "colour MapLibre cannot parse (see map-style.ts → " +
+            "toMapLibreColor); it can also mean the map never stopped loading."
+        );
+      }
+      if (s.layerIds.length === 0) {
+        unmet.push("map style has no layers — nothing can paint");
+      } else {
+        // The track layers are only added once `load` fires, so their presence
+        // proves the whole chain (style → load → ready → PathLayer /
+        // SignalHeatLayer).
+        const absent = REQUIRED_LAYERS.filter((id) => !s.layerIds.includes(id));
+        if (absent.length > 0) {
+          unmet.push(
+            `track layers absent: ${absent.join(", ")} (present: ` +
+              `${s.layerIds.join(", ") || "none"})`
+          );
+        }
+      }
+      // `fitBounds` only runs inside the `load` handler; the provisional camera
+      // is zoom 1 at (0,0), so a moved camera proves the track was framed.
+      if (!(s.zoom > 1)) {
+        unmet.push(
+          `camera never left its provisional zoom (${s.zoom}) — fitBounds did ` +
+            "not run"
+        );
+      }
+      return unmet;
+    };
+
+    await expect
+      .poll(async () => unmetMapInvariants(await readMapState()), {
+        timeout: 10_000,
+        message:
+          "the live MapLibre instance never reached a working state — the " +
+          "listed invariants stayed unsatisfied for the whole poll window",
+      })
+      .toEqual([]);
 
     // 3. Sample the real drawing buffer. The read runs *inside* MapLibre's
     //    `render` event — i.e. still inside the rAF that drew the frame — so the
