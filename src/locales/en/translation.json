@@ -372,7 +372,18 @@
     },
     "export": {
       "button": "Export .elrsp",
-      "filename": "{{name}}.elrsp"
+      "filename": "{{name}}.elrsp",
+      "dialogTitle": "Export profile as .elrsp",
+      "filterName": "ExpressLRS profile",
+      "savedTitle": "Profile exported",
+      "failedTitle": "Export failed",
+      "dismiss": "Dismiss this export message"
+    },
+    "deleteConfirm": {
+      "title": "Delete this profile?",
+      "body": "This permanently removes “{{name}}” from your saved profiles. It can't be undone — export it as an .elrsp first if you might want it back.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
     },
     "migrated": {
       "badge": "Migrated",
@@ -1126,6 +1137,11 @@
       "exportHint": "Download a single JSON bundle of your local data: recorded telemetry sessions, chat history, config profiles, imported knowledge, and preferences. API keys are never included.",
       "exportAction": "Export my data",
       "exportFilename": "omnilink-data-export-{{name}}.json",
+      "exportDialogTitle": "Save your data export",
+      "exportFilterName": "JSON file",
+      "exportSavedTitle": "Export saved",
+      "exportFailedTitle": "Export failed",
+      "exportDismiss": "Dismiss this export message",
       "backupsTitle": "Pre-flash device backups",
       "backupsHint": "Before every flash, OmniLink saves a snapshot of the connected device as an .elrsp file. Open the folder to import one from the Profiles page.",
       "backupsAction": "Open backups folder",
@@ -1306,6 +1322,10 @@
       "loadAria": "Load session from {{target}} recorded {{time}}",
       "exportAria": "Export session from {{target}} recorded {{time}} as CSV",
       "exportFilename": "omnilink-session-{{name}}.csv",
+      "exportDialogTitle": "Save session CSV",
+      "exportFilterName": "CSV file",
+      "exportSaved": "Saved to {{path}}",
+      "exportFailed": "Couldn't save the CSV: {{detail}}",
       "summary": "{{sessions}} · {{frames}}",
       "summarySessions_one": "{{count}} session",
       "summarySessions_other": "{{count}} sessions",

@@ -7,6 +7,7 @@ pub mod ai;
 pub mod bridge;
 pub mod config;
 pub mod device;
+pub mod export;
 pub mod flash;
 pub mod knowledge;
 pub mod logs;

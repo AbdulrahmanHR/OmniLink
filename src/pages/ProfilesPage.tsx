@@ -49,6 +49,7 @@ import {
   type ElrspDocument,
 } from "@/lib/elrsp";
 import { loadCommunityPresetForImport } from "@/lib/communityPresets";
+import { exportErrorDetail, saveExportedFile } from "@/lib/fileExport";
 import type { ProfileSettings } from "@/lib/profileSettings";
 
 type DialogMode = "save" | "rename" | null;
@@ -60,6 +61,15 @@ interface ImportPreview {
   doc: ElrspDocument;
   migrated: boolean;
 }
+
+/**
+ * How the last `.elrsp` export ended. `null` before the first attempt — and
+ * after a cancelled save dialog, which must leave the page exactly as it was.
+ */
+type ExportStatus =
+  | { kind: "saved"; path: string }
+  | { kind: "failed"; detail: string }
+  | null;
 
 function ProfileFormDialog({
   mode,
@@ -247,6 +257,7 @@ export function ProfilesPage() {
   const [tab, setTab] = useState<ProfilesTab>("saved");
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [exportStatus, setExportStatus] = useState<ExportStatus>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selected = useMemo(
@@ -298,21 +309,32 @@ export function ProfilesPage() {
     selectProfile(id);
   };
 
-  /** Export the selected profile as a downloadable `.elrsp` file. */
-  const handleExport = () => {
+  /**
+   * Export the selected profile as an `.elrsp` file — through the native save
+   * dialog under Tauri (v3.0.3: the `<a download>` this replaced landed in the
+   * process cwd on WebKitGTK), falling back to a browser download elsewhere.
+   * The outcome is always stated; a cancel states nothing, which is correct.
+   */
+  const handleExport = async () => {
     if (!selected) return;
-    const blob = new Blob([serializeElrsp(profileToElrsp(selected, t))], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = t("profiles.export.filename", {
-      name: profileName(selected, t),
-    });
-    a.click();
-    // Defer the revoke so the browser can't race it against the download.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setExportStatus(null);
+    try {
+      const result = await saveExportedFile({
+        contents: serializeElrsp(profileToElrsp(selected, t)),
+        defaultName: t("profiles.export.filename", {
+          name: profileName(selected, t),
+        }),
+        mimeType: "application/json",
+        dialogTitle: t("profiles.export.dialogTitle"),
+        filterName: t("profiles.export.filterName"),
+        extensions: ["elrsp"],
+      });
+      if (result.outcome === "saved") {
+        setExportStatus({ kind: "saved", path: result.path });
+      }
+    } catch (e) {
+      setExportStatus({ kind: "failed", detail: exportErrorDetail(e) });
+    }
   };
 
   return (
@@ -420,6 +442,63 @@ export function ProfilesPage() {
         </div>
       )}
 
+      {/* Where the `.elrsp` went, or why it didn't (v3.0.3). Same inline
+          status/error convention as the import error above and folder sync. */}
+      {exportStatus?.kind === "saved" && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-status-good/40 bg-status-good/10 p-3"
+          data-testid="profiles-export-status"
+        >
+          <Check
+            className="mt-0.5 h-4 w-4 shrink-0 text-status-good"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-foreground">
+              {t("profiles.export.savedTitle")}
+            </p>
+            <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">
+              {exportStatus.path}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportStatus(null)}
+            aria-label={t("profiles.export.dismiss")}
+            className="shrink-0 rounded p-0.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {exportStatus?.kind === "failed" && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-destructive"
+          data-testid="profiles-export-error"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold">
+              {t("profiles.export.failedTitle")}
+            </p>
+            <p className="mt-0.5 break-words font-mono text-[11px] opacity-80">
+              {exportStatus.detail}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportStatus(null)}
+            aria-label={t("profiles.export.dismiss")}
+            className="shrink-0 rounded p-0.5 transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       {tab === "community" && (
         <CommunityPresets onImport={handleImportPreset} />
       )}
@@ -481,7 +560,12 @@ export function ProfilesPage() {
                         ? t("profiles.actions.applied")
                         : t("profiles.actions.apply")}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleExport()}
+                      data-testid="profiles-export-btn"
+                    >
                       <Download />
                       {t("profiles.export.button")}
                     </Button>
@@ -569,6 +653,7 @@ export function ProfilesPage() {
         onConfirm={handleConfirmImport}
         onClose={() => setImportPreview(null)}
       />
+
     </div>
   );
 }

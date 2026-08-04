@@ -2,11 +2,13 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
+  Check,
   Download,
   FolderOpen,
   Loader2,
   ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -26,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { collectUserDataExport, wipeAllUserData } from "@/lib/userData";
+import { exportErrorDetail, saveExportedFile } from "@/lib/fileExport";
 import { openBackupsFolder } from "@/lib/tauri";
 
 /**
@@ -61,9 +64,20 @@ function fileStamp(now: number): string {
  * The inventory is centralized in `@/lib/userData`, so this card can't drift
  * from what is actually exported/erased.
  */
+/**
+ * How the last export ended, as the card reports it. `null` before the first
+ * attempt — and after a cancelled one, which is a normal outcome that must
+ * leave the card exactly as it was.
+ */
+type ExportStatus =
+  | { kind: "saved"; path: string }
+  | { kind: "failed"; detail: string }
+  | null;
+
 export function PrivacyDataSettings() {
   const { t } = useTranslation();
   const [exporting, setExporting] = React.useState(false);
+  const [exportStatus, setExportStatus] = React.useState<ExportStatus>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmText, setConfirmText] = React.useState("");
   const [deleting, setDeleting] = React.useState(false);
@@ -75,20 +89,29 @@ export function PrivacyDataSettings() {
 
   const handleExport = React.useCallback(async () => {
     setExporting(true);
+    setExportStatus(null);
     try {
       const now = Date.now();
       const bundle = await collectUserDataExport(now);
-      // Mirror the working download pattern in SessionPicker.handleExport.
-      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
-        type: "application/json",
+      // Under Tauri this opens a native save dialog and writes where the user
+      // chose; in a plain browser it falls back to a download. Either way the
+      // outcome is stated below — the shipped 3.0.3 bug was that it wasn't.
+      const result = await saveExportedFile({
+        contents: JSON.stringify(bundle, null, 2),
+        defaultName: t("settings.privacy.exportFilename", {
+          name: fileStamp(now),
+        }),
+        mimeType: "application/json",
+        dialogTitle: t("settings.privacy.exportDialogTitle"),
+        filterName: t("settings.privacy.exportFilterName"),
+        extensions: ["json"],
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = t("settings.privacy.exportFilename", { name: fileStamp(now) });
-      a.click();
-      // Defer the revoke so the browser can't race it against the download start.
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      // A cancel leaves the card untouched; only a real save announces itself.
+      if (result.outcome === "saved") {
+        setExportStatus({ kind: "saved", path: result.path });
+      }
+    } catch (e) {
+      setExportStatus({ kind: "failed", detail: exportErrorDetail(e) });
     } finally {
       setExporting(false);
     }
@@ -157,6 +180,65 @@ export function PrivacyDataSettings() {
             {t("settings.privacy.exportAction")}
           </Button>
         </div>
+
+        {/* The outcome of the last export. Matches the inline status/error
+            convention used by folder sync rather than inventing a toast: a
+            success names the file the user now has, a failure names what went
+            wrong, and a cancel renders nothing at all. */}
+        {exportStatus?.kind === "saved" && (
+          <div
+            role="status"
+            className="flex items-start gap-2 rounded-md border border-status-good/40 bg-status-good/10 p-3"
+            data-testid="privacy-export-status"
+          >
+            <Check
+              className="mt-0.5 h-4 w-4 shrink-0 text-status-good"
+              aria-hidden
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-foreground">
+                {t("settings.privacy.exportSavedTitle")}
+              </p>
+              <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">
+                {exportStatus.path}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExportStatus(null)}
+              aria-label={t("settings.privacy.exportDismiss")}
+              className="shrink-0 rounded p-0.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        )}
+
+        {exportStatus?.kind === "failed" && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-destructive"
+            data-testid="privacy-export-error"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold">
+                {t("settings.privacy.exportFailedTitle")}
+              </p>
+              <p className="mt-0.5 break-words font-mono text-[11px] opacity-80">
+                {exportStatus.detail}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExportStatus(null)}
+              aria-label={t("settings.privacy.exportDismiss")}
+              className="shrink-0 rounded p-0.5 transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        )}
 
         {/* Pre-flash device backups (FLASH-5). The engine writes an `.elrsp`
             snapshot of the connected device before every flash — and refuses to

@@ -25,6 +25,7 @@ import {
   telemetrySessionToCsv,
   type TelemetrySessionCsvRow,
 } from "@/lib/telemetry-session-csv";
+import { exportErrorDetail, saveExportedFile } from "@/lib/fileExport";
 import {
   deleteSession,
   formatSessionDuration,
@@ -117,6 +118,33 @@ export function SessionPicker({ onSession }: SessionPickerProps) {
     []
   );
 
+  // v3.0.3: the outcome of the last CSV export, per row. Kept separate from
+  // `errorId` because the two say different things — that one is a DB *read*
+  // failure ("try again"), this one is where the file went, or why it didn't.
+  const [exportNotice, setExportNotice] = React.useState<{
+    sessionId: string;
+    kind: "saved" | "failed";
+    detail: string;
+  } | null>(null);
+  const exportTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Show one export outcome transiently, mirroring {@link flagRowError}. */
+  const flagExport = React.useCallback(
+    (sessionId: string, kind: "saved" | "failed", detail: string) => {
+      setExportNotice({ sessionId, kind, detail });
+      if (exportTimer.current) clearTimeout(exportTimer.current);
+      exportTimer.current = setTimeout(() => setExportNotice(null), 8000);
+    },
+    []
+  );
+
+  React.useEffect(
+    () => () => {
+      if (exportTimer.current) clearTimeout(exportTimer.current);
+    },
+    []
+  );
+
   // Retention policy (M24): when enabled, prune before listing so the database
   // stays bounded. Read individually so a setter-only change can't re-run loads.
   const retentionEnabled = useRetentionStore((s) => s.enabled);
@@ -190,33 +218,44 @@ export function SessionPicker({ onSession }: SessionPickerProps) {
     async (session: StoredSessionMeta) => {
       setBusyId(session.sessionId);
       setErrorId(null);
+      setExportNotice(null);
+      let rows: TelemetrySessionCsvRow[];
       try {
         // Read the frames first and let a genuine DB failure throw *before* the
-        // Blob is built, so a failed read can't produce a header-only CSV that
-        // looks like a successful (but empty) export.
-        const rows = await loadSessionRows(session.sessionId);
-        const blob = new Blob([telemetrySessionToCsv(rows)], {
-          type: "text/csv",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = t("logs.session.exportFilename", {
-          name: fileStamp(session.startedAt),
-        });
-        a.click();
-        // Defer the revoke so the browser can't race it against starting the
-        // download (revoking synchronously can cancel an in-flight download).
-        setTimeout(() => URL.revokeObjectURL(url), 0);
+        // save dialog opens, so a failed read can't produce a header-only CSV
+        // that looks like a successful (but empty) export.
+        rows = await loadSessionRows(session.sessionId);
       } catch {
         // Same guard as handleLoad: surface the failure inline instead of
         // silently "exporting" an empty CSV.
         flagRowError(session.sessionId);
+        setBusyId(null);
+        return;
+      }
+      try {
+        // Native save dialog under Tauri (v3.0.3 — the `<a download>` this
+        // replaced wrote into the process cwd on WebKitGTK); browser download
+        // otherwise. A cancel says nothing; a save says where it went.
+        const result = await saveExportedFile({
+          contents: telemetrySessionToCsv(rows),
+          defaultName: t("logs.session.exportFilename", {
+            name: fileStamp(session.startedAt),
+          }),
+          mimeType: "text/csv",
+          dialogTitle: t("logs.session.exportDialogTitle"),
+          filterName: t("logs.session.exportFilterName"),
+          extensions: ["csv"],
+        });
+        if (result.outcome === "saved") {
+          flagExport(session.sessionId, "saved", result.path);
+        }
+      } catch (e) {
+        flagExport(session.sessionId, "failed", exportErrorDetail(e));
       } finally {
         setBusyId(null);
       }
     },
-    [t, flagRowError]
+    [t, flagRowError, flagExport]
   );
 
   // Delete the session + all its frames (best-effort), then re-list. Always
@@ -335,6 +374,8 @@ export function SessionPicker({ onSession }: SessionPickerProps) {
           );
           const rowBusy = busyId === session.sessionId;
           const rowError = errorId === session.sessionId;
+          const rowExport =
+            exportNotice?.sessionId === session.sessionId ? exportNotice : null;
           const editing = editingId === session.sessionId;
 
           if (editing) {
@@ -450,6 +491,36 @@ export function SessionPicker({ onSession }: SessionPickerProps) {
                     >
                       <AlertTriangle className="h-3 w-3" aria-hidden />
                       {t("logs.session.rowError")}
+                    </span>
+                  )}
+                  {/* Where the CSV went, or why it didn't (v3.0.3). Transient,
+                      like the read-failure notice above it. */}
+                  {rowExport?.kind === "saved" && (
+                    <span
+                      className="flex min-w-0 items-center gap-1 text-status-good"
+                      role="status"
+                      data-testid="session-export-saved"
+                    >
+                      <Check className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="truncate">
+                        {t("logs.session.exportSaved", {
+                          path: rowExport.detail,
+                        })}
+                      </span>
+                    </span>
+                  )}
+                  {rowExport?.kind === "failed" && (
+                    <span
+                      className="flex min-w-0 items-center gap-1 text-destructive"
+                      role="status"
+                      data-testid="session-export-failed"
+                    >
+                      <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="truncate">
+                        {t("logs.session.exportFailed", {
+                          detail: rowExport.detail,
+                        })}
+                      </span>
                     </span>
                   )}
                 </span>

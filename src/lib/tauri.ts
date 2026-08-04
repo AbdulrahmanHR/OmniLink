@@ -769,6 +769,44 @@ export function openBackupsFolder(): Promise<void> {
   return invoke<void>("open_backups_dir");
 }
 
+/**
+ * One `save_export_file` request. Mirrors `ExportFileRequest` in
+ * `src-tauri/src/commands/export.rs`.
+ *
+ * Note what is NOT here: a destination. The backend opens the native save
+ * dialog itself, so the only path it can write is one the user just picked —
+ * see the module doc in `commands/export.rs` for why that matters. Every
+ * user-facing string is passed in already localized; the backend holds no copy.
+ */
+export interface ExportFileRequest {
+  /** Native dialog title. */
+  title: string;
+  /** Suggested file name (a suggestion — the user can change it). */
+  defaultName: string;
+  /** Localized name of the file-type filter, e.g. "JSON file". */
+  filterName: string;
+  /** Extensions for that filter, without dots, e.g. `["json"]`. */
+  extensions: readonly string[];
+  /** The document to write, UTF-8. */
+  contents: string;
+}
+
+/**
+ * Show a native save dialog and write `contents` to the chosen file (v3.0.3).
+ *
+ * Resolves to the resolved path, or `null` when the user dismissed the dialog —
+ * a cancel is a normal outcome, not an error. Rejects only when the write
+ * genuinely failed, with the OS detail as the message.
+ *
+ * Callers should go through {@link import("@/lib/fileExport").saveExportedFile},
+ * which also covers the plain-browser context.
+ */
+export function saveExportFile(
+  request: ExportFileRequest
+): Promise<string | null> {
+  return invoke<string | null>("save_export_file", { request });
+}
+
 // ---------------------------------------------------------------------------
 // M71-API: user-owned folder sync (decision D37).
 //

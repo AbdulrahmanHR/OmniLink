@@ -345,6 +345,114 @@ Rendering is unchanged and offline-first is unchanged; that was the entire point
   now, matching the placeholder convention already used in `docs/RELEASING.md`, so
   it cannot rot again. It was the only versioned example filename in `docs/`.
 
+### The final verification pass found two more defects, and this release is re-cut
+
+`3.0.3` had been tagged and a draft release built before either of these
+surfaced. **The draft was never published**, so nothing shipped with them and
+there is nothing to supersede: the tag is re-cut on this tree rather than a
+`3.0.4` opened for a release no one could install. The version in all five
+version-carrying files is untouched and still `3.0.3`.
+
+#### "Export my data" wrote to the process working directory, and said nothing
+
+Settings → **Export my data** produced a correct bundle — every persisted store,
+every user-data table, API key values excluded exactly as promised — and then put
+it somewhere the user had no way to find. Observed in the packaged AppImage under
+**WebKitGTK 2.52.3**: no save dialog, no confirmation, no reveal-in-folder, and
+the file written into the **process's current working directory**. On a normally
+installed app that directory is `/` or `$HOME`, neither of which the user was
+looking in; where the cwd is not writable the export would have failed with
+nothing said at all.
+
+The cause is the browser idiom — build a `Blob`, mint an object URL, click a
+synthetic `<a download>`. Chromium hands that to its download manager, which is
+why the Playwright suite has always been green on it: `waitForEvent("download")`
+observes a mechanism WebKitGTK does not implement, so the test could not have
+caught this and was not weak, merely engine-bound. **The same three lines backed
+all three exports.** A recorded session's CSV and a profile's `.elrsp` carried the
+identical defect; only the data export had been looked at.
+
+The desktop path now goes through a native save dialog and reports what happened.
+`src/lib/fileExport.ts` is the single seam: under Tauri it calls the new Rust
+command `save_export_file`, outside it (a `npm run dev` tab, and the Playwright
+suite, which runs the web build) it keeps the anchor download, which is both
+correct and the only mechanism there is in that context.
+
+**The dialog is opened in Rust, not in TypeScript, and that is the substantive
+design decision here.** `@tauri-apps/plugin-dialog` exposes `save()` to JS, so the
+obvious shape is "pick the path in TS, hand it to a Rust `write(path, contents)`".
+That shape hands the webview a command that writes **any path it names** — and
+`src-tauri/capabilities/default.json` argues at length that the six
+`folder-sync:allow-*` permissions are this application's only filesystem grant,
+with `tauri-plugin-fs` deliberately unregistered. App-level commands are not
+ACL-gated at all, so such a command would open a filesystem hole *outside* the
+document that describes the app's reach. Opening the dialog inside the same
+command closes it: the only path `save_export_file` can write is one the user
+chose in a native dialog during that call, the frontend never names a
+destination, and there is no window between "path picked" and "path written" in
+which the target could change. It also needed no new plugin, no new dependency
+and no new capability entry — `dialog:default` already covers the Rust-side use,
+and the plugin has been registered since M25.
+
+Three outcomes, all distinguishable, none silent. A save shows the resolved path
+in a `role="status"` block; a **cancel shows nothing**, because a cancel is a
+normal thing to do and an error message for it would be a lie; a failure shows a
+`role="alert"` with the OS detail verbatim under a localized heading. That is the
+inline convention folder sync and the Profiles import error already use, not a
+new toast mechanism. The suggested file name is flattened to a single path
+segment backend-side (`sanitize_file_name`) because it is interpolated from
+user-controlled text — `profiles.export.filename` is `{{name}}.elrsp` — and a
+name containing a separator would otherwise reach the dialog as a path and
+quietly relocate the default destination.
+
+A source scan in `tests/unit/exportSaveDialog.test.ts` now pins the idiom to that
+one seam: any other file under `src/` reaching for `URL.createObjectURL` or an
+`a.download =` assignment fails the suite. It was watched failing first, naming
+all three offenders —
+
+```
+- Expected
++ Received
+  [
+-   "lib/fileExport.ts",
++   "components/logs/SessionPicker.tsx",
++   "components/settings/PrivacyDataSettings.tsx",
++   "pages/ProfilesPage.tsx",
+  ]
+```
+
+— which is also the evidence that the other two exports had the defect, rather
+than an assumption that they did.
+
+#### Verified on the real engine, again
+
+Both export surfaces were driven in a live window under **WebKitGTK 2.52.3**,
+through AT-SPI, against a freshly compiled `src-tauri` — the stale-binary trap
+this release documented is the reason that last clause is stated:
+
+- Settings → Export my data opens a native GTK save dialog titled **"Save your
+  data export"** (the localized `settings.privacy.exportDialogTitle`, so the copy
+  is reaching the dialog from the frontend as designed). Choosing
+  `/tmp/…/chosen-export.json` wrote **4,557 bytes** of valid bundle JSON at
+  exactly that path, and the card then rendered `Export saved` above that same
+  path.
+- Cancelling the dialog on a second attempt left the card clean — no status, no
+  error — and wrote **nothing** to the process working directory, which is the
+  original defect checked directly rather than by proxy.
+- Profiles → Export .elrsp opens the same dialog titled **"Export profile as
+  .elrsp"**, pre-filled `Racing 500Hz.elrsp`, and wrote a 430-byte `.elrsp` to
+  the chosen path with `Profile exported` and the path shown afterwards.
+
+**What was not verified live:** the session-CSV export, which needs a recorded
+session in `omnilink.db` and no radio has ever been attached here; it goes
+through the identical seam and is covered by the unit and e2e tests. The
+WebKitGTK run also cost this session its display: the WSLg X server died with
+`Fatal server error: request could not be marshaled: can't send file descriptor`
+the first time the GTK file chooser opened, and the verification above was
+completed against a private `Xvfb` instead. That is a WSLg limitation, not an
+application fault — the dialog behaves correctly on a working X server — but it
+is recorded because the next person to try this will hit it.
+
 ### Gates
 
 Re-run in full on this tree at the version bump:
@@ -366,6 +474,22 @@ clean, production build green, and **E2E 79 passed, 0 failed** at the pinned two
 workers. E2E *was* re-run this time, unlike at the version bump, because this
 change is to the shipped bundle and Playwright drives the same Vite pipeline the
 plugin hooks. No Rust source changed, so the Rust counts stand.
+
+Re-run once more for the two defects above, which are the last work in this
+release: unit **1659 passed, 130 files** (+6 in one new file), `tsc --noEmit`
+clean, `eslint` clean, production build green, Rust **371 passed** (+4, all in
+`commands/export.rs`) with `cargo fmt --check` and `cargo clippy -- -D warnings`
+clean, and **E2E 84 passed, 0 failed** (+5) at the pinned two workers. Every one
+of the eleven new tests was watched failing against the pre-fix tree before it
+was kept.
+
+One environment note, because it cost an hour and will cost the next person the
+same: with a **dead X server still advertised in `DISPLAY`** — which is what WSLg
+leaves behind after the crash described above — headless Chromium hangs inside
+`AxeBuilder.analyze()`, and the eight `a11y.spec.ts` tests fail on a 30 s (and a
+180 s) timeout with no other symptom. It reproduces on an unmodified checkout of
+`main`, and `env -u DISPLAY` makes the same test pass in 1.1 s. Nothing in the
+suite is at fault.
 
 ### Version
 

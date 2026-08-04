@@ -17,6 +17,7 @@ use commands::bridge::{fetch_bridge_context, probe_bridge, run_passthrough_check
 use commands::config::folder_sync;
 use commands::config::{delete_profile, load_profiles, save_profile};
 use commands::device::{connect_device, disconnect_device, list_serial_ports, DeviceManager};
+use commands::export::save_export_file;
 use commands::flash::{
     cancel_flash, delete_all_backups, derive_uid, fetch_firmware_releases, open_backups_dir,
     start_flash, FlashManager,
@@ -43,6 +44,9 @@ pub fn run() {
         // file" option calls the JS `@tauri-apps/plugin-dialog` `open()`, which
         // is served by this plugin (gated by the `dialog:default` capability).
         // M71 reuses the same plugin for the folder picker (`directory: true`).
+        // v3.0.3 reuses it a third time, from RUST: `save_export_file` shows the
+        // save dialog and writes the file in one command, so the webview never
+        // names a destination (see `commands/export.rs`).
         .plugin(tauri_plugin_dialog::init())
         // v3.0.3: OS notifications for tripped live alerts.
         //
@@ -186,7 +190,8 @@ pub fn run() {
             probe_wifi_device,
             probe_bridge,
             run_passthrough_check,
-            fetch_bridge_context
+            fetch_bridge_context,
+            save_export_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

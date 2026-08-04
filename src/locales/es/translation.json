@@ -372,7 +372,18 @@
     },
     "export": {
       "button": "Exportar .elrsp",
-      "filename": "{{name}}.elrsp"
+      "filename": "{{name}}.elrsp",
+      "dialogTitle": "Exportar perfil como .elrsp",
+      "filterName": "Perfil de ExpressLRS",
+      "savedTitle": "Perfil exportado",
+      "failedTitle": "Fallo al exportar",
+      "dismiss": "Descartar este mensaje de exportación"
+    },
+    "deleteConfirm": {
+      "title": "¿Eliminar este perfil?",
+      "body": "Esto elimina permanentemente “{{name}}” de tus perfiles guardados. No se puede deshacer: expórtalo como .elrsp antes si crees que lo querrás de vuelta.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar"
     },
     "migrated": {
       "badge": "Migrado",
@@ -1126,6 +1137,11 @@
       "exportHint": "Descarga un único archivo JSON con tus datos locales: sesiones de telemetría grabadas, historial de chat, perfiles de configuración, conocimiento importado y preferencias. Las claves de API nunca se incluyen.",
       "exportAction": "Exportar mis datos",
       "exportFilename": "omnilink-datos-exportados-{{name}}.json",
+      "exportDialogTitle": "Guardar la exportación de tus datos",
+      "exportFilterName": "Archivo JSON",
+      "exportSavedTitle": "Exportación guardada",
+      "exportFailedTitle": "Fallo al exportar",
+      "exportDismiss": "Descartar este mensaje de exportación",
       "backupsTitle": "Copias de seguridad previas al flasheo",
       "backupsHint": "Antes de cada flasheo, OmniLink guarda una instantánea del dispositivo conectado como archivo .elrsp. Abre la carpeta para importar una desde la página de Perfiles.",
       "backupsAction": "Abrir carpeta de copias",
@@ -1306,6 +1322,10 @@
       "loadAria": "Cargar la sesión de {{target}} grabada {{time}}",
       "exportAria": "Exportar como CSV la sesión de {{target}} grabada {{time}}",
       "exportFilename": "omnilink-session-{{name}}.csv",
+      "exportDialogTitle": "Guardar el CSV de la sesión",
+      "exportFilterName": "Archivo CSV",
+      "exportSaved": "Guardado en {{path}}",
+      "exportFailed": "No se pudo guardar el CSV: {{detail}}",
       "summary": "{{sessions}} · {{frames}}",
       "summarySessions_one": "{{count}} sesión",
       "summarySessions_other": "{{count}} sesiones",
