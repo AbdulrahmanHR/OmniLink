@@ -23,7 +23,9 @@ this document is the exact procedure.
   `plugins.updater`):
   - endpoint: `https://github.com/AbdulrahmanHR/OmniLink/releases/latest/download/latest.json`
   - a real minisign **public key** is already committed (`pubkey`, fingerprint
-    `1F941C509DAAD29A`).
+    `B97BAECF776B41BF` — decode the `pubkey` value to read it back; the earlier
+    `1F941C509DAAD29A` was rotated out at `2ced4d1`, before publication, and is
+    current only for releases up to `2.5.0`).
 - **A version-guard** (`release.yml` job `create-release`): the pushed tag
   `vX.Y.Z` must EXACTLY equal both `package.json.version` and
   `tauri.conf.json.version` **at the tagged commit**, or the run fails fast. This
@@ -49,7 +51,7 @@ this document is the exact procedure.
 ## Step 0 — Signing key (one-time)
 
 The signing secrets are already in the repo and match the committed `pubkey`
-(`1F941C509DAAD29A`) — **for a normal release you skip this whole step**. You
+(`B97BAECF776B41BF`) — **for a normal release you skip this whole step**. You
 only revisit it to rotate the key.
 
 **A. Keep the existing key** (normal case): nothing to do — the secrets already
@@ -146,9 +148,11 @@ git push origin vX.Y.Z  # this is what triggers release.yml
   `.msi`/`.exe`, `.dmg`, `.deb`/`.AppImage`, and `latest.json` + signatures are
   attached.
 - **Diff the generated `latest.json` against the previous release's** before
-  publishing. Its asset-URL shape is emitted by `tauri-apps/tauri-action`, which is
-  pinned to a mutable tag, so it can change under you without any edit here. This
-  is the cheapest check that protects the whole updater feed.
+  publishing. Its asset-URL shape is emitted by `tauri-apps/tauri-action`, so it
+  changes whenever that pin is bumped — it is pinned to a full commit SHA since
+  `479d34f`, which makes the change deliberate rather than silent, but the shape
+  still moves under you the release after a bump. This is the cheapest check that
+  protects the whole updater feed.
 - **Publish** the draft. Publishing is required — a draft's assets are NOT served
   at `/releases/latest/download/latest.json`, so the in-app updater only resolves
   once you publish.
