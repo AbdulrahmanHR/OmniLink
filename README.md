@@ -1,6 +1,6 @@
 # OmniLink
 
-**A free, open-source, offline-first desktop application for ExpressLRS drone-radio hardware. No accounts. No subscriptions. No cloud dependencies.**
+**Configure, flash, and monitor ExpressLRS radio gear from your desktop.**
 
 [![License: GPL v3 or later](https://img.shields.io/badge/License-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![CI](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/ci.yml)
@@ -8,26 +8,18 @@
 [![Windows Build](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/windows-build.yml/badge.svg)](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/windows-build.yml)
 [![macOS Build](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/macos-build.yml/badge.svg)](https://github.com/AbdulrahmanHR/OmniLink/actions/workflows/macos-build.yml)
 
-OmniLink is a cross-platform desktop suite for configuring, flashing, and monitoring **ExpressLRS** gear across Windows, macOS, and Linux. Built on **Tauri 2 (Rust)**, **React 19**, and **TypeScript**.
+Plug a transmitter or receiver into USB and OmniLink picks it up, identifies the
+target and firmware, and opens a live link over **CRSF**. From there you can watch
+telemetry as it arrives — RSSI, link quality, SNR, antenna pattern, GPS track on a
+map — flash new firmware through a guided wizard, save and diff configuration
+profiles, replay a recorded session, and pull apart a Betaflight blackbox log.
 
-OmniLink communicates directly with ExpressLRS hardware over **CRSF** (serial USB-CDC), device **Wi-Fi** APIs, and **ExpressLRS Backpack** companion devices. It provides real-time telemetry dashboards (RSSI / LQ / SNR, antenna polar plots, GPS mapping), guided firmware flashing, local profile management, Betaflight blackbox log decoding, and an optional bring-your-own-key (BYOK) AI assistant.
+It also reaches ExpressLRS gear that is not on the end of a cable: devices in Wi-Fi
+mode and **ExpressLRS Backpack** companion hardware, over the device Wi-Fi APIs and
+mDNS.
 
----
-
-## Core Principles
-
-Every feature in OmniLink is open and fully accessible. 
-
-| Principle | Description |
-|---|---|
-| **Free & Open Source** | Released under **GPL-3.0-or-later**. Free to use, inspect, modify, and redistribute. |
-| **Offline-First** | Telemetry, firmware flashing from cache, config profiles, and log analysis operate 100% offline. |
-| **Zero Account Dependency** | No user registration, authentication, identity tracking, or personal data collection. |
-| **No Cloud Backend** | The application runs completely on your local machine with zero external server dependencies. |
-| **Privacy & Zero Telemetry** | No tracking or analytical pinging. Privacy is enforced at the architectural level. |
-| **Bring Your Own Key (BYOK) AI** | Optional AI assistance powered by your own API key (Anthropic, OpenAI, Gemini, Groq, Ollama, etc.), stored securely in your OS keychain. |
-
-> Architectural commitments are detailed in [`CONTRIBUTING.md`](CONTRIBUTING.md#scope-boundary--what-will-not-be-accepted). Contributions requiring central servers, paid entitlements, or telemetry tracking are strictly out of scope.
+Runs on Windows, macOS, and Linux. Built with **Tauri 2 (Rust)**, **React 19**, and
+**TypeScript**.
 
 ---
 
@@ -46,18 +38,43 @@ Every feature in OmniLink is open and fully accessible.
 | **Blackbox Log Analysis** | Import and analyze Betaflight/iNav `.bbl` logs with full interactive scrubber controls | In-process pure-Rust `blackbox-log` parser |
 | **Offline Maps & Replay** | Replay flight telemetry sessions with adjustable speed and view paths on offline tile sets | MapLibre GL + offline `.ompack` tile engine |
 | **Flight Controller Bridge** | Read-only passthrough telemetry inspection via flight controller USB connections | Non-destructive MSP passthrough bridge |
-| **BYOK AI Assistant** | Grounded technical assistant with local BM25 documentation indexing (RAG) and automatic PII scrubbing | Secure local keychain + direct provider API integration |
+| **AI Assistant** (optional) | Grounded technical assistant with local BM25 documentation indexing (RAG) and automatic PII scrubbing | Secure local keychain + direct provider API integration |
+
+---
+
+## How OmniLink Works
+
+| | |
+|---|---|
+| **Runs on your machine** | No backend, no accounts, no sign-in. Telemetry, flashing from cache, profiles, and log analysis all work with the network off. |
+| **Keeps your data local** | Sessions and profiles live in local SQLite and files you own. No tracking, no analytics pings. |
+| **Open source** | **GPL-3.0-or-later** — use it, read it, change it, redistribute it. |
+| **Optional AI, your key** | The assistant is off until you add your own provider key (Anthropic, OpenAI, Gemini, Groq, Ollama…), stored in the OS keychain. Everything else works without it. |
+
+> These are scope boundaries, not just preferences: contributions that require a
+> central server, a paid tier, or usage tracking are out of scope. See
+> [`CONTRIBUTING.md`](CONTRIBUTING.md#scope-boundary--what-will-not-be-accepted).
 
 ---
 
 ## Getting Started
 
-### Prerequisites
+### Install a build
+
+Download the installer for your platform from
+[Releases](https://github.com/AbdulrahmanHR/OmniLink/releases) — `.deb`/`.AppImage`
+for Linux, `.dmg` for macOS, `.exe`/`.msi` for Windows. Installers are unsigned; see
+[Operating System Setup](#operating-system-setup) for the warnings you will hit and
+how to get past them.
+
+### Build from source
+
+#### Prerequisites
 
 * **[Node.js](https://nodejs.org/)** LTS (v22+) & `npm`
 * **[Rust Toolchain](https://www.rust-lang.org/)** (v1.81+) & [Tauri Prerequisites](https://tauri.app/start/prerequisites/) for your operating system
 
-### Installation & Execution
+#### Running it
 
 ```bash
 # Clone the repository
