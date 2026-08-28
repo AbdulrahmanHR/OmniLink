@@ -15,6 +15,85 @@ All notable changes to OmniLink are documented here. This project adheres to
 > has been edited away below. A changelog quietly rewritten after the event is worth
 > less than one that says what it said and is corrected in the open.
 
+## [3.0.4] — 2026-08-29
+
+**"Two engines."** A maintenance release. Nothing here changes what the app
+does for a user, and it is cut for one reason: the test suite now runs under
+the engine this app actually ships in, and that had to be recorded somewhere
+other than a commit message.
+
+### The suite ran in Chromium; the app runs in WebKit
+
+`3.0.3` was cut after this app was run under WebKitGTK by hand, and four
+defects fell out immediately — one of them a flight map that had painted
+nothing since `3.0.2`. That was a manual, one-off check. It is now automated:
+`playwright.config.ts` declares a second `webkit` project, CI installs both
+browsers, and a bare `playwright test` runs all 168 tests across both.
+
+Closing that gap surfaced three things, none of which exist in Chromium.
+
+**`diagnostics.spec.ts` could not start at all.** It declared clipboard
+permissions statically, and Playwright's WebKit backend does not implement
+`clipboard-write`, so `newPage()` threw for all 11 tests in the file before
+the app ever loaded. The grant is now Chromium-gated; only the one test that
+genuinely round-trips the clipboard skips elsewhere, and its assertions are
+unchanged.
+
+**`isExpectedTileError`'s message match knew only Chromium and Firefox.**
+That function decides which MapLibre errors stay quiet and which are surfaced
+as real defects, and every token in its last-resort regex — `failed to
+fetch`, `err_unknown_url_scheme`, `network error` — was vocabulary from
+engines this app does not ship on. It is now grouped by engine and justified
+token by token, with negative tests proving style-spec, paint and WebGL
+errors are still surfaced. Widening that filter too far would re-create the
+`map.on("error", () => {})` blindness that hid `3.0.3`'s blank map, so what
+was rejected is recorded next to what was added.
+
+**This is written down as defensive, not as a fix**, because instrumenting
+the failing scenario showed the causal chain did not hold: all 46 tile errors
+already matched on the structural `sourceId`/`tile`/`status` branches, the
+message regex was never reached, and the app logged nothing. The e2e failure
+was the *engine* talking — under `installTauriMock` the `omnitiles` scheme
+cannot be registered, and WebKit reports that refusal twice per tile, on
+`pageerror` and on `console`. The Chromium twin of exactly that noise was
+already whitelisted in the spec; the WebKit forms now join it, scoped to the
+`mockedTauri` opt-in so the mock-free flight-map test that actually guards
+offline tile behaviour never sees them.
+
+**WebKit runs this app roughly twice as slowly as Chromium.** Uniformly, not
+on one hot path: the axe sweeps go 7.0s → 17.2s and 9.5s → 20.8s. Timeouts
+are widened for that project alone, so Chromium keeps a tight 7s per-assertion
+budget as a performance canary. The 2x gap is unmeasured on real hardware and
+is not explained here — it is recorded because it is the second thing a
+Chromium-only suite structurally could not see.
+
+### Fixed
+
+- `parse_serial_config` walked its payload with `chunks_exact`, which Rust
+  1.98's clippy flags under `-D warnings`. CI's toolchain action is
+  SHA-pinned but installs whatever `stable` currently resolves to, so the
+  Lint & Test job began failing on a line unchanged since `3.0.2`, with no
+  commit having touched Rust. Now `as_chunks::<N>()`, which also makes the
+  record indexing length-checked at compile time. No behaviour change.
+
+### Changed
+
+- The README led with licence, accounts and cloud posture; a reader met a
+  six-row principles table before learning the app talks to a radio. It now
+  opens on what the app does, installs from Releases before it clones, and
+  keeps the principles condensed below the feature table. The GitHub
+  repository description was rewritten to match.
+
+### Still not verified
+
+Unchanged from `3.0.3` and repeated because a release note is where people
+look: **no ExpressLRS hardware has ever been attached to this project.** The
+WebKit coverage added here narrows the *engine* gap, not the hardware one,
+and none of it ran in the packaged Tauri shell — the `omnitiles` scheme is
+served natively there and may fail with different words than anything
+observed. The four CFNetwork message tokens added to the tile filter are
+researched vocabulary for the WKWebView build, not observations.
+
 ## [3.0.3] — 2026-08-01
 
 **"The map paints."** The first release cut after this app was run under the
