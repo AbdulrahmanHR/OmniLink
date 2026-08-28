@@ -385,7 +385,9 @@ fn parse_serial_config(payload: &[u8]) -> Vec<SerialPortMeta> {
         return Vec::new();
     }
     payload
-        .chunks_exact(SERIAL_CONFIG_PORT_LEN)
+        .as_chunks::<SERIAL_CONFIG_PORT_LEN>()
+        .0
+        .iter()
         .take(MAX_SERIAL_PORTS)
         .map(|rec| {
             let function_mask = u16::from_le_bytes([rec[1], rec[2]]);
