@@ -41,6 +41,24 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // The app ships on WebKitGTK (Linux) and WKWebView (macOS). Chromium alone
+      // cannot see engine-level differences in those two — `3.0.3` shipped a
+      // flight map that had painted nothing since `3.0.2` because a CSS colour
+      // serialised as `oklch(...)` in WebKit and `rgb(...)` in Chromium.
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+      // WebKit runs this app roughly 2x slower than Chromium, uniformly rather
+      // than on one hot path — the axe sweeps go 7.0s → 17.2s and 9.5s → 20.8s,
+      // and the heaviest offline test 7.7s alone → over the 7s per-assertion
+      // budget once the full suite is competing for two workers. The budgets
+      // below are widened for that engine ONLY: every assertion is unchanged,
+      // and Chromium keeps the tight 7s as a performance canary, so a real
+      // regression still trips there. The 2x gap is itself unmeasured on real
+      // hardware and is worth its own investigation.
+      expect: { timeout: 20_000 },
+      timeout: 90_000,
+    },
   ],
   webServer: {
     command: "npm run dev",

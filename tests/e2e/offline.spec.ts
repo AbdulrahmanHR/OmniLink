@@ -105,9 +105,36 @@ const BARE_BENIGN: RegExp[] = [/transformCallback/i];
  *
  * It only became reachable at all once the 3.0.3 blank-map defect was fixed:
  * before that the style never loaded, so not one tile was ever requested.
+ *
+ * **The engine picks the words, and WebKit picks different ones.** The same
+ * unregistered scheme is reported three times per tile on WebKitGTK/WKWebView
+ * and only the third is the app's:
+ *
+ *   1. `Fetch API cannot load omnitiles://tiles/z/x/y.png due to access control
+ *      checks.` — an engine report with a stack, which Playwright's WebKit
+ *      delivers on `pageerror`, not on `console`. Playwright splits it into
+ *      `name`/`message` at the first colon, so the scheme ends up in `name` and
+ *      only the tile path survives into `message` — which is what the filter
+ *      has to anchor on, hence the second pattern below.
+ *   2. `Cross origin requests are only supported for HTTP.` — the engine's
+ *      console line for the same refusal. Not scheme-scoped in its own text,
+ *      but nothing else in this test can produce it: `setupOffline` aborts every
+ *      external http(s) request at the route level, so `omnitiles://` is the
+ *      only non-HTTP request the app makes.
+ *   3. A MapLibre `AJAXError` on `map.on("error")` carrying `sourceId`, `tile`,
+ *      `status: 0` and `url` — correctly classified as expected by
+ *      `isExpectedTileError`, so it is never logged. Nothing to filter.
+ *
+ * Only (1) and (2) are listed here: they are the engine talking about a scheme
+ * the IPC mock cannot register, not the app failing. Both stay confined to the
+ * `mockedTauri` opt-in, so the map test below — which runs WITHOUT the mock and
+ * is the real guard on offline tile behaviour — never sees them.
  */
 const MOCKED_TAURI_BENIGN: RegExp[] = [
-  /URL scheme "omnitiles" is not supported/i,
+  /URL scheme "omnitiles" is not supported/i, // Chromium
+  /Fetch API cannot load omnitiles/i, // WebKit, full message
+  /\/tiles\/\d+\/\d+\/\d+\.png due to access control checks/i, // WebKit, Playwright-split
+  /Cross origin requests are only supported for HTTP/i, // WebKit
 ];
 
 /** App-level failure signatures that must NEVER appear, even after filtering. */

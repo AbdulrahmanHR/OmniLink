@@ -259,6 +259,65 @@ describe("isExpectedTileError", () => {
     ).toBe(true);
   });
 
+  it("stays quiet for WebKit's vocabulary — the engine the app ships on", () => {
+    // Verbatim, captured from WebKitGTK 2.x under Playwright with the tile
+    // scheme unregistered. Chromium says "Failed to fetch" for the same event;
+    // not one token of that phrasing appears here.
+    expect(
+      isExpectedTileError({
+        error: {
+          message:
+            "Fetch API cannot load omnitiles: /tiles/2/2/2.png due to access control checks.",
+        },
+      })
+    ).toBe(true);
+    // The same message with the URL spelled out in full, and each half on its
+    // own — a wrapper that keeps only the head or only the tail still classifies.
+    expect(
+      isExpectedTileError({
+        error: {
+          message:
+            "Fetch API cannot load omnitiles://tiles/0/0/0.png due to access control checks.",
+        },
+      })
+    ).toBe(true);
+    expect(
+      isExpectedTileError({ error: { message: "Fetch API cannot load omnitiles" } })
+    ).toBe(true);
+    expect(
+      isExpectedTileError({ error: { message: "…due to access control checks." } })
+    ).toBe(true);
+    // WebKit's whole TypeError for a rejected fetch, and the form MapLibre
+    // wraps it in when it has no status/url to attribute the failure with.
+    expect(isExpectedTileError({ error: { message: "Load failed" } })).toBe(true);
+    expect(
+      isExpectedTileError({
+        error: { message: "AJAXError: Load failed (0): omnitiles://tiles/0/0/0.png" },
+      })
+    ).toBe(true);
+    // WebKit's refusal to issue a non-HTTP request at all.
+    expect(
+      isExpectedTileError({
+        error: { message: "Cross origin requests are only supported for HTTP." },
+      })
+    ).toBe(true);
+    // CFNetwork phrasings a WKWebView surfaces (macOS).
+    expect(isExpectedTileError({ error: { message: "unsupported URL" } })).toBe(
+      true
+    );
+    expect(
+      isExpectedTileError({
+        error: { message: "The network connection was lost." },
+      })
+    ).toBe(true);
+    expect(
+      isExpectedTileError({
+        error: { message: "The Internet connection appears to be offline." },
+      })
+    ).toBe(true);
+    expect(isExpectedTileError({ error: { message: "cancelled" } })).toBe(true);
+  });
+
   it("surfaces style/configuration errors — the 3.0.3 blind spot", () => {
     // Verbatim messages captured from the live, broken map.
     expect(
@@ -285,5 +344,35 @@ describe("isExpectedTileError", () => {
     expect(isExpectedTileError({ sourceId: "", error: new Error("boom") })).toBe(
       false
     );
+  });
+
+  it("the multi-engine widening swallows nothing it should surface", () => {
+    // The guard on widening: real defects whose wording brushes up against the
+    // network vocabulary must still get through. Each of these is a style,
+    // paint, layer-configuration or WebGL failure — the classes the doc comment
+    // promises to surface — and none carries a sourceId, tile or AJAX status.
+    const mustSurface = [
+      // Style-spec validation, the 3.0.3 family, phrased around URLs and loads.
+      'sources.omnitiles.url: string expected, number found',
+      'sources.omnitiles.tiles[0]: string expected, null found',
+      'layers[0].paint.background-color: color expected, "oklch(0.2 0.012 240)" found',
+      'layers.flight-path-line.layout.line-cap: expected one of [butt, round, square], "circle" found',
+      'glyphs: expected a string, but found undefined',
+      // Layer/source configuration.
+      'Source "omnitiles" cannot be removed while layer "omnitiles-raster" is using it.',
+      'Layer "flight-path-line" does not exist in the map\'s style and cannot be styled.',
+      'There is no source with ID "omnitiles"',
+      // WebGL setup — note this one contains "lost", which the CFNetwork
+      // "network connection was lost" fragment must NOT match on.
+      "Failed to initialize WebGL",
+      "WebGL context lost",
+      "Your browser does not support WebGL",
+      // Generic app-level breakage.
+      "Cannot read properties of undefined (reading 'style')",
+      "boom",
+    ];
+    for (const message of mustSurface) {
+      expect(isExpectedTileError({ error: { message } }), message).toBe(false);
+    }
   });
 });

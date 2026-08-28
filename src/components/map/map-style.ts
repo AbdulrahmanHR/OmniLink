@@ -344,6 +344,68 @@ export function isMapAlive(map: MapLibreMap | null | undefined): boolean {
 }
 
 /**
+ * Message fragments that mark a failure as *network/tile* rather than *style*,
+ * for {@link isExpectedTileError}'s last-resort branch.
+ *
+ * Every entry is a phrase only a network stack emits. None can occur in a
+ * MapLibre style-spec validation message (`layers[0].paint.background-color:
+ * color expected, "…" found`), a layer/paint configuration error, or a WebGL
+ * setup failure — which is the property that keeps this from becoming the
+ * blanket `error` swallow that hid the 3.0.3 blank map.
+ *
+ * Grouped by the engine that says it. The Chromium column is what the
+ * Playwright suite sees; the WebKit column is what users actually get, since
+ * the app ships on WebKitGTK (Linux) and WKWebView (macOS).
+ */
+const EXPECTED_NETWORK_ERROR_MESSAGE = new RegExp(
+  [
+    // ── Chromium / Firefox ────────────────────────────────────────────────
+    // Chromium's whole `TypeError` message for any rejected `fetch()`.
+    "failed to fetch",
+    // Firefox: "NetworkError when attempting to fetch resource."
+    "networkerror",
+    // XHR `onerror` phrasing, both engines.
+    "network error",
+    // Chromium's `net::` code when a scheme is not registered — which is
+    // exactly what `omnitiles://` is in a plain browser tab.
+    "err_unknown_url_scheme",
+    // A tile request superseded by a pan/zoom before it resolved.
+    "aborted",
+
+    // ── WebKit: WebKitGTK (Linux) and WKWebView (macOS) ───────────────────
+    // WebKit's entire `TypeError` message for a rejected `fetch()` — the
+    // counterpart of Chromium's "Failed to fetch", and what MapLibre puts in
+    // the `statusText` slot of the `AJAXError` it wraps the failure in
+    // ("AJAXError: Load failed (0): omnitiles://tiles/0/0/0.png").
+    "load failed",
+    // WebKit's report for a fetch it refuses to issue at all: "Fetch API
+    // cannot load omnitiles://tiles/0/0/0.png due to access control checks."
+    // Both halves are matched: the prefix survives when a wrapper keeps only
+    // the head of the message, the suffix when it keeps only the tail.
+    "fetch api cannot load",
+    "due to access control checks",
+    // WebKit's security refusal for a non-HTTP scheme: "Cross origin requests
+    // are only supported for HTTP."
+    "cross origin requests are only supported",
+    // CFNetwork `NSURLErrorUnsupportedURL` (-1002) — WebKit's answer to
+    // Chromium's ERR_UNKNOWN_URL_SCHEME, i.e. `omnitiles://` reaching the
+    // network stack instead of the shell's scheme handler.
+    "unsupported url",
+    // CFNetwork `NSURLErrorNetworkConnectionLost` (-1005) and
+    // `NSURLErrorNotConnectedToInternet` (-1009): the two phrasings a
+    // WKWebView gives for "there is no network", which for an offline-first
+    // app is the normal case, not a defect. Matched as full phrases so they
+    // cannot collide with MapLibre's own "WebGL context lost".
+    "network connection was lost",
+    "connection appears to be offline",
+    // CFNetwork `NSURLErrorCancelled` (-999) — WebKit's word for the
+    // already-listed "aborted".
+    "\\bcancelled\\b",
+  ].join("|"),
+  "i"
+);
+
+/**
  * Classify a MapLibre `error` event as *expected offline noise* rather than a
  * defect.
  *
@@ -357,10 +419,23 @@ export function isMapAlive(map: MapLibreMap | null | undefined): boolean {
  * normal with no network and are already handled by
  * {@link installOfflineTileFallback} plus the themed empty-coverage backdrop.
  * MapLibre tags such events with `sourceId`/`tile`, or carries an AJAX error
- * (with `status`/`url`).
+ * (with `status`/`url`). Those three structural signals do the real work and
+ * are engine-independent; the message match below is only the last resort, for
+ * a bare `Error` MapLibre hands up with nothing to attribute it with.
+ *
+ * That last resort is **multi-engine on purpose** — see
+ * {@link EXPECTED_NETWORK_ERROR_MESSAGE}. This app ships on WebKit (WebKitGTK
+ * on Linux, WKWebView on macOS) and is tested largely in Chromium, and the two
+ * do not describe the same failure with the same words. Writing down one
+ * engine's vocabulary and assuming it is universal is the exact shape of the
+ * 3.0.3 blank-map defect, where a comment asserted that every engine serialises
+ * a computed colour as `rgb()`.
  *
  * Everything else — style validation, layer/paint configuration, WebGL setup —
- * is a real bug and must be surfaced by the caller.
+ * is a real bug and must be surfaced by the caller. Every fragment in that
+ * list is therefore a *network-layer* phrase that no style-spec, paint or
+ * WebGL message can contain; widening it to anything vaguer would re-create the
+ * `map.on("error", () => {})` blindness that hid 3.0.3 for two releases.
  */
 export function isExpectedTileError(event: unknown): boolean {
   if (!event || typeof event !== "object") return false;
@@ -378,9 +453,7 @@ export function isExpectedTileError(event: unknown): boolean {
       return true;
     }
     if (typeof err.message === "string") {
-      return /failed to fetch|networkerror|load failed|err_unknown_url_scheme|network error|aborted/i.test(
-        err.message
-      );
+      return EXPECTED_NETWORK_ERROR_MESSAGE.test(err.message);
     }
   }
   return false;

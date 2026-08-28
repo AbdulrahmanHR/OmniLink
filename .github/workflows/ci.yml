@@ -121,13 +121,27 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        # Both engines, not just Chromium. Chromium is a test harness here and
+        # nothing else — the app ships on WebKitGTK (Linux) and WKWebView
+        # (macOS), and running Chromium alone is what let a flight map that
+        # painted nothing ship through `3.0.3`; the defect surfaced the first
+        # time the app was exercised under the engine it actually ships in.
+        # `--with-deps` matters most for WebKit: its apt dependencies are not on
+        # the runner image, and without them the browser downloads but will not
+        # launch.
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Build frontend
         run: npm run build
 
       - name: Run E2E tests
+        # `npm run e2e` is a bare `playwright test`: with no `--project` filter
+        # Playwright runs *every* project in playwright.config.ts, so this one
+        # command covers chromium and webkit. That roughly doubles the step
+        # (~6 min per engine, ~13 min total) — still an order of magnitude under
+        # GitHub's 6-hour default job ceiling, so no `timeout-minutes` is needed.
+        #
         # Worker count is pinned to 2 in playwright.config.ts (M74) — MapLibre/GPU
         # contention flakes above that. Inherited from the config, not a flag here.
         run: npm run e2e

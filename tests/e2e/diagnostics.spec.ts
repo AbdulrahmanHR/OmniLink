@@ -52,10 +52,26 @@ const HEALTHY_CSV = path.join(DIAG_FIXTURES, "healthy", "healthy-clean-cruise-01
 
 test.describe("Local link diagnostics (M37)", () => {
   // Reduced motion → axe reads the settled state, never a mid-animation frame.
-  // Clipboard permissions → the "Copy Diagnostic Summary" round-trip can read back.
-  test.use({
-    reducedMotion: "reduce",
-    permissions: ["clipboard-read", "clipboard-write"],
+  test.use({ reducedMotion: "reduce" });
+
+  /**
+   * Clipboard permissions → the "Copy Diagnostic Summary" round-trip can read back.
+   *
+   * Granted here rather than declared via `test.use({ permissions: [...] })`
+   * because Playwright's WebKit backend does not implement `clipboard-write`:
+   * declaring it statically makes `browserContext.newPage()` throw `Unknown
+   * permission: clipboard-write` for EVERY test in this file, before the app is
+   * ever reached. That is a limitation of the Playwright harness, not of the
+   * engines OmniLink ships on (WebKitGTK/WKWebView do support the async clipboard
+   * API), so the grant is Chromium-gated instead of dropped — Chromium keeps the
+   * full read-back assertions, and only the one test that genuinely needs the
+   * clipboard skips elsewhere. Every other test here touches no clipboard at all
+   * and runs unchanged under both projects.
+   */
+  test.beforeEach(async ({ context, browserName }) => {
+    if (browserName === "chromium") {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    }
   });
 
   test("import failsafe session → health panel, score, critical findings, chart markers", async ({
@@ -116,7 +132,17 @@ test.describe("Local link diagnostics (M37)", () => {
 
   test("Copy Diagnostic Summary → identifier-free clipboard text", async ({
     page,
+    browserName,
   }) => {
+    // The only test in this file that actually round-trips the clipboard, so it is
+    // the only one the Chromium-gated grant above can't cover. Skipped honestly
+    // rather than weakened: the Chromium run still proves the whole
+    // identifier-free-summary contract below.
+    test.skip(
+      browserName !== "chromium",
+      "Playwright's WebKit backend has no clipboard-write permission"
+    );
+
     await installTauriMock(page, {});
     await gotoApp(page, "/analysis");
     await uploadFile(page, "logs-import-input", FAILSAFE_CSV);
@@ -143,7 +169,16 @@ test.describe("Local link diagnostics (M37)", () => {
 
   test("sensitivity preset switch re-analyzes and updates the rendered findings", async ({
     page,
+    browserName,
   }) => {
+    // The heaviest test in the file: one import plus TWO full re-analyses, each of
+    // which re-renders the whole findings list. WebKit runs it in ~22s against
+    // Chromium's ~12s, so under the 2-worker default it lands on the 30s wall and
+    // times out mid-assertion — the analysis itself is correct, just slower. Triple
+    // the budget there rather than trim the work: every assertion below is
+    // unchanged, and Chromium keeps its tight 30s budget as the perf canary.
+    test.slow(browserName !== "chromium", "WebKit re-analyzes ~2x slower");
+
     await installTauriMock(page, {});
     await gotoApp(page, "/analysis");
     await uploadFile(page, "logs-import-input", PRESET_DELTA_CSV);
