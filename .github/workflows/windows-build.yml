@@ -60,8 +60,16 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          # Keyed on the RUNNER IMAGE, not `runner.os`. `runner.os` is the string
+          # "Linux" on both ubuntu-latest (24.04) and the ubuntu-22.04 leg that
+          # release.yml pins for installer glibc compatibility — so both wrote
+          # and read one namespace. A cargo `target/` built on 24.04 is not
+          # usable on 22.04: its proc-macro dylibs and build-script binaries link
+          # against a newer glibc, and cargo then reports every dependent crate
+          # as `E0463: can't find crate`, which is exactly how the v3.0.4 release
+          # build failed while the ubuntu-latest build of the same commit passed.
+          key: windows-latest-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: windows-latest-cargo-
 
       - name: Install npm dependencies
         run: npm ci
