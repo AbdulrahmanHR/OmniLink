@@ -1,0 +1,1857 @@
+{
+  "bridge": {
+    "label": "飞控桥接",
+    "title": "飞控桥接",
+    "probe": "探测",
+    "probing": "探测中…",
+    "probeAction": "在 {{port}} 上探测飞控桥接",
+    "notController": "该端口没有飞控响应。这不是飞控桥接——直接以 CRSF 通信的 ELRS 接收机不会在这里应答。",
+    "family": {
+      "betaflight": "Betaflight",
+      "inav": "iNav",
+      "unsupported": "不支持的桥接"
+    },
+    "safety": {
+      "warning": "探测前：请卸下螺旋桨并将飞机放在工作台上。探测会给飞控和接收机通电——请确保没有任何部件会转动。"
+    },
+    "recovery": {
+      "wrongPort": "端口错误：请选择飞控的串口，而不是接收机或其他设备。",
+      "busyPort": "端口被占用：请关闭 Betaflight/iNav Configurator 或任何占用该端口的串口监视器，然后重试。",
+      "wrongBaud": "波特率错误：OmniLink 会自动尝试常见的 MSP 波特率——若均无应答，请给飞控断电重启后再试。",
+      "noMspResponse": "无 MSP 响应：请确认飞控已通电且运行 Betaflight/iNav（不在 DFU/引导模式下）。"
+    },
+    "a11y": {
+      "label": "飞控桥接：{{family}}（{{id}}）"
+    },
+    "context": {
+      "title": "飞控上下文（只读）",
+      "fetch": "获取上下文",
+      "fetching": "获取中…",
+      "family": "飞控",
+      "version": "固件版本",
+      "apiVersion": "MSP API 版本",
+      "serialPorts": "串口",
+      "noSerialPorts": "没有可用的串口信息。",
+      "empty": "飞控上下文不足",
+      "emptyHint": "连接 Betaflight/iNav 飞控并获取其只读上下文，以帮助诊断透传问题。",
+      "function": {
+        "serialRx": "串口接收（Serial RX）",
+        "msp": "MSP",
+        "gps": "GPS",
+        "telemetry": "遥测",
+        "blackbox": "黑匣子"
+      },
+      "a11y": {
+        "surface": "用于 ELRS 故障排查的只读飞控上下文",
+        "fetch": "从 {{port}} 获取只读飞控上下文",
+        "serialPorts": "飞控串口"
+      }
+    },
+    "passthrough": {
+      "title": "透传诊断",
+      "intro": "运行引导式检查，精确定位 UART 到接收机的透传在哪一步失败。",
+      "safety": "运行前：请卸下螺旋桨并将飞机放在工作台上。透传会给飞控通电并为接收机供电——请确认接线无误，确保没有任何部件会转动。",
+      "run": "运行检查",
+      "running": "运行中…",
+      "success": "透传已到达接收机——收到了有效的 CRSF 数据帧。",
+      "baudOverride": "波特率",
+      "baudAuto": "自动（全部尝试）",
+      "step": {
+        "handshake": "飞控握手",
+        "uart": "UART 透传",
+        "receiver": "接收机响应",
+        "crsf": "CRSF 响应"
+      },
+      "status": {
+        "pass": "通过",
+        "fail": "失败",
+        "skipped": "已跳过",
+        "pending": "待执行"
+      },
+      "failure": {
+        "controllerNotResponding": "飞控未响应 MSP。请检查端口与波特率，并确认 Betaflight/iNav 正在运行（不在 DFU/引导模式下）。",
+        "passthroughUnavailable": "飞控可访问，但无法进入串口透传。请更新飞控固件或选择正确的 UART。",
+        "rxNotPowered": "透传已打开，但接收机没有任何回应——很可能未通电。请检查接收机的 5V 与 GND。",
+        "rxNotWired": "有数据返回，但并非来自所选 UART 上的 CRSF 接收机——接收机未接到该 UART。请重新检查 TX↔RX 及所选端口。",
+        "crsfTimeout": "接收机有响应，但未在时限内收到有效 CRSF 数据帧——通常是波特率不匹配。请尝试其他波特率。"
+      },
+      "wiring": {
+        "title": "接线（通用）",
+        "tx": "接收机 TX → 飞控 UART RX（信号交叉连接）。",
+        "rx": "接收机 RX → 飞控 UART TX（交叉的另一半）。",
+        "power": "接收机 5V → 5V、GND → GND，取自同一个飞控。",
+        "uart": "请选择你实际接入接收机的那个飞控 UART。"
+      },
+      "log": {
+        "title": "尝试记录",
+        "empty": "还没有透传尝试记录。",
+        "clear": "清空记录",
+        "success": "透传成功",
+        "errored": "无法运行检查",
+        "atBaud": "@ {{baud}} 波特率"
+      }
+    },
+    "export": {
+      "copy": "复制报告",
+      "copied": "已复制",
+      "copyAria": "将桥接故障支持报告复制到剪贴板",
+      "title": "桥接故障支持报告",
+      "intro": "请将其粘贴到你的支持请求中。其中只包含诊断信息，不含任何隐私标识。",
+      "none": "不可用",
+      "noReport": "尚未运行透传检查。",
+      "noFailure": "没有故障——透传已到达接收机。",
+      "noSerialPorts": "没有可用的串口信息。",
+      "section": {
+        "environment": "环境",
+        "bridge": "检测到的飞控桥接",
+        "passthrough": "透传检查",
+        "handshake": "握手摘要",
+        "serialPorts": "串口"
+      },
+      "field": {
+        "generatedAt": "生成时间",
+        "appVersion": "应用版本",
+        "os": "操作系统",
+        "port": "所选端口",
+        "family": "飞控系列",
+        "fcVariant": "飞控型号",
+        "apiVersion": "MSP API 版本",
+        "fcVersion": "飞控固件",
+        "baudAttempts": "尝试的波特率",
+        "baudUsed": "使用的波特率",
+        "uart": "接线 UART",
+        "failure": "故障类别"
+      }
+    }
+  },
+  "app": {
+    "name": "OmniLink",
+    "tagline": "ExpressLRS 配置与遥测"
+  },
+  "a11y": {
+    "skipToContent": "跳转到主内容",
+    "primaryNav": "主导航"
+  },
+  "nav": {
+    "home": "首页",
+    "flash": "刷写",
+    "telemetry": "遥测",
+    "profiles": "配置方案",
+    "logs": "日志",
+    "wizard": "向导",
+    "simulator": "模拟器",
+    "analysis": "会话分析",
+    "trends": "趋势",
+    "settings": "设置"
+  },
+  "sessionAnalysis": {
+    "title": "会话分析",
+    "description": "载入一次录制的会话，然后拖动时间轴做事后分析，或通过实时仪表盘重放——无需硬件。",
+    "empty": {
+      "title": "未载入会话",
+      "description": "导入飞行日志（.bbl/.csv），或选择此前的 OmniLink 会话来拖动查看或重放。"
+    }
+  },
+  "home": {
+    "deviceStatus": {
+      "title": "设备",
+      "firmware": "固件",
+      "port": "端口",
+      "disconnectedTitle": "未连接设备",
+      "disconnectedDescription": "请从上方状态栏连接你的 ExpressLRS 设备，或刷写新固件开始使用。",
+      "baud": "波特率",
+      "params": "参数"
+    },
+    "activeProfile": {
+      "label": "当前配置",
+      "none": "尚未应用任何配置方案。",
+      "view": "查看配置方案"
+    }
+  },
+  "device": {
+    "status": {
+      "disconnected": "已断开",
+      "connecting": "连接中…",
+      "connected": "已连接",
+      "bootloader": "引导模式",
+      "flashing": "刷写中…",
+      "error": "错误"
+    },
+    "error": {
+      "title": "连接失败",
+      "show": "显示错误详情",
+      "copy": "复制错误信息"
+    },
+    "connect": "连接",
+    "connecting": "连接中…",
+    "cancelConnect": "取消连接尝试",
+    "disconnect": "断开连接",
+    "port": "串口",
+    "selectPort": "选择端口",
+    "noPorts": "未发现设备",
+    "refreshPorts": "刷新端口",
+    "baudTitle": "CRSF 握手成功，波特率 {{baud}}",
+    "typeUnknown": "未知类型",
+    "firmwareUnknown": "固件未知",
+    "portMissing": "{{port}}（未连接）",
+    "autoSelectPort": "跟随第一个端口",
+    "connectPortAbsent": "{{port}} 当前未连接——请重新插入，或选择其他端口。",
+    "connectNoPort": "请先选择串口。",
+    "portBusy": {
+      "probe": "OmniLink 正在该端口上探测飞控——连接与刷写将在几秒后恢复。",
+      "context": "OmniLink 正在从该端口读取飞控上下文——连接与刷写将在几秒后恢复。",
+      "passthrough": "OmniLink 正在该端口上运行透传检查——检查结束后（最长约 15 秒）连接与刷写将恢复。",
+      "connecting": "OmniLink 仍在与该端口建立连接——连接尝试结束后即可刷写，也可在设备栏中取消。"
+    }
+  },
+  "telemetry": {
+    "title": "遥测",
+    "live": "实时",
+    "empty": {
+      "title": "无遥测数据流",
+      "description": "连接设备以查看遥测"
+    },
+    "metrics": {
+      "rssi": "RSSI",
+      "linkQuality": "链路质量",
+      "snr": "SNR",
+      "txPower": "发射功率",
+      "packetRate": "包率"
+    },
+    "link": {
+      "title": "链路性能",
+      "rssi1": "RSSI 天线 1",
+      "rssi2": "RSSI 天线 2",
+      "linkQuality": "链路质量"
+    },
+    "polar": {
+      "title": "天线方向图",
+      "antenna1": "天线 1",
+      "antenna2": "天线 2",
+      "noSignal": "无信号",
+      "ariaLabel": "天线信号方向雷达图"
+    },
+    "gps": {
+      "title": "GPS",
+      "latitude": "纬度",
+      "longitude": "经度",
+      "satellites": "卫星数",
+      "altitude": "高度",
+      "groundSpeed": "地速",
+      "heading": "航向",
+      "noModule": "无 GPS 数据——请连接带 GPS 的设备。",
+      "noFix": "获取中…"
+    },
+    "map": {
+      "title": "飞行轨迹",
+      "toggleLabel": "飞行轨迹地图",
+      "metricRssi": "RSSI",
+      "metricLq": "链路质量"
+    }
+  },
+  "simulator": {
+    "title": "遥测重放模拟器",
+    "description": "通过实时仪表盘重放录制的遥测会话——无需硬件。",
+    "badge": "模拟数据",
+    "badgeTitle": "模拟数据——并非实时设备",
+    "source": {
+      "dropzone": "导入会话 CSV",
+      "hint": "将 OmniLink 会话 .csv 拖到此处，或浏览选择。",
+      "browse": "浏览",
+      "reading": "正在读取会话…",
+      "loaded_one": "已载入 {{count}} 帧",
+      "loaded_other": "已载入 {{count}} 帧",
+      "replace": "载入其他会话",
+      "errors": {
+        "read": "无法读取该文件。",
+        "parse": "该文件不是有效的 OmniLink 会话 CSV。",
+        "empty": "该会话没有遥测数据行。",
+        "unsupported": "不支持的文件——请选择导出的 .csv 会话。"
+      }
+    },
+    "transport": {
+      "title": "播放控制",
+      "play": "播放",
+      "pause": "暂停",
+      "stop": "停止",
+      "seek": "在会话中拖动定位",
+      "speed": "速度",
+      "speedValue": "{{value}}×",
+      "frame": "第 {{current}} / {{total}} 帧",
+      "endReached": "会话结束"
+    },
+    "export": {
+      "button": "导出会话 CSV",
+      "filename": "simulated-session.csv"
+    },
+    "empty": {
+      "title": "未载入会话",
+      "description": "导入录制的遥测会话 CSV，通过仪表盘重放。"
+    }
+  },
+  "profiles": {
+    "title": "配置方案",
+    "untitled": "未命名配置方案",
+    "active": "当前使用",
+    "builtin": "内置预设",
+    "actions": {
+      "saveAs": "另存为",
+      "apply": "应用",
+      "applied": "已应用",
+      "rename": "重命名",
+      "delete": "删除",
+      "import": "导入 .elrsp",
+      "export": "导出 .elrsp"
+    },
+    "list": {
+      "title": "已保存的配置方案",
+      "empty": {
+        "title": "暂无已保存的配置方案",
+        "description": "保存当前配置以创建你的第一个配置方案。"
+      }
+    },
+    "empty": {
+      "title": "未选择配置方案",
+      "description": "选择一个配置方案以预览其设置，并与当前配置比较。"
+    },
+    "settings": {
+      "title": "配置方案设置"
+    },
+    "diff": {
+      "title": "变更",
+      "subtitle": "正在将此配置方案与当前设备配置比较。",
+      "noChanges": "无变更",
+      "identical": "此配置方案与当前配置一致。",
+      "changeCount_one": "{{count}} 项变更",
+      "changeCount_other": "{{count}} 项变更",
+      "unchanged_one": "{{count}} 项未改动设置",
+      "unchanged_other": "{{count}} 项未改动设置"
+    },
+    "dialog": {
+      "saveTitle": "保存当前配置",
+      "saveDescription": "将设备当前配置保存为新的配置方案。",
+      "renameTitle": "重命名配置方案",
+      "renameDescription": "更新此配置方案的名称与说明。",
+      "nameLabel": "名称",
+      "namePlaceholder": "例如 Racing 500Hz",
+      "descriptionLabel": "说明",
+      "descriptionPlaceholder": "关于此配置方案的可选备注"
+    },
+    "presets": {
+      "racing": {
+        "name": "竞速 500Hz",
+        "description": "面向竞技竞速的低延迟 500Hz 链路。"
+      },
+      "longRange": {
+        "name": "远航 50Hz",
+        "description": "为远距离飞行提供最大航程与灵敏度。"
+      },
+      "freestyle": {
+        "name": "花飞 250Hz",
+        "description": "适合花飞的均衡 250Hz 链路，支持动态功率。"
+      },
+      "default": {
+        "name": "默认",
+        "description": "出厂基线配置。"
+      }
+    },
+    "tabs": {
+      "saved": "已保存",
+      "community": "社区",
+      "folder": "文件夹"
+    },
+    "import": {
+      "button": "导入 .elrsp",
+      "title": "导入配置方案",
+      "description": "预览此配置方案将应用的变更，然后导入到已保存的配置方案中。",
+      "previewTitle": "与当前配置的差异",
+      "confirm": "导入配置方案",
+      "cancel": "取消",
+      "parseError": "无法读取此 .elrsp 文件：{{message}}",
+      "unsupportedVersion": "此配置方案使用的架构版本不受支持，无法导入。"
+    },
+    "export": {
+      "button": "导出 .elrsp",
+      "filename": "{{name}}.elrsp",
+      "dialogTitle": "导出配置方案为 .elrsp",
+      "filterName": "ExpressLRS 配置方案",
+      "savedTitle": "配置方案已导出",
+      "failedTitle": "导出失败",
+      "dismiss": "关闭此导出提示"
+    },
+    "deleteConfirm": {
+      "title": "删除此配置方案？",
+      "body": "这将从已保存的配置方案中永久删除“{{name}}”。此操作无法撤销——如果之后可能还需要它，请先导出为 .elrsp。",
+      "confirm": "删除",
+      "cancel": "取消"
+    },
+    "migrated": {
+      "badge": "已迁移",
+      "title": "架构已迁移"
+    },
+    "firmwareWarn": {
+      "title": "固件不匹配",
+      "description": "此配置方案面向固件 {{profileFw}}，与所连设备（{{deviceFw}}）差异较大。你仍然可以导入。"
+    },
+    "community": {
+      "title": "社区预设",
+      "description": "为常见机型与用途精选的只读预设。导入后会加入你的已保存配置方案。",
+      "searchPlaceholder": "搜索预设…",
+      "searchAria": "搜索社区预设",
+      "import": "导入",
+      "empty": {
+        "title": "未找到预设",
+        "description": "没有匹配搜索条件的社区预设。"
+      },
+      "categories": {
+        "racing": "竞速",
+        "long-range": "远航",
+        "freestyle": "花飞",
+        "cinematic": "电影航拍"
+      }
+    },
+    "errors": {
+      "saveFailed": "无法将配置方案保存到磁盘。重启后你的更改可能丢失。",
+      "deleteFailed": "无法从磁盘删除该配置方案。重启后它可能会重新出现。",
+      "dismiss": "关闭"
+    }
+  },
+  "folderSync": {
+    "title": "文件夹同步",
+    "description": "把你的配置方案保存在自己拥有的文件夹中——只在这台机器上，或按需同步到每一台机器。",
+    "mechanism": "OmniLink 会将纯 .elrsp 文件写入你选择的文件夹，并读取其中的所有内容。不会上传任何数据，也没有 OmniLink 服务器：把它指向 Dropbox、Google Drive、OneDrive、Syncthing 或 git 检出目录中的文件夹，同步就由这些工具完成。下面每一次传输都只在你点击按钮时发生。",
+    "folderLabel": "同步文件夹",
+    "inSyncTitle": "已同步",
+    "dialog": {
+      "title": "选择同步文件夹"
+    },
+    "actions": {
+      "choose": "选择文件夹",
+      "change": "更换文件夹",
+      "refresh": "重新读取文件夹",
+      "forget": "忘记文件夹",
+      "dismissError": "关闭此错误",
+      "push": "推送",
+      "pull": "拉取",
+      "keepMine": "保留本机的",
+      "keepTheirs": "保留文件夹的",
+      "keepBoth": "两者都保留",
+      "skip": "跳过",
+      "remove": "从文件夹移除",
+      "compare": "比较"
+    },
+    "status": {
+      "local-only": "仅本机有",
+      "folder-only": "仅文件夹中有",
+      "same": "已同步",
+      "conflict": "有差异"
+    },
+    "summary": {
+      "localOnly": "仅本机：{{n}}",
+      "folderOnly": "仅文件夹：{{n}}",
+      "same": "已同步：{{n}}",
+      "conflict": "有差异：{{n}}"
+    },
+    "side": {
+      "localUpdated": "本机：{{when}}",
+      "folderUpdated": "文件夹：{{when}}"
+    },
+    "empty": {
+      "title": "尚未设置同步文件夹",
+      "description": "选择一个文件夹，即可将已保存的配置方案作为 .elrsp 文件复制进去。在你操作之前，不会读取或写入任何内容。"
+    },
+    "nothingToDo": {
+      "title": "无需同步",
+      "description": "文件夹与已保存的配置方案一致。保存一个配置方案，或将 .elrsp 文件放入文件夹后重新读取。"
+    },
+    "unavailable": {
+      "title": "文件夹同步需要桌面应用",
+      "description": "在本机读写文件夹只能在 OmniLink 桌面应用中完成，浏览器中不支持。"
+    },
+    "unreadable": {
+      "title": "部分文件无法读取",
+      "description": "这些文件位于文件夹中，但不是有效的 .elrsp 配置方案。它们保持原样，未被改动。"
+    },
+    "conflict": {
+      "diffCaption": "以文件夹中的版本为基准，本机版本视为变更。",
+      "help": "在你做出选择前不会覆盖任何内容。“两者都保留”会重命名本机副本，并让文件夹中的文件保留原名，因此两者都不会丢失。"
+    },
+    "remove": {
+      "title": "从文件夹中移除？",
+      "description": "{{name}} 将从同步文件夹中删除。本机保存的配置方案不受影响。",
+      "confirm": "移除文件"
+    },
+    "errors": {
+      "not-granted": "尚无可用的文件夹。请重新选择文件夹。",
+      "not-a-directory": "该路径不是文件夹。",
+      "invalid-name": "该配置方案名称无法作为文件夹中的文件名。",
+      "outside-root": "该文件指向你所选文件夹之外，因此未被处理。",
+      "too-large": "该文件过大，不可能是配置方案。",
+      "not-a-file": "文件夹中的该项不是文件。",
+      "not-utf8": "该文件不是可读文本。",
+      "parse": "该文件不是有效的 .elrsp 配置方案。",
+      "io": "无法读取或写入该文件夹。"
+    }
+  },
+  "wizard": {
+    "title": "刷写向导",
+    "subtitle": "逐步引导你刷写 ExpressLRS 设备。",
+    "launch": "打开刷写向导",
+    "mode": {
+      "label": "向导模式",
+      "static": "静态",
+      "staticHint": "经典的逐步向导。完全可离线使用，无需账号。",
+      "ai": "AI 辅助",
+      "aiHint": "回答几个问题，即可获得推荐的构建目标与设置供你审阅。"
+    },
+    "ai": {
+      "title": "AI 辅助设置",
+      "subtitle": "回答几个问题，Omnia 会推荐构建目标与设置供你审阅——最终仍由你确认并刷写。",
+      "recommend": "获取推荐",
+      "questions": {
+        "deviceRole": {
+          "label": "你要刷写什么？",
+          "TX": "发射机（高频头）",
+          "RX": "接收机（机载）"
+        },
+        "useCase": {
+          "label": "飞什么类型？",
+          "racing": "竞速",
+          "freestyle": "花飞",
+          "longRange": "远航",
+          "cinematic": "电影航拍"
+        },
+        "region": {
+          "label": "你在哪里飞行？",
+          "us": "美国",
+          "eu": "欧洲",
+          "au": "澳大利亚",
+          "in": "印度",
+          "global": "其他 / 全球"
+        }
+      },
+      "summary": {
+        "title": "推荐设置",
+        "confidence": "{{level}}置信度 · {{percent}}%",
+        "confidenceAria": "{{level}}置信度，{{percent}}%",
+        "brand": "品牌",
+        "model": "型号",
+        "device": "设备类型",
+        "target": "构建目标",
+        "band": "频段",
+        "firmware": "固件",
+        "method": "刷写方式",
+        "binding": "对频",
+        "bindingTraditional": "传统（按键 / 三段开关）",
+        "apply": "应用并审阅",
+        "restart": "修改答案"
+      },
+      "confidenceLevel": {
+        "high": "高",
+        "medium": "中",
+        "low": "低"
+      },
+      "explain": {
+        "title": "为什么推荐这些设置",
+        "band24": "2.4 GHz 延迟更低、包率更高——是近距离飞行的合适取舍。",
+        "band900": "900 MHz 传输更远、穿障能力更强，更适合远航飞行。",
+        "domain": "{{band}} 频段符合你所在地区的法规，因此链路既合法又兼容。",
+        "model": "{{model}} 是设备目录中与你描述需求高度匹配的型号。",
+        "firmware": "固件 {{version}} 是最新的稳定版本，链路更可靠、兼容性更好。",
+        "methodUart": "USB（UART）刷写是首次刷写最可靠的方式。",
+        "methodWifi": "当设备开启自己的热点后，WiFi（OTA）刷写最为方便。",
+        "methodBetaflight": "Betaflight 透传可通过飞控的 USB 为接收机刷写。",
+        "bindingTraditional": "传统对频无需对频短语即可开始——你也可以在确认页面切换为对频短语。"
+      },
+      "fallback": {
+        "title": "AI 辅助当前不可用",
+        "disabled": "未配置 AI 服务商。请在设置中添加密钥，或继续使用静态向导。",
+        "offline": "你似乎处于离线状态，无法访问 AI 辅助。静态向导仍可完全离线使用。",
+        "useStatic": "使用静态向导"
+      }
+    },
+    "steps": {
+      "brand": {
+        "title": "品牌",
+        "instruction": "选择你要刷写的设备制造商。"
+      },
+      "model": {
+        "title": "型号",
+        "instruction": "选择确切的设备型号，以便使用正确的构建目标。"
+      },
+      "frequency": {
+        "title": "频率",
+        "instruction": "选择射频频段、固件版本以及固件的传输方式。"
+      },
+      "binding": {
+        "title": "对频",
+        "instruction": "设置对频短语，或改用传统按键对频。"
+      },
+      "review": {
+        "title": "确认",
+        "instruction": "确认你的选择，然后刷写设备。"
+      }
+    },
+    "nav": {
+      "back": "上一步",
+      "next": "下一步",
+      "startOver": "重新开始",
+      "flashAnother": "刷写其他设备"
+    },
+    "validation": {
+      "brand": "请选择品牌以继续",
+      "model": "请选择设备型号以继续",
+      "frequency": "请选择频段、固件版本和刷写方式",
+      "binding": "请输入对频短语或选择传统对频"
+    },
+    "deviceType": {
+      "TX": "发射机",
+      "RX": "接收机"
+    },
+    "brand": {
+      "modelCount_one": "{{count}} 个设备",
+      "modelCount_other": "{{count}} 个设备"
+    },
+    "model": {
+      "bandCount_one": "{{count}} 个频段",
+      "bandCount_other": "{{count}} 个频段",
+      "detected": "已检测到：{{target}}"
+    },
+    "frequency": {
+      "bandTitle": "频段",
+      "firmwareTitle": "固件版本",
+      "methodTitle": "刷写方式",
+      "latest": "最新",
+      "prerelease": "预发布",
+      "showPrereleases": "显示预发布（beta / RC）版本",
+      "releasesLoading": "正在加载版本…",
+      "releasesOffline": "离线——无法访问 ExpressLRS GitHub；显示内置版本",
+      "releasesRateLimited": "已达到 GitHub 每小时请求上限；显示内置版本——请一小时后再试",
+      "releasesLive": "来自 ExpressLRS GitHub 的实时数据",
+      "releasesCached": "已缓存——无法访问 ExpressLRS GitHub；上次更新于 {{updated}}",
+      "releasesCachedUnknown": "已缓存——无法访问 ExpressLRS GitHub；显示上次获取的列表",
+      "changelogTitle": "更新日志 — {{version}}",
+      "deviceIpLabel": "设备 IP 地址",
+      "deviceIpPlaceholder": "10.0.0.1",
+      "deviceIpHint": "设备的 WiFi 地址（ELRS 默认热点为 10.0.0.1）。",
+      "deviceIpInvalid": "请输入有效的 IP 地址或主机名。",
+      "wifiDevicesTitle": "已发现的 WiFi 设备",
+      "scan": "扫描",
+      "scanning": "扫描中…",
+      "stopScan": "停止",
+      "noDevicesFound": "尚未发现设备——请开始扫描或手动输入 IP。",
+      "pickDeviceHint": "选择已发现的设备以填入其地址，或手动输入。",
+      "backpackNotFlashable": "Backpack 运行自己的固件，无法接收此处选择的机型。",
+      "manualEntry": "手动输入 IP"
+    },
+    "domains": {
+      "ISM2400": "2.4 GHz ISM",
+      "FCC915": "FCC 915（美洲）",
+      "EU868": "EU 868",
+      "AU915": "AU 915",
+      "IN866": "IN 866",
+      "EU433": "EU 433"
+    },
+    "methods": {
+      "wifi": {
+        "name": "WiFi",
+        "description": "通过设备热点无线上传。"
+      },
+      "uart": {
+        "name": "UART",
+        "description": "通过 USB 串口直接刷写。"
+      },
+      "betaflight": {
+        "name": "Betaflight 透传",
+        "description": "通过飞控为接收机刷写。"
+      }
+    },
+    "binding": {
+      "modeTitle": "对频方式",
+      "phrase": {
+        "name": "对频短语",
+        "description": "TX 与 RX 共享的一段易记短语——无需对频按键。"
+      },
+      "traditional": {
+        "name": "传统对频",
+        "description": "刷写后使用按键或三段开关手动对频。"
+      },
+      "phraseLabel": "对频短语",
+      "phrasePlaceholder": "例如 my-quad-link",
+      "uidLabel": "派生 UID",
+      "uidHint": "这是将被写入的确切 UID（由你的短语派生）。",
+      "traditionalNote": "刷写后，将接收机置入对频模式并按常规方式对频。"
+    },
+    "review": {
+      "summaryTitle": "配置摘要",
+      "traditionalBinding": "传统（对频按键）",
+      "warning": "刷写过程中请勿断开设备或关闭电源。",
+      "identityBlocked": "刷写已阻止：该端口上次检测到的设备不是此处选择的型号，因此本次刷写已被拒绝。请选择与你的硬件匹配的型号——或重新连接设备，让 OmniLink 重新检查。",
+      "fields": {
+        "brand": "品牌",
+        "model": "型号",
+        "deviceType": "类型",
+        "target": "目标",
+        "band": "频段",
+        "firmware": "固件",
+        "method": "方式",
+        "binding": "对频",
+        "uid": "UID",
+        "deviceIp": "设备 IP",
+        "source": "固件来源"
+      }
+    },
+    "localFile": {
+      "select": "选择本地 .bin 文件",
+      "sectionLabel": "或刷写电脑中的固件文件",
+      "badge": "本地文件",
+      "clear": "移除",
+      "hint": "从电脑刷写固件 .bin，而不是发布版本。刷写前会针对你的设备做安全检查。",
+      "dialogTitle": "选择固件文件",
+      "filterName": "固件镜像",
+      "pickFailed": "无法打开文件选择器。",
+      "backupName": "刷写前备份 — {{target}}",
+      "backupWarning": "刷写前无法备份当前配置。刷写仍会继续，但没有新的恢复快照。"
+    },
+    "flash": {
+      "start": "刷写",
+      "stages": {
+        "fetch": "正在获取固件…",
+        "erase": "正在擦除…",
+        "write": "正在写入…",
+        "verify": "正在校验…",
+        "done": "完成"
+      },
+      "success": {
+        "title": "刷写完成",
+        "description": "{{model}} 现已运行 ExpressLRS {{version}}。"
+      },
+      "eta": "剩余 {{eta}}",
+      "etaUnits": {
+        "minutes": "{{count}}m",
+        "seconds": "{{count}}s"
+      },
+      "log": {
+        "title": "构建日志（{{count}} 行）"
+      },
+      "cancel": "取消刷写",
+      "cancelUnavailable": "无法取消——设备正在被写入。请勿断开连接或关闭电源。",
+      "retry": "重试",
+      "copyDiagnostic": "复制诊断报告",
+      "copied": "已复制",
+      "recoveryTitle": "如何修复",
+      "categories": {
+        "wiring": "连接或接线问题。",
+        "driver": "USB 串口驱动问题。",
+        "firmwareMismatch": "固件或设备类型不匹配。",
+        "networkTimeout": "网络超时。",
+        "compilationError": "固件编译失败。",
+        "unknown": "刷写过程中出现错误。"
+      },
+      "errors": {
+        "txRxMismatch": "刷写已阻止：该固件面向的设备类型（TX 或 RX）与该端口上的设备不同。如果你更换了设备，请连接新设备，让 OmniLink 重新检查。",
+        "backpackCrossType": "刷写已阻止：此 Backpack 固件面向的 Backpack 类型（TX 或 VRX）与已连接的不一致。",
+        "backpackCrossFamily": "刷写已阻止：所选目标是一台 ExpressLRS Backpack，它需要自己的固件——而不是向导中选择的机型。",
+        "targetMismatch": "刷写已阻止：该固件文件与所连设备的构建目标不匹配。",
+        "connectedTargetMismatch": "刷写已阻止：该端口上的设备不是向导中选择的型号。请选择与你的硬件匹配的型号，或重新连接设备，让 OmniLink 重新检查。",
+        "unknownMcu": "刷写已阻止：该目标的 MCU 系列未知，无法确定正确的刷写偏移量。",
+        "localFileUnreadable": "无法读取所选固件文件",
+        "firmwareTooSmall": "所选文件太小，不可能为有效固件",
+        "firmwareTooLarge": "所选文件太大，不可能为有效固件",
+        "notElrsFirmware": "所选文件不是有效的 ExpressLRS 固件镜像",
+        "noOptionsRegion": "固件镜像缺少其选项区域",
+        "optionsTooLarge": "所选选项不适用于此固件",
+        "firmwareDownloadFailed": "无法下载固件",
+        "firmwareNotAvailableForTarget": "该固件版本没有适用于你设备的构建，因此未向设备写入任何内容。请选择其他版本。",
+        "firmwareTruncated": "固件下载不完整，因此未向设备写入任何内容。请检查网络连接后重试。",
+        "firmwareDownloadTooLarge": "下载内容远大于任何固件镜像，因此已中止，未向设备写入任何内容。",
+        "firmwareRedirectRefused": "下载被重定向到意料之外的地址，因此已拒绝，未向设备写入任何内容。",
+        "backpackFirmwareUnavailable": "Backpack 固件下载尚不可用——需要经过硬件验证的版本获取流程，因此未向设备写入任何内容。",
+        "otaUploadFailed": "向设备进行 WiFi 上传失败",
+        "fcNotResponding": "飞控无响应",
+        "passthroughUnavailable": "飞控拒绝串口透传",
+        "toolFailed": "刷写工具报告错误",
+        "toolNotFound": "缺少必需的刷写工具",
+        "esptoolNotFound": "未安装 esptool，无法通过 USB 刷写该设备。未向设备写入任何内容。",
+        "otaRejected": "设备拒绝了固件上传，因此仍在运行旧固件。",
+        "verifyFailed": "写入设备的固件回读校验不正确。",
+        "deviceMayBePartiallyWritten": "在已开始向设备写入之后刷写失败。其固件可能不完整——使用前请重新刷写。",
+        "invalidFirmwareRequest": "该固件版本或目标不是有效选项，因此未下载任何内容。",
+        "backupFailed": "无法备份当前配置",
+        "startFailed": "无法开始刷写",
+        "truncatedOptionsRegion": "固件镜像的选项区域已损坏",
+        "optionsEncode": "无法编码所选选项",
+        "httpClient": "无法初始化网络客户端",
+        "noPort": "未选择串口",
+        "fcOpenFailed": "无法打开飞控串口",
+        "noDeviceIp": "未提供设备 IP 地址",
+        "tempWrite": "无法将固件写入临时文件",
+        "cancelled": "刷写已取消",
+        "spawnFailed": "无法启动刷写工具",
+        "fcWriteFailed": "无法向飞控发送数据",
+        "fcReadFailed": "无法从飞控读取数据",
+        "multipart": "无法构建固件上传请求",
+        "waitFailed": "与刷写工具进程失去联系"
+      },
+      "recovery": {
+        "checkUsb": "请检查 USB 线缆，并确认设备已通电。",
+        "reconnect": "请拔下并重新连接设备，然后重试。",
+        "bootloaderMode": "请将设备置入引导/刷写模式后重试。",
+        "installDriver": "请安装适用于你设备的 USB 串口驱动。",
+        "checkPermissions": "请确保没有其他应用占用该串口。",
+        "linuxUdev": "在 Linux 上，请将自己加入 dialout 用户组或安装 udev 规则。",
+        "verifyTarget": "请确认你选择了正确的品牌和型号。",
+        "verifyDeviceType": "请确保 TX 固件刷入 TX 设备（RX 固件刷入 RX 设备）。",
+        "chooseAnotherVersion": "请返回并选择其他固件版本——重试当前版本无济于事。",
+        "checkNetwork": "请检查网络连接后重试。",
+        "retry": "请稍等片刻后重试。",
+        "deviceWifiMode": "请确认设备处于 WiFi 模式且可访问。",
+        "checkPlatformio": "请确认已安装 PlatformIO 且已加入 PATH。",
+        "installEsptool": "请安装 esptool（pip install esptool）并确保其在 PATH 中，然后重试。",
+        "configureFcUart": "请在 Betaflight/iNav Configurator 中将接收机所接的 UART 设为 Serial RX，然后保存并重启。",
+        "updateFcFirmware": "请更新飞控固件——较旧的版本没有 MSP 串口透传。",
+        "flashOverUsb": "或者将接收机直接接到 USB 转串口适配器，改用 UART 刷写。",
+        "reflashDevice": "使用前请用同一固件重新刷写设备——不要依赖其原有固件。",
+        "keepDevicePowered": "整个刷写过程中请保持设备连接并通电；写入时不要拔下。",
+        "viewLog": "打开下方的构建日志查看完整详情。",
+        "reportIssue": "若问题持续，请复制诊断报告并寻求帮助。"
+      }
+    }
+  },
+  "config": {
+    "groups": {
+      "link": "射频链路",
+      "power": "功率",
+      "model": "机型匹配",
+      "binding": "对频",
+      "antenna": "天线"
+    },
+    "fields": {
+      "packetRate": "包率",
+      "telemetryRatio": "遥测比例",
+      "switchMode": "开关模式",
+      "txPower": "发射功率",
+      "dynamicPower": "动态功率",
+      "fanThreshold": "风扇阈值",
+      "modelMatch": "机型匹配",
+      "modelId": "机型 ID",
+      "bindingPhrase": "对频短语",
+      "antennaMode": "天线模式"
+    },
+    "values": {
+      "on": "开",
+      "off": "关"
+    }
+  },
+  "ai": {
+    "title": "Omnia",
+    "subtitle": "ExpressLRS 助手",
+    "openAssistant": "打开 Omnia 助手",
+    "closeAssistant": "关闭 Omnia 助手",
+    "placeholder": "向 Omnia 询问遥测、功率、对频…",
+    "inputLabel": "给 Omnia 发消息",
+    "send": "发送",
+    "clear": "清空对话",
+    "typing": "Omnia 正在输入…",
+    "disclaimer": "由 AI 生成——刷写前请核实设置。",
+    "noKeyConfigured": "我需要 API 密钥才能回答。请在 设置 → AI 助手中添加。",
+    "noConfig": "我需要 AI 配置才能回答。请在 设置 → Omnia AI 中添加。",
+    "error": "Omnia 无法回答：{{message}}",
+    "role": {
+      "you": "你",
+      "assistant": "Omnia"
+    },
+    "history": {
+      "title": "聊天记录",
+      "show": "聊天记录",
+      "newChat": "新对话",
+      "empty": "暂无已保存的对话。",
+      "untitled": "未命名对话",
+      "delete": "删除对话"
+    },
+    "empty": {
+      "title": "你好，我是 Omnia",
+      "description": "询问你的 ExpressLRS 配置——遥测、功率、对频、刷写或配置方案。"
+    },
+    "suggestions": {
+      "telemetry": "如何查看我的 RSSI 和链路质量？",
+      "power": "我应该使用多少发射功率？",
+      "binding": "对频是如何工作的？"
+    },
+    "suggestion": {
+      "label": "建议设置",
+      "review": "审阅变更",
+      "hideReview": "隐藏审阅",
+      "reviewTitle": "应用前审阅此变更",
+      "apply": "应用变更",
+      "confirm": "确认应用",
+      "cancel": "取消",
+      "confirmPrompt": "这会更新你的当前配置。是否应用？",
+      "applied": "变更已应用到你的当前配置",
+      "appliedProfileName": "AI 建议：{{key}}",
+      "lowConfidence": "低置信度建议——应用前请仔细审阅。",
+      "unsupported": "无法自动应用",
+      "unsupportedHint": "该建议有效，但不对应 OmniLink 可为你应用的配置方案项。如需使用请手动修改。",
+      "blocked": "因安全原因被阻止",
+      "blockedHint": "该建议针对受保护或不支持的字段，无法应用。安全关键设置（射频功率、失控保护、对频）绝不会被自动更改。"
+    },
+    "providers": {
+      "anthropic": "Anthropic（Claude）",
+      "openai": "OpenAI",
+      "gemini": "Google Gemini",
+      "openrouter": "OpenRouter",
+      "ollama": "Ollama（本地）"
+    },
+    "preview": {
+      "title": "查看将发送的内容",
+      "description": "只有这些经过净化和匿名化的数据会离开你的设备。对频短语、GPS、MAC/序列号、IP 和邮箱绝不会包含在内。",
+      "empty": "暂无可发送的设备上下文。"
+    },
+    "controls": {
+      "provider": "服务商",
+      "model": "型号",
+      "config": "配置",
+      "noConfigs": "请在设置中添加配置以开始对话。"
+    },
+    "context": {
+      "label": "上下文",
+      "description": "选择 Omnia 依据的硬件上下文。",
+      "auto": "自动",
+      "device": "已连接设备",
+      "wizard": "向导目标",
+      "offline": "离线（无设备数据）"
+    },
+    "sources": {
+      "title": "本次对话的知识来源",
+      "description": "选择本次对话依据的知识来源。在此关闭某项只影响本次对话。",
+      "count": "已启用 {{enabled}} / {{total}}",
+      "on": "开",
+      "off": "关",
+      "untrusted": "你的",
+      "enableAria": "为本次对话启用 {{title}}",
+      "disableAria": "为本次对话停用 {{title}}",
+      "allOff": "本次对话的所有来源均已关闭——Omnia 将在没有依据来源的情况下作答。"
+    },
+    "commands": {
+      "title": "指令",
+      "explain": {
+        "label": "解释",
+        "description": "解释某个 ExpressLRS 设置或概念。",
+        "prompt": "请用通俗的语言解释以下 ExpressLRS 设置或概念的工作原理："
+      },
+      "troubleshoot": {
+        "label": "故障排查",
+        "description": "逐步诊断链路或刷写问题。",
+        "prompt": "请帮我逐步排查这个 ExpressLRS 问题："
+      },
+      "telemetry": {
+        "label": "遥测",
+        "description": "检查我当前的遥测数据是否有异常。",
+        "prompt": "请检查我当前的遥测数据，并标出任何看起来异常的地方："
+      }
+    },
+    "attach": {
+      "button": "附加文件或日志",
+      "label": "附件",
+      "remove": "移除 {{name}}"
+    },
+    "generating": "生成中…",
+    "stop": "停止生成",
+    "code": {
+      "copy": "复制",
+      "copied": "已复制"
+    },
+    "goals": {
+      "categories": {
+        "telemetry": "遥测",
+        "flashing": "刷写",
+        "tuning": "调参",
+        "troubleshooting": "故障排查"
+      },
+      "telemetry": {
+        "label": "解读 RSSI 与链路质量",
+        "prompt": "如何解读 RSSI 和链路质量，什么数值才算健康？"
+      },
+      "linkHealth": {
+        "label": "我的链路健康吗？",
+        "prompt": "根据我的遥测数据，我的链路现在健康吗？"
+      },
+      "flashing": {
+        "label": "刷写我的接收机",
+        "prompt": "带我一步步为接收机刷写 ExpressLRS 固件。"
+      },
+      "binding": {
+        "label": "对频原理",
+        "prompt": "ExpressLRS 对频是如何工作的，如何把 RX 与 TX 对频？"
+      },
+      "power": {
+        "label": "选择发射功率",
+        "prompt": "我的飞行应该用多少发射功率，有哪些取舍？"
+      },
+      "packetRate": {
+        "label": "选择包率",
+        "prompt": "如何在航程与延迟之间选择合适的包率？"
+      },
+      "failsafe": {
+        "label": "配置失控保护",
+        "prompt": "我应该如何在 ExpressLRS 接收机上配置失控保护？"
+      },
+      "dropouts": {
+        "label": "解决信号中断",
+        "prompt": "飞行中信号会中断——如何诊断并解决？"
+      }
+    },
+    "citation": {
+      "title": "基于你的上下文",
+      "verify": "刷写前请对照你的当前配置核实。",
+      "none": "无设备上下文",
+      "offline": "离线知识库"
+    },
+    "rag": {
+      "title": "来源",
+      "listLabel": "引用的来源",
+      "sourceLabel": "来源：{{title}}",
+      "confidence": "相关度 {{percent}}%",
+      "confidenceAria": "相关度 {{percent}}%",
+      "noSource": {
+        "title": "未找到可信来源",
+        "description": "Omnia 没有与此问题匹配的可信来源，因此应如实说明，而不是无依据作答。"
+      },
+      "trust": {
+        "official": "官方",
+        "omnilinkNotes": "OmniLink 笔记"
+      },
+      "preview": {
+        "title": "检索到的上下文",
+        "count": "有 {{count}} 段可信摘录可作为此回答的依据。",
+        "none": "没有可信来源与此草稿匹配——不会发送任何摘录，Omnia 会说明它没有来源。"
+      }
+    }
+  },
+  "settings": {
+    "sections": {
+      "app": "应用",
+      "telemetry": "遥测与地图",
+      "ai": "AI 助手",
+      "data": "数据与隐私",
+      "lab": "实验室（实验性）"
+    },
+    "update": {
+      "title": "应用更新",
+      "description": "检查 OmniLink 新版本并直接安装。更新会在你的设备上下载并校验，重启后生效。",
+      "currentVersion": "当前版本",
+      "check": "检查更新",
+      "upToDate": "你已是最新版本",
+      "available": "版本 {{version}} 可用",
+      "install": "安装并重启",
+      "downloading": "下载中… {{progress}}%",
+      "restarting": "更新已安装——正在重启…",
+      "errorTitle": "无法检查更新",
+      "errorHint": "请确认更新端点可访问且已配置。",
+      "notConfiguredTitle": "此构建不支持自动更新",
+      "notConfigured": "应用内更新仅适用于指向更新源的已打包、已签名 OmniLink 版本。开发版或未签名版本没有更新通道——请从 GitHub 下载最新版本进行更新。"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "选择 OmniLink 的外观。主题立即生效并被记住。"
+    },
+    "language": {
+      "title": "语言",
+      "description": "选择 OmniLink 的显示语言。立即生效并被记住。",
+      "label": "显示语言",
+      "options": {
+        "en": "英语",
+        "es": "西班牙语"
+      }
+    },
+    "byok": {
+      "title": "Omnia AI（自带密钥）",
+      "description": "使用你自己的 API 密钥为 Omnia 提供动力。请求会从你的设备直接发往服务商——绝不经过 OmniLink 服务器。",
+      "provider": "服务商",
+      "model": "型号",
+      "modelsLoading": "正在加载可用模型…",
+      "modelsError": "无法从服务商加载模型——显示默认列表。",
+      "modelsLive": "已从服务商加载实时模型。",
+      "modelsFallbackNoKey": "当前显示默认模型。在下方添加 API 密钥以加载该服务商的实时模型列表。",
+      "baseUrl": "基础 URL",
+      "baseUrlHint": "OpenAI 兼容服务商的端点（OpenAI、Gemini、OpenRouter、本地 Ollama）。",
+      "apiKey": "API 密钥",
+      "apiKeyPlaceholder": "sk-…",
+      "apiKeyHint": "保存在你的设备上，仅在发送请求时读取。之后不会再次显示，也不会发送给 OmniLink。",
+      "noKeyNeeded": "该服务商在本地运行，无需 API 密钥。",
+      "save": "保存密钥",
+      "clear": "移除密钥",
+      "saved": "密钥已保存",
+      "statusSet": "密钥已配置",
+      "statusUnset": "无密钥——Omnia 使用离线回答",
+      "empty": "尚无 AI 配置。添加一个即可开始与 Omnia 对话。",
+      "addConfig": "添加配置",
+      "newConfig": "新建配置",
+      "editConfig": "编辑配置",
+      "saveConfig": "保存配置",
+      "name": "名称",
+      "namePlaceholder": "例如 工作 OpenAI",
+      "setActive": "设为当前",
+      "activeBadge": "当前使用",
+      "edit": "编辑配置",
+      "delete": "删除配置",
+      "confirmDelete": "移除“{{label}}”？这也会删除其已保存的 API 密钥。",
+      "keySet": "已设置密钥",
+      "keyUnset": "无密钥",
+      "keyNotNeeded": "无需密钥",
+      "apiKeyStoredPlaceholder": "输入新密钥以替换已保存的密钥",
+      "apiKeyStoredHint": "此配置已保存密钥。留空则保留，或输入新密钥以替换。"
+    },
+    "tiles": {
+      "title": "离线地图瓦片",
+      "description": "飞行轨迹地图框架与离线瓦片包机制均可完全离线运行。目前内置的底图与区域包都是纯色占位瓦片，并非真实地理数据——尚未打包经授权的栅格瓦片集。",
+      "placeholderTitle": "占位瓦片",
+      "placeholderNotice": "内置底图与所有区域包目前都是纯色占位瓦片——尚未包含真实地理瓦片（等待经授权的 OpenStreetMap 栅格数据）。飞行轨迹背后是纯色地图属于预期表现，不是缺陷。",
+      "loading": "正在加载瓦片包…",
+      "bundled": "内置",
+      "baseMissing": "未找到",
+      "downloaded": "已下载",
+      "download": "下载",
+      "cancel": "取消",
+      "delete": "删除",
+      "packMeta": "{{size}} · 缩放 {{minZoom}}–{{maxZoom}}",
+      "downloadingProgress": "下载中… {{percent}}%（{{received}} / {{total}}）",
+      "downloadingUnknown": "下载中… {{received}}"
+    },
+    "retention": {
+      "title": "会话存储",
+      "description": "自动清理旧的已录制遥测会话，以保持本地数据库精简。默认关闭——在你开启前，录制会一直保留。",
+      "enable": "自动清理",
+      "enableHint": "开启后，每次加载会话列表时，OmniLink 会按下方限制清理会话。",
+      "maxCount": "保留最新会话数",
+      "maxCountHint": "除最近的这么多个录制外，其余全部删除。",
+      "maxAgeDays": "最长保留天数",
+      "maxAgeDaysHint": "删除超过此天数的录制。",
+      "on": "开",
+      "off": "关"
+    },
+    "privacy": {
+      "title": "你的数据",
+      "description": "OmniLink 存储的所有内容都保留在本设备上——没有服务器。你可以导出本地数据副本，或永久清除全部数据。",
+      "exportTitle": "导出我的数据",
+      "exportHint": "以单个 JSON 包下载你的本地数据：已录制的遥测会话、聊天记录、配置方案、导入的知识和偏好设置。API 密钥绝不会包含在内。",
+      "exportAction": "导出我的数据",
+      "exportFilename": "omnilink-data-export-{{name}}.json",
+      "exportDialogTitle": "保存数据导出文件",
+      "exportFilterName": "JSON 文件",
+      "exportSavedTitle": "导出已保存",
+      "exportFailedTitle": "导出失败",
+      "exportDismiss": "关闭此导出提示",
+      "backupsTitle": "刷写前设备备份",
+      "backupsHint": "每次刷写前，OmniLink 会将所连设备的快照保存为 .elrsp 文件。打开该文件夹即可从“配置方案”页面导入。",
+      "backupsAction": "打开备份文件夹",
+      "deleteTitle": "删除我的所有数据",
+      "deleteHint": "不可逆地清除本设备上的所有内容：遥测、已录制会话、聊天记录、配置方案、导入的知识、设备配置备份、偏好设置和 API 密钥。此操作无法撤销。",
+      "deleteAction": "删除我的所有数据",
+      "deleteConfirmWord": "删除",
+      "deleteConfirmTitle": "删除你的所有数据？",
+      "deleteConfirmBody": "这将永久清除所有本地数据——遥测、已录制会话、聊天记录、配置方案、导入的知识、设备配置备份、偏好设置和 API 密钥。此操作无法撤销，且不会上传到任何地方。",
+      "deleteConfirmPrompt": "输入 {{word}} 以确认。",
+      "deleteCancel": "取消",
+      "deleteConfirm": "删除全部"
+    },
+    "knowledge": {
+      "title": "可信知识来源",
+      "description": "Omnia 允许使用的来源。它们均随应用内置并可离线使用；仅包含官方 ExpressLRS 参考资料和 OmniLink 自己的笔记，此白名单之外的任何内容都不会出现在这里。",
+      "update": "更新",
+      "updateAria": "更新 {{title}}",
+      "updateAll": "全部更新",
+      "updateAllAria": "更新所有知识来源",
+      "updateAllCurrent": "知识随 OmniLink 一同内置，且已对此版本为最新——没有更新的知识包。",
+      "updateAllRefreshed_one": "已刷新 {{count}} 个来源。",
+      "updateAllRefreshed_other": "已刷新 {{count}} 个来源。",
+      "updateAllFailed": "无法检查更新的知识包。你内置的来源未变化，仍可离线使用。",
+      "updating": "更新中…",
+      "version": "版本 {{version}}",
+      "license": "许可：{{license}}",
+      "cached": "已缓存 · 可离线使用",
+      "notCached": "未缓存",
+      "freshness": "内容日期 {{date}}",
+      "refreshed": "刷新于 {{date}}",
+      "bundled": "随此版本内置",
+      "trust": {
+        "official": "官方",
+        "omnilinkNotes": "OmniLink 笔记"
+      },
+      "empty": {
+        "title": "无知识来源",
+        "description": "此构建中没有可用的可信知识来源。"
+      },
+      "debug": {
+        "title": "测试检索",
+        "description": "输入一个 ExpressLRS 问题，查看 Omnia 会引用哪些可信片段及其相关度得分。仅在本地对内置来源执行检索——不会发送任何内容。",
+        "queryLabel": "测试查询",
+        "queryPlaceholder": "例如：如何为接收机对频？",
+        "run": "搜索",
+        "noQuery": "输入问题以查看 Omnia 会引用的来源。",
+        "topScore": "最高相关度 {{percent}}%",
+        "threshold": "阈值 {{percent}}%",
+        "terms": "匹配词：{{terms}}",
+        "tableToggle": "各片段得分",
+        "tableCaption": "每个片段的相关度得分与匹配词。",
+        "colChunk": "片段",
+        "colScore": "相关度",
+        "colTerms": "匹配词",
+        "colSelected": "已引用",
+        "selected": "已引用",
+        "belowThreshold": "低于阈值"
+      },
+      "import": {
+        "title": "你导入的笔记",
+        "description": "添加你自己的 .txt 或 .md 笔记供 Omnia 检索。它们保留在本设备上，绝不上传，且始终被视为不可信——Omnia 可以引用它们，但绝不遵从其中的指令，它们也永远无法更改你的硬件设置。",
+        "add": "导入笔记",
+        "addAria": "导入本地 .txt 或 .md 笔记",
+        "adding": "导入中…",
+        "hint": "仅支持文本或 Markdown（.txt、.md），最多 {{max}} 条笔记。",
+        "dialogTitle": "选择要导入的笔记",
+        "dialogFilter": "文本或 Markdown",
+        "sections": "已索引 {{count}} 个段落",
+        "perChatHint": "可在 Omnia 的“本次对话的知识来源”控件中为特定对话开启或关闭某条笔记。",
+        "deleteAria": "删除已导入的笔记 {{title}}",
+        "atLimit": "你已达到 {{max}} 条导入笔记的上限。请删除一条后再导入。",
+        "empty": {
+          "title": "无导入的笔记",
+          "description": "导入本地文本或 Markdown 笔记，让 Omnia 与官方来源一同检索。"
+        },
+        "errors": {
+          "extension": "只能导入 .txt 和 .md 文件。",
+          "tooLarge": "该文件过大。导入的笔记必须小于 256 KB。",
+          "empty": "该文件没有可导入的可读文本。",
+          "limit": "你已达到 {{max}} 条导入笔记的上限。",
+          "read": "无法读取该文件。请尝试其他文件。"
+        }
+      }
+    },
+    "devFlags": {
+      "title": "预览功能（开发）",
+      "description": "为 QA/演示切换受开关控制的功能界面。仅限开发构建——不会发布。更改在重新加载后生效。",
+      "reset": "重置预览开关",
+      "applyNote": "重新加载后生效",
+      "on": "开",
+      "off": "关",
+      "flag": {
+        "mlLab": "机器学习实验室（会话标注）"
+      }
+    }
+  },
+  "knowledge": {
+    "import": {
+      "untrustedLabel": "用户提供 · 非官方",
+      "untrustedAria": "你导入了这条笔记。它不是官方或可信来源：Omnia 可以引用它，但绝不遵从其中的指令。"
+    }
+  },
+  "theme": {
+    "label": "主题",
+    "system": "系统主题",
+    "dark": "信号实验室（深色）",
+    "light": "实验室白（浅色）",
+    "carbon": "碳纤与铜"
+  },
+  "map": {
+    "ariaLabel": "带信号热力图的飞行轨迹地图",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "noGps": {
+      "title": "无 GPS 数据",
+      "hint": "连接 GPS 模块或在 Betaflight 中启用 GPS 遥测，以查看飞行轨迹地图。"
+    }
+  },
+  "tiles": {
+    "errors": {
+      "categories": {
+        "network": "网络错误",
+        "manifest": "瓦片包错误",
+        "storage": "存储错误",
+        "cancelled": "下载已取消",
+        "unknown": "下载失败"
+      },
+      "httpClient": "无法开始下载。请检查网络后重试。",
+      "requestFailed": "下载请求失败。请检查网络连接。",
+      "httpStatus": "瓦片服务器返回错误。请稍后重试。",
+      "readFailed": "下载被中断。请检查网络后重试。",
+      "writeFailed": "无法将瓦片包写入磁盘。请检查可用存储空间。",
+      "commitFailed": "无法保存已下载的瓦片包。请检查可用存储空间。",
+      "invalidPack": "下载的文件不是有效的瓦片包。",
+      "cancelled": "下载已取消。",
+      "downloadFailed": "瓦片包下载失败。"
+    }
+  },
+  "logs": {
+    "title": "飞行日志",
+    "empty": "导入 Betaflight 黑匣子日志（.bbl/.csv）或 OmniLink 会话以开始。",
+    "analyze": "分析所选区间",
+    "loadAnother": "载入其他日志",
+    "import": {
+      "title": "导入日志",
+      "dropzone": "将 .bbl 或 .csv 文件拖到此处",
+      "hint": "Betaflight 黑匣子（.bbl、.csv）或导出的 OmniLink 会话（.csv）",
+      "bbl": "黑匣子二进制（.bbl）",
+      "browse": "浏览文件",
+      "reading": "正在读取文件…",
+      "decoding": "正在解码黑匣子日志… {{percent}}%",
+      "cancel": "取消解码"
+    },
+    "errors": {
+      "decode": "无法解码黑匣子日志。",
+      "parse": "无法解析日志文件。",
+      "read": "无法读取该文件。",
+      "bblNeedsDrop": "将 .bbl 文件拖到窗口中以解码。",
+      "csvUseBrowse": "请使用“浏览文件”导入 .csv。",
+      "unsupported": "不支持的文件类型。",
+      "decodedLogTooLarge": "此飞行日志过大，无法在此打开。请尝试更短的录制或拆分日志。"
+    },
+    "session": {
+      "title": "OmniLink 会话",
+      "loading": "正在加载已录制会话…",
+      "loadError": "无法加载已录制会话。",
+      "rowError": "无法读取此会话——请重试。",
+      "empty": "暂无已录制会话。",
+      "csvHint": "请从上方导入导出的会话 CSV。",
+      "unknownTarget": "未知设备",
+      "unknownFirmware": "固件不可用",
+      "recorded": "录制于 {{time}}",
+      "frames_one": "{{count}} 帧",
+      "frames_other": "{{count}} 帧",
+      "duration": "时长 {{duration}}",
+      "export": "导出",
+      "loadAria": "载入来自 {{target}}、录制于 {{time}} 的会话",
+      "exportAria": "将来自 {{target}}、录制于 {{time}} 的会话导出为 CSV",
+      "exportFilename": "omnilink-session-{{name}}.csv",
+      "exportDialogTitle": "保存会话 CSV",
+      "exportFilterName": "CSV 文件",
+      "exportSaved": "已保存到 {{path}}",
+      "exportFailed": "无法保存 CSV：{{detail}}",
+      "summary": "{{sessions}} · {{frames}}",
+      "summarySessions_one": "{{count}} 个会话",
+      "summarySessions_other": "{{count}} 个会话",
+      "renameAria": "重命名此会话",
+      "renameSave": "保存名称",
+      "renameCancel": "取消重命名",
+      "namePlaceholder": "会话名称",
+      "deleteAria": "删除来自 {{target}}、录制于 {{time}} 的会话",
+      "deleteConfirmTitle": "删除此会话？",
+      "deleteConfirmBody": "这将从 OmniLink 中永久删除该录制及其所有帧。此操作无法撤销。",
+      "deleteConfirm": "删除",
+      "deleteCancel": "取消"
+    },
+    "scrubber": {
+      "title": "时间轴",
+      "label": "拖动位置",
+      "position": "采样 {{index}} / {{total}} · {{time}}",
+      "markStart": "标记区间起点",
+      "markEnd": "标记区间终点",
+      "clear": "清除区间",
+      "selection": "区间 {{start}}–{{end}}（{{startTime}} → {{endTime}}）",
+      "noSelection": "未选择区间——将分析整份日志。"
+    },
+    "charts": {
+      "title": "通道",
+      "empty": "此日志中没有可绘图的通道。",
+      "decimated": "显示 {{shown}} / {{total}} 个采样"
+    },
+    "path": {
+      "title": "飞行轨迹",
+      "cursorFix": "光标：{{lat}}，{{lon}}",
+      "cursorNoFix": "光标处无 GPS 定位"
+    }
+  },
+  "anomaly": {
+    "panel": {
+      "title": "异常",
+      "empty": "此日志中未检测到异常。",
+      "count": "检测到 {{count}} 处"
+    },
+    "filter": {
+      "type": "类型",
+      "severity": "严重程度",
+      "allTypes": "所有类型",
+      "allSeverities": "所有严重程度"
+    },
+    "type": {
+      "signalLoss": "信号丢失",
+      "failsafe": "失控保护",
+      "lqDrop": "链路质量下降",
+      "txPowerChange": "发射功率变化"
+    },
+    "severity": {
+      "info": "信息",
+      "warning": "警告",
+      "critical": "严重"
+    },
+    "message": {
+      "signalLoss": "信号丢失——RSSI 降至 {{rssi}} dBm",
+      "failsafe": "失控保护——链路质量 {{lq}}%",
+      "lqDrop": "链路质量下降 {{from}}% → {{to}}%",
+      "txPowerChange": "发射功率变化 {{from}} → {{to}} mW"
+    },
+    "sendToAi": "发送给 AI",
+    "sendToAiAria": "将此异常区间发送给 AI",
+    "marker": {
+      "aria": "{{time}} 的{{type}}异常"
+    },
+    "jumpAria": "跳转到 {{time}} 的{{type}}"
+  },
+  "alerts": {
+    "regionLabel": "实时遥测告警",
+    "dismiss": "关闭告警",
+    "type": {
+      "signalLoss": "信号弱",
+      "lqDrop": "链路质量低",
+      "failsafe": "链路丢失",
+      "gpsDistance": "距离超限"
+    },
+    "message": {
+      "signalLoss": "信号弱——RSSI 降至 {{rssi}} dBm",
+      "lqDrop": "链路质量低——{{lq}}%",
+      "failsafe": "链路丢失——遥测信号降至 0%",
+      "gpsDistance": "飞机距起飞点 {{distance}} 米——超出设定范围"
+    },
+    "settings": {
+      "title": "实时告警",
+      "description": "当实时遥测链路质量下降时发出告警。每个告警的触发与恢复阈值各不相同——因此数值在临界点附近徘徊时不会反复抖动——且必须在去抖窗口内持续异常才会触发。",
+      "mute": "静音所有告警",
+      "muteHint": "开启后抑制所有应用内和系统通知。告警仍会持续跟踪链路，但保持静默。",
+      "osNotify": "桌面通知",
+      "osNotifyHint": {
+        "off": "同时将触发的告警以桌面通知显示，这样即使 OmniLink 在后台也能看到。默认关闭；静音时同样静默。",
+        "on": "开启——触发的告警也会发出桌面通知。静音时不会显示。",
+        "denied": "已被系统阻止，因此桌面通知保持静默。应用内告警和通知中心仍可正常使用；请在系统设置中允许 OmniLink 的通知以重新开启。",
+        "unsupported": "桌面通知由 OmniLink 桌面应用提供，因此在此不可用。应用内告警和通知中心仍可正常使用。"
+      },
+      "osNotifyState": {
+        "denied": "已阻止",
+        "unsupported": "不可用"
+      },
+      "sound": "告警时播放声音",
+      "soundHint": "告警触发时，除屏幕提示和系统通知外，还会播放短促提示音。默认关闭；静音时不会播放。",
+      "soundTest": "测试",
+      "muted": "已静音",
+      "unmuted": "已启用",
+      "alertsActive": "告警已启用",
+      "on": "开",
+      "off": "关",
+      "debounce": "去抖（帧）",
+      "rssiTrip": "RSSI 下限（dBm）",
+      "rssiClear": "恢复阈值（dBm）",
+      "lqTrip": "链路质量下限（%）",
+      "lqClear": "恢复阈值（%）",
+      "linkLossHint": "当链路质量持续为 0%（失控保护）时触发。",
+      "gpsHint": "当飞机距首次 GPS 定位点（起飞点）超过设定距离时触发。",
+      "gpsTrip": "距离上限（米）",
+      "gpsClear": "恢复阈值（米）"
+    }
+  },
+  "notifications": {
+    "title": "通知",
+    "empty": "暂无通知",
+    "markRead": "标记为已读",
+    "markAllRead": "全部标记为已读",
+    "clearAll": "全部清除",
+    "unread_one": "{{count}} 条未读",
+    "unread_other": "{{count}} 条未读",
+    "badgeLabel": "通知，{{count}} 条未读",
+    "arrived": "新通知：{{title}}"
+  },
+  "diagnostics": {
+    "panel": {
+      "title": "信号健康度",
+      "live": "实时链路",
+      "session": "会话",
+      "compact": "信号健康度",
+      "healthLabel": "信号健康度评分",
+      "factorsTitle": "评分因子",
+      "worstFactor": "最弱项：",
+      "allNominal": "所有因子均正常",
+      "windowTrend": "整个会话中按窗口划分的健康度趋势",
+      "liveFindings": "实时发现",
+      "liveFindingsEmpty": "未检测到实时链路问题。"
+    },
+    "gauge": {
+      "scoreOf": "{{score}} / 100",
+      "outOf": "/ 100"
+    },
+    "factor": {
+      "lq": "链路质量",
+      "rssi": "RSSI（最佳）",
+      "snr": "SNR",
+      "packetRate": "包率",
+      "txPower": "发射功率"
+    },
+    "severity": {
+      "info": "信息",
+      "warning": "警告",
+      "critical": "严重"
+    },
+    "category": {
+      "signal": "信号",
+      "link": "链路",
+      "power": "功率",
+      "stability": "稳定性"
+    },
+    "rule": {
+      "lqCollapse": "链路质量骤降",
+      "rssiFloor": "RSSI 触底",
+      "snrNoise": "SNR 噪声偏大",
+      "packetInstability": "包率不稳定",
+      "txPowerSaturation": "发射功率饱和"
+    },
+    "finding": {
+      "window": "{{start}}–{{end}}s",
+      "whyTitle": "为什么这很重要",
+      "expand": "显示详情",
+      "collapse": "隐藏详情",
+      "jumpAria": "跳转到 {{time}} 的{{rule}}",
+      "evidenceAria": "证据窗口：{{start}} 至 {{end}} 秒",
+      "confidenceLabel": "置信度",
+      "confidence": "{{pct}}%",
+      "explain": "解释",
+      "explainAria": "让 Omnia 解释此发现",
+      "lqCollapse": "链路质量从 {{from}}% 骤降至 {{to}}%。",
+      "rssiFloor": "RSSI 最低降至 {{rssi}} dBm——接收机已触及灵敏度下限。",
+      "snrNoise": "信号噪声偏大——在 {{window}} 个采样中 SNR 波动 ±{{stdDev}} dB。",
+      "packetInstability": "包率不稳定——{{window}} 个采样内发生 {{changes}} 次速率切换。",
+      "txPowerSaturation": "发射功率持续保持在 {{txPower}} mW，而 RSSI 平均为 {{avgRssi}} dBm——已无功率余量。"
+    },
+    "detail": {
+      "from": "起",
+      "to": "止",
+      "rssi": "RSSI（dBm）",
+      "stdDev": "SNR 标准差",
+      "window": "窗口",
+      "changes": "速率切换次数",
+      "txPower": "发射功率（mW）",
+      "avgRssi": "平均 RSSI（dBm）"
+    },
+    "why": {
+      "lqCollapse": "链路质量突然下降说明控制数据包已无法正常送达——这是最可能出现在失控保护之前的时刻。",
+      "rssiFloor": "处于噪声本底时，接收机已无法将信号与噪声区分开，因此任何进一步的衰减都会立即造成掉线。",
+      "snrNoise": "信噪比忽高忽低，通常意味着存在干扰或天线链路处于临界状态，会削弱航程与可靠性。",
+      "packetInstability": "包率不断切换，说明链路在压力下反复重新协商，而不是稳定保持某一模式。",
+      "txPowerSaturation": "在链路较弱时已跑到最大功率，意味着再没有可用的功率余量——你已经处于航程边缘。"
+    },
+    "findings": {
+      "title": "诊断",
+      "count": "发现 {{count}} 项",
+      "empty": "此会话中未发现链路健康问题。",
+      "notEnoughData": "此会话的数据不足以运行诊断。",
+      "copy": "复制摘要",
+      "copied": "已复制",
+      "copyAria": "将诊断摘要复制到剪贴板",
+      "copyTitle": "OmniLink 链路诊断",
+      "copyHealth": "信号健康度：{{score}} / 100",
+      "filterSeverity": "按严重程度筛选",
+      "allSeverities": "所有严重程度",
+      "ask": "询问 Omnia",
+      "askAria": "向 Omnia 询问此会话的诊断结果"
+    },
+    "ai": {
+      "explainPrompt": "请用通俗的语言解释这条链路诊断发现（{{rule}}），并告诉我首先该检查什么。仅使用所提供的已净化诊断证据。",
+      "askSessionPrompt": "请用通俗的语言解释我会话的链路诊断结果，并告诉我首先该检查什么。仅使用所提供的已净化诊断证据。"
+    },
+    "settings": {
+      "title": "诊断设置",
+      "description": "调整设备端诊断标记链路健康问题的灵敏度。全部在本地运行——不会上传任何内容。",
+      "open": "设置",
+      "sensitivity": "灵敏度预设",
+      "preset": {
+        "beginner": "入门",
+        "intermediate": "进阶",
+        "advanced": "高级"
+      },
+      "categories": "类别",
+      "thresholds": "微调各条规则的阈值。",
+      "thresholdsSessionOnly": "单条规则的阈值覆盖仅在本次会话内有效——重新加载后会恢复为预设值。",
+      "advancedToggle": "高级阈值",
+      "reset": "重置为预设",
+      "on": "开",
+      "off": "关",
+      "threshold": {
+        "lqFloor": "链路质量下限",
+        "rssiFloor": "RSSI 下限",
+        "snrStd": "SNR 噪声阈值",
+        "jitter": "包率抖动",
+        "txPoorRssi": "发射饱和 RSSI"
+      }
+    },
+    "notification": {
+      "category": {
+        "signal": "信号诊断",
+        "link": "链路诊断",
+        "power": "功率诊断",
+        "stability": "稳定性诊断"
+      }
+    },
+    "marker": {
+      "aria": "{{time}} 的{{rule}}"
+    },
+    "patterns": {
+      "title": "飞行后规律",
+      "mostLikely": "最可能的问题",
+      "evidence": "证据",
+      "checkFirst": "首先检查什么",
+      "notEnough": "此会话的证据不足，尚无法检测重复出现的规律。",
+      "none": "此会话中未发现突出的重复规律。",
+      "windows_one": "{{count}} 个证据窗口",
+      "windows_other": "{{count}} 个证据窗口",
+      "secondary": "其他规律",
+      "jumpAria": "跳转到{{pattern}}的证据"
+    },
+    "pattern": {
+      "repeatedLqDrops": "反复出现的链路质量下降",
+      "headingDegradation": "与飞行方向相关的信号丢失",
+      "gpsAreaDegradation": "与位置相关的信号丢失",
+      "powerPacketLinkEvents": "链路事件前后的功率/包率变化"
+    },
+    "patternSummary": {
+      "repeatedLqDrops": "链路质量分别下降了 {{drops}} 次，最低降至 {{lowestLq}}%。",
+      "headingDegradation": "每当飞机朝向约 {{sectorDeg}}° 时信号就会变弱——该方向平均链路质量为 {{sectorLq}}%，其他方向为 {{baselineLq}}%。",
+      "gpsAreaDegradation": "在 {{passes}} 次经过中，有 {{areas}} 处地点反复出现信号偏弱——该处为 {{areaLq}}%，其他地点为 {{baselineLq}}%。",
+      "powerPacketLinkEvents": "在 {{events}} 次链路事件前后，发射功率和/或包率发生了变化。"
+    },
+    "patternEvidence": {
+      "repeatedLqDrops": "整个会话中发生 {{drops}} 次链路质量骤降，最深降至 {{lowestLq}}%。",
+      "headingDegradation": "信号较低的时段与中心约在 {{sectorDeg}}° 的航向扇区吻合。",
+      "gpsAreaDegradation": "{{passes}} 次经过 {{areas}} 个区域的飞行都出现了相同的下降。",
+      "powerPacketLinkEvents": "在约 {{events}} 次事件中，发射功率最高上升 {{maxTxRampMw}} mW，包率变化 {{packetRateChanges}} 次。"
+    },
+    "patternCheck": {
+      "repeatedLqDrops": "反复出现的下降通常意味着航程或遮挡问题，而不是偶发故障——请检查天线位置，并在更近的距离飞行以确认。",
+      "headingDegradation": "与方向相关的信号盲点说明问题在于是天线朝向或机架遮挡了信号——请调整天线位置，或增加朝向弱信号扇区的分集天线。",
+      "gpsAreaDegradation": "每次经过都在同一处出现信号偏弱，说明是环境因素——请记录该位置并避开，或提高高度通过。",
+      "powerPacketLinkEvents": "每次下降都伴随功率爬升，说明你已处于链路预算边缘——请缩短距离，或升级天线/发射端配置。"
+    },
+    "patternMarker": {
+      "aria": "{{time}} 的{{pattern}}证据"
+    },
+    "trends": {
+      "title": "趋势与建议",
+      "subtitle": "基于你自己已分析会话的跨会话趋势与保守设置建议——本地离线运行。",
+      "emptyTitle": "暂无趋势",
+      "emptyDescription": "在会话分析页面分析几个会话后，其诊断历史会在此累积，形成按设备划分的趋势与设置建议。",
+      "notEnough": "已录制 {{have}} / {{need}} 个会话——再分析一些即可查看趋势。",
+      "unknownDevice": "未知设备",
+      "sessionCount_one": "已录制 {{count}} 个会话",
+      "sessionCount_other": "已录制 {{count}} 个会话",
+      "avgHealth": "平均健康度 {{score}}/100",
+      "healthTrendAria": "{{device}} 的信号健康度变化",
+      "repeatedEvents": "重复事件",
+      "eventSessions_one": "{{count}} 个会话",
+      "eventSessions_other": "{{count}} 个会话",
+      "weakRfModes": "薄弱的射频模式",
+      "weakRfMode": "{{packetRate}} Hz · {{sessions}} 个会话平均健康度 {{avgHealth}}",
+      "suggestionsTitle": "设置建议",
+      "noSuggestions": "暂无设置建议——你的会话中尚未出现突出的重复问题。",
+      "excludedDevices_one": "{{count}} 台设备的会话太少，尚无法形成趋势。",
+      "excludedDevices_other": "{{count}} 台设备的会话太少，尚无法形成趋势。",
+      "noTrendableDevices": "尚无设备拥有 2 个或以上已录制会话——请分析同一设备的更多会话以查看其趋势。"
+    },
+    "confidence": {
+      "measured": "已测量",
+      "likely": "可能",
+      "worthChecking": "值得检查"
+    },
+    "history": {
+      "resetTitle": "重置历史",
+      "resetConfirmTitle": "重置诊断历史？",
+      "resetConfirmBody": "这将永久清除所有已录制的会话摘要及由此得出的趋势。此操作无法撤销。",
+      "resetConfirm": "重置历史",
+      "resetCancel": "取消"
+    },
+    "suggestion": {
+      "antennaCheck": {
+        "title": "检查你的天线",
+        "body": "在 {{ofSessions}} 个已录制会话中有 {{sessions}} 个以相同方式出现信号变弱。请检查天线位置、接头和朝向。"
+      },
+      "telemetryIntervalReview": {
+        "title": "检查遥测间隔",
+        "body": "在 {{ofSessions}} 个会话中有 {{sessions}} 个反复出现包率不稳定。请检查遥测/更新间隔，避免链路过载。"
+      },
+      "packetRateReconsideration": {
+        "title": "重新考虑你的包率",
+        "body": "在 {{ofSessions}} 个会话中有 {{sessions}} 个反复出现包率不稳定。建议改用更稳健的包率（更低或固定）以获得更稳定的链路。",
+        "bodyWeakRf": "在 {{ofSessions}} 个会话中有 {{sessions}} 个出现某包率与较低链路健康度同时发生。可以尝试更稳健（更低）的包率，看链路是否更稳定。"
+      },
+      "powerSettingReview": {
+        "title": "检查你的功率设置",
+        "body": "在 {{ofSessions}} 个会话中有 {{sessions}} 个出现发射功率持续顶在最大值。请检查功率设置，并考虑增加天线增益是否有帮助。"
+      },
+      "wiringPowerSuspicion": {
+        "title": "怀疑接线或供电问题",
+        "body": "在 {{ofSessions}} 个会话中有 {{sessions}} 个反复出现接线/供电方面的规律。请检查供电线缆、接头以及 RX/VTX 的接地。"
+      }
+    }
+  },
+  "mlLab": {
+    "title": "会话标注（机器学习实验室）",
+    "description": "为已录制的会话打标签，以便训练和评估链路健康模型。这是一件实验室工具：此处内容不会到达任何用户，用当前数据训练出的模型也不适合面向用户。",
+    "privacyNote": "标签保留在本设备上。一个标签由会话 ID、六个固定值之一和修订号组成——没有自由文本字段，也不会上传任何内容。",
+    "sessions": {
+      "title": "你的已录制会话",
+      "loading": "正在读取已存储会话…",
+      "empty": "无已录制会话",
+      "emptyHint": "从已连接设备录制一次遥测会话，它就会出现在这里，随时可以标注。",
+      "meta": "{{frames}} 帧 · {{duration}}",
+      "unknownDuration": "时长未知"
+    },
+    "label": {
+      "legend": "标签",
+      "aria": "为录制于 {{session}} 的会话设置标签",
+      "unlabeled": "未标注",
+      "healthy": "健康",
+      "warning": "警告",
+      "failsafe": "失控保护",
+      "wiringSuspicion": "怀疑接线问题",
+      "antennaSuspicion": "怀疑天线问题",
+      "unknown": "未知——无法判断"
+    },
+    "readiness": {
+      "title": "数据准备度",
+      "verdictNotEnoughData": "数据不足以训练——门槛要求 {{required}} 个已标注会话，当前有 {{have}} 个。",
+      "verdictBarMet": "已达到门槛——每个类别共 {{required}} 个已标注会话。",
+      "meaning": "门槛（D21）为每个类别 {{perClass}} 个已标注会话，共 {{classes}} 个类别。该门槛未达到，且差距不小。本版本中任何模型报告的指标仅供参考——它不代表通过准入门槛，且用此数据集训练的任何模型都不会到达用户。",
+      "provenance": "其中 {{fixtures}} 个是 OmniLink 内置的参考样例——不是你的录制。你在本设备上标注的会话：{{user}}。",
+      "unknownNote": "{{unknown}} 个标注为未知，不计入任何类别。",
+      "tableCaption": "各类别已标注会话数与所需门槛对比",
+      "colClass": "类别",
+      "colFixtures": "样例",
+      "colYours": "你的",
+      "colRequired": "需要",
+      "colShortfall": "还差"
+    },
+    "model": {
+      "title": "模型原型（M58）",
+      "badge": "模型辅助 · 未验证",
+      "loading": "正在加载模型原型…",
+      "verdictFailed": "此模型未通过 M56 发布门槛。clearsM56Gate() 返回了 false。",
+      "verdictCleared": "此模型通过了 M56 发布门槛。",
+      "verdictReason": "确实无法通过。v2.0 规则引擎在同一批留出会话上的误报率为 {{baselineFp}}，而门槛要求模型的误报率必须严格低于规则引擎。没有任何数值能严格低于零——因此没有模型能通过这道门槛，无论是这个模型还是完美模型。此外，这些规则正是针对这批会话编写的，所以它们的满分是上限而非实际表现：这里根本没有可超越的对象。",
+      "dataBar": "该模型基于 {{rows}} 个健康会话拟合。数据门槛（D21）为每个类别 {{required}} 个已标注会话。本面板中的每个数字都仅供参考——它不代表通过门槛，且此原型不会到达任何用户。",
+      "scores": {
+        "caption": "模型原型与确定性 v2.0 规则引擎在同一批会话上的评分",
+        "colSet": "评分数据集",
+        "colDetector": "检测器",
+        "colPrecision": "精确率",
+        "colRecall": "召回率",
+        "colFp": "误报",
+        "colN": "会话数",
+        "setTest": "留出测试集",
+        "setCorpus": "全部数据集",
+        "detectorRules": "v2.0 规则",
+        "detectorModel": "模型（M58）",
+        "nCell": "{{sessions}} · {{negatives}} 个健康",
+        "quantum": "留出集只有 {{negatives}} 个健康会话，因此其误报率只能以 {{quantum}} 个百分点为步长变化——只有四个可能取值，中间没有其他值。基于三个会话算出的比率不是一次测量，也不能被当作测量来解读。"
+      },
+      "session": {
+        "title": "你当前打开的会话",
+        "empty": "未载入会话。请在会话分析页面导入一个会话，它就会在这里被扫描——确定性引擎与模型并排对比。",
+        "deterministic": "确定性 v2.0 诊断",
+        "deterministicSummary": "健康度 {{health}} · {{findings}} 项发现",
+        "deterministicNote": "生产路径。应用据此执行操作，本版本不会改变它。",
+        "model": "模型辅助（仅供参考）",
+        "modelSummary": "得分 {{score}} · 阈值 {{threshold}} · {{verdict}}",
+        "flagged": "已标记",
+        "notFlagged": "未标记",
+        "topFeatures": "主要贡献特征：{{features}}",
+        "evidence": "证据窗口：采样 {{start}}–{{end}}"
+      },
+      "advisoryNote": "该模型仅供参考。它绝不会写入设备配置或固件，绝不会更改诊断结论，其输出也只保留在本设备上。"
+    },
+    "predictive": {
+      "title": "失控保护预测预警（M59）——实验",
+      "badge": "预测 · 非实测",
+      "loading": "正在加载 M59 实验…",
+      "verdictFailed": "此实验未达到验收标准。它仅用于研究，不是经过验证的功能。",
+      "verdictMet": "此实验在真实数据集上达到了验收标准。",
+      "verdictReason": "确实达不到。M59 提出的问题是“我们能否在链路失效前提醒飞手？”。在 OmniLink 的真实参考飞行中，答案是不能。在 {{events}} 次已记录的链路丢失中，有 {{zeroLead}} 次链路几乎毫无预警——质量在单个 40 ms 采样内从健康直接跌到零。在所有这些事件中，任何预测器最多能提取出的预警时间为 {{oracleMax}} ms，典型值为 {{oracleMedian}} ms，而目标是 {{target}} ms。数据中根本不存在可供发现的预警信号。",
+      "nullTitle": "真实飞行显示的结果",
+      "nullCeiling": "任何预测器的最佳情况：预警 {{oracleMax}} ms（典型 {{oracleMedian}} ms），而目标是 {{target}} ms。",
+      "nullCeilingNote": "这是可能达到的上限，而非此预测器取得的分数。它仅从已记录的飞行中测得，完全没有模型参与——因此再好的模型也无法超越它。",
+      "nullPredictor": "在 {{events}} 次已记录的链路丢失中，此预测器对 {{predicted}} 次提前发出预警；有 {{late}} 次是在链路已经丢失之后才捕获，另有 {{missed}} 次完全漏掉。",
+      "nullLate": "在链路丢失发生之后才捕获，属于检测而非预测——OmniLink 现有的告警已经在做这件事。",
+      "syntheticTitle": "基于生成的测试数据（非真实飞行）",
+      "syntheticWarning": "以下数字来自生成器“绘制”的 {{sessions}} 个会话，并非真实飞行。这些数据是与该预测器配套生成的，其中衰减斜坡被刻意拉长，才使 {{target}} ms 的预警成为可能。它们只说明代码能跑通，并不证明它在真实飞行中有效，也不代表通过验收。",
+      "syntheticLead": "在生成的衰减斜坡上，它平均提前 {{median}} ms 发出预警。",
+      "syntheticFalseAlarms": "但在 {{negatives}} 个先下降又恢复的生成会话中，它对 {{falseAlarms}} 个发出了误报——其中还包括 {{deepNegatives}} 个链路几近中断又恢复中的 {{deepFalseAlarms}} 个。",
+      "syntheticTension": "这不是需要修复的缺陷。在链路真正中断之前，会恢复的飞行与不会恢复的飞行看起来完全相同。想要提前预警，就必须接受随之而来的误报。",
+      "safetyTitle": "如果它将来发布，请先读这段",
+      "safety": "预测性预警是对近期未来的猜测，而不是对当前状态的测量。它可能在两个方向上出错：可能在本不会发生任何事时发出预警，也可能一直保持沉默直到链路彻底丢失。不能依靠它让飞机保持在空中，它也不能替代你对航程和视距的判断，并且它绝不会更改你硬件上的任何设置。",
+      "prototype": "未经验证的原型。在 OmniLink 的真实参考飞行中，此预测器根本没有找到任何预警信号。此处功能对普通用户均未启用。",
+      "warning": {
+        "title": "预测链路丢失",
+        "predictedLinkLoss": "按当前衰减速率推算，这条链路预计将在约 {{ttlMs}} ms 后丢失。这是预测而非实测——可能出错。",
+        "confidence": "预测置信度：{{confidence}}",
+        "confidenceNote": "当前衰减速率使链路距离反应窗口边缘还有多远——不是坠机概率。",
+        "evidence": "基于采样 {{start}}–{{end}}：链路质量 {{lqFit}}%，正以 {{lqSlope}} %/秒下降；信号 {{rssiFit}} dBm，正以 {{rssiSlope}} dB/秒下降。",
+        "none": "此会话中没有预测的链路丢失。"
+      },
+      "session": {
+        "title": "本会话",
+        "empty": "载入一个会话以运行实验性预测器。",
+        "measured": "当前实测（M26 告警）",
+        "measuredNote": "链路当前的真实状态。这是已发布的确定性路径，本实验不会更改、重排或抑制其中任何内容。",
+        "predicted": "事先预测（M59，实验性）",
+        "count": "已触发 {{count}} 条预测预警。"
+      }
+    }
+  },
+  "backpack": {
+    "kind": {
+      "tx": "Backpack（TX）",
+      "vrx": "Backpack（VRX）"
+    },
+    "config": {
+      "title": "Backpack 设置",
+      "vtxChannel": {
+        "label": "VTX 频道",
+        "help": "Backpack 将所连 VTX 调至的图传频段与频道（例如 R1）。必须与你的眼镜频道一致。"
+      },
+      "dvrControl": {
+        "label": "DVR 录制控制",
+        "help": "Backpack 何时触发眼镜 DVR 录制：关闭、解锁时自动，或仅手动。"
+      },
+      "headTracker": {
+        "label": "头部追踪",
+        "help": "启用 Backpack 向所连云台或 VRX 输出头部追踪的平移/俯仰/横滚。"
+      }
+    }
+  },
+  "wifi": {
+    "source": {
+      "ap": "AP 模式",
+      "mdns": "已在网络中"
+    },
+    "discoveredTitle": "WiFi 设备",
+    "scan": "扫描 WiFi",
+    "scanning": "扫描中…",
+    "stopScan": "停止扫描",
+    "empty": "未发现 WiFi 设备",
+    "apHint": "自建热点——加入其网络，通过 10.0.0.1 访问",
+    "mdnsHint": "已在你的本地网络中（mDNS）",
+    "deviceTitle": "{{name}} — {{address}}",
+    "errors": {
+      "categories": {
+        "adapter": "无 WiFi 网卡",
+        "scanTool": "WiFi 扫描不可用",
+        "mdns": "网络发现错误",
+        "probe": "设备无法访问",
+        "unknown": "发现失败"
+      },
+      "mdnsInitFailed": "无法启动网络发现。已在你的网络中的 WiFi 设备可能不会显示。"
+    }
+  },
+  "common": {
+    "notifications": "通知",
+    "loading": "加载中…",
+    "error": "发生错误",
+    "retry": "重试",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭"
+  }
+}
